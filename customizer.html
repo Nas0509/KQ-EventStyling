@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Customize Your Event | KQ Event Styling</title>
+
+    <link rel="stylesheet"
+          href="customizer.css">
+
+</head>
+
+
+<body>
+
+
+    <!-- ========================================
+         HEADER
+    ======================================== -->
+
+    <header class="customizer-header">
+
+        <a href="index.html"
+           class="brand">
+
+            <img src="kqlogo.png"
+                 alt="KQ Event Styling Logo">
+
+            <div class="brand-text">
+
+                <strong>KQ</strong>
+
+                <span>
+                    EVENT STYLING
+                </span>
+
+            </div>
+
+        </a>
+
+
+        <a href="index.html"
+           class="back-link">
+
+            ← Back to Website
+
+        </a>
+
+    </header>
+
+
+
+    <!-- ========================================
+         PAGE
+    ======================================== -->
+
+    <main class="customizer-page">
+
+
+        <!-- PAGE INTRO -->
+
+        <section class="page-intro">
+
+            <span class="eyebrow">
+                KQ EVENT STYLING
+            </span>
+
+            <h1>
+                Customize Your Event
+            </h1>
+
+            <p>
+                Choose a styling package and personalize
+                your event based on your preferred theme,
+                colors, and celebration details.
+            </p>
+
+        </section>
+
+
+
+        <!-- ========================================
+             CUSTOMIZER
+        ======================================== -->
+
+        <section class="customizer-layout">
+
+
+            <!-- ====================================
+                 LEFT SIDE
+            ==================================== -->
+
+            <div class="customizer-form">
+
+
+                <!-- STEP 1 -->
+
+                <div class="customizer-card">
+
+                    <div class="section-heading">
+
+                        <span class="step-number">
+                            01
+                        </span>
+
+                        <div>
+
+                            <h2>
+                                Choose Styling Level
+                            </h2>
+
+                            <p>
+                                Select the type of styling
+                                that best fits your event.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="category-grid">
+
+
+                        <button type="button"
+                                class="category-option active"
+                                data-category="simple">
+
+                            <span class="category-title">
+                                Simple Styling
+                            </span>
+
+                            <span class="category-description">
+                                Simple backdrop styling
+                                for intimate celebrations.
+                            </span>
+
+                        </button>
+
+
+                        <button type="button"
+                                class="category-option"
+                                data-category="venue">
+
+                            <span class="category-title">
+                                Venue Styling
+                            </span>
+
+                            <span class="category-description">
+                                Backdrop styling with
+                                additional venue elements.
+                            </span>
+
+                        </button>
+
+
+                        <button type="button"
+                                class="category-option"
+                                data-category="full">
+
+                            <span class="category-title">
+                                Full Venue Styling
+                            </span>
+
+                            <span class="category-description">
+                                Complete venue styling
+                                with ceiling and entrance
+                                treatments.
+                            </span>
+
+                        </button>
+
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- STEP 2 -->
+
+                <div class="customizer-card">
+
+                    <div class="section-heading">
+
+                        <span class="step-number">
+                            02
+                        </span>
+
+                        <div>
+
+                            <h2>
+                                Choose Package
+                            </h2>
+
+                            <p>
+                                Select the package you want
+                                to customize.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div id="packageOptions"
+                         class="package-options">
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- STEP 3 -->
+
+                <div class="customizer-card">
+
+                    <div class="section-heading">
+
+                        <span class="step-number">
+                            03
+                        </span>
+
+                        <div>
+
+                            <h2>
+                                Event Details
+                            </h2>
+
+                            <p>
+                                Tell us about your celebration.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-grid">
+
+
+                        <!-- EVENT TYPE -->
+
+                        <div class="form-group">
+
+                            <label for="eventType">
+                                Event Type
+                            </label>
+
+                            <select id="eventType">
+
+                                <option value="">
+                                    Select event type
+                                </option>
+
+                                <option value="Birthday">
+                                    Birthday
+                                </option>
+
+                                <option value="Wedding">
+                                    Wedding
+                                </option>
+
+                                <option value="Debut">
+                                    Debut
+                                </option>
+
+                                <option value="Christening">
+                                    Christening
+                                </option>
+
+                                <option value="Anniversary">
+                                    Anniversary
+                                </option>
+
+                                <option value="Other">
+                                    Other
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- CELEBRANT -->
+
+                        <div class="form-group">
+
+                            <label for="celebrantName">
+                                Celebrant / Couple Name
+                            </label>
+
+                            <input type="text"
+                                   id="celebrantName"
+                                   placeholder="Enter name">
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- STEP 4 -->
+
+                <div class="customizer-card">
+
+                    <div class="section-heading">
+
+                        <span class="step-number">
+                            04
+                        </span>
+
+                        <div>
+
+                            <h2>
+                                Choose Your Style
+                            </h2>
+
+                            <p>
+                                Personalize the visual style
+                                of your event.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- THEME -->
+
+                    <div class="style-section">
+
+                        <label>
+                            Theme / Concept
+                        </label>
+
+                        <input type="text"
+                               id="theme"
+                               placeholder="e.g. Princess, Cars, Elegant, Minimalist">
+
+
+                    </div>
+
+
+
+                    <!-- COLOR -->
+
+                    <div class="style-section">
+
+                        <label>Preferred Color</label>
+
+                        <div class="color-options">
+
+                            <button type="button"
+                                    class="color-option"
+                                    data-color="Baby Blue">
+
+                                <span class="color-circle blue"></span>
+                                Baby Blue
+
+                            </button>
+
+
+                            <button type="button"
+                                    class="color-option"
+                                    data-color="Pink">
+
+                                <span class="color-circle pink"></span>
+                                Pink
+
+                            </button>
+
+
+                            <button type="button"
+                                    class="color-option"
+                                    data-color="White">
+
+                                <span class="color-circle white"></span>
+                                White
+
+                            </button>
+
+
+                            <button type="button"
+                                    class="color-option"
+                                    data-color="Gold">
+
+                                <span class="color-circle gold"></span>
+                                Gold
+
+                            </button>
+
+
+                            <button type="button"
+                                    class="color-option"
+                                    data-color="Silver">
+
+                                <span class="color-circle silver"></span>
+                                Silver
+
+                            </button>
+
+
+                            <!-- CUSTOM COLOR -->
+
+                            <button type="button"
+                                    id="customColorOption"
+                                    class="color-option custom-color-option"
+                                    data-color="Custom">
+
+                                <span id="customColorPreview"
+                                      class="color-circle custom">
+                                </span>
+
+                                <span>Custom</span>
+
+                            </button>
+
+                        </div>
+
+
+                        <!-- CUSTOM COLOR PICKER -->
+
+                        <div id="customColorPicker"
+                             class="custom-color-picker">
+
+                            <div class="custom-color-picker-content">
+
+                                <div id="customColorPreviewLarge"
+                                     class="custom-color-preview-large">
+                                </div>
+
+                                <div>
+                                    <strong>Choose your custom color</strong>
+
+                                    <p>
+                                        Select any color you want for your event styling.
+                                    </p>
+                                </div>
+
+                                <input type="color"
+                                       id="customColorInput"
+                                       value="#249bd3"
+                                       aria-label="Choose custom color">
+
+                            </div>
+
+                            <div id="customColorHex"
+                                 class="custom-color-hex">
+                                #249BD3
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- CHARACTER -->
+
+                    <div class="style-section">
+
+                        <label for="character">
+                            Character / Theme Reference
+                        </label>
+
+                        <input type="text"
+                               id="character"
+                               placeholder="e.g. Barbie, Bluey, Disney Princess">
+
+
+                    </div>
+
+
+
+                    <!-- ADDITIONAL REQUEST -->
+
+                    <div class="style-section">
+
+                        <label for="additionalRequest">
+                            Additional Request
+                        </label>
+
+                        <textarea id="additionalRequest"
+                                  rows="4"
+                                  placeholder="Tell us any special styling requests..."></textarea>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- NOTE -->
+
+                <div class="important-note">
+
+                    <strong>
+                        Important Note
+                    </strong>
+
+                    <p>
+                        Crew meal and transportation fees are
+                        not included. Package prices may vary
+                        depending on the venue. An ocular
+                        inspection may be required before
+                        final pricing.
+                    </p>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- ====================================
+                 RIGHT SIDE SUMMARY
+            ==================================== -->
+
+            <aside class="summary-card">
+
+
+                <div class="summary-top">
+
+                    <span>
+                        YOUR EVENT STYLE
+                    </span>
+
+                    <span id="summaryCategory"
+                          class="summary-badge">
+
+                        Simple Styling
+
+                    </span>
+
+                </div>
+
+
+                <h2 id="summaryPackage">
+                    Simple Package
+                </h2>
+
+
+                <div class="summary-divider">
+                </div>
+
+
+                <div class="summary-row">
+
+                    <span>
+                        Package
+                    </span>
+
+                    <strong id="summaryPrice">
+                        ₱5,500
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-details">
+
+
+                    <div class="summary-detail">
+
+                        <span>
+                            Event
+                        </span>
+
+                        <strong id="summaryEvent">
+                            Not selected
+                        </strong>
+
+                    </div>
+
+
+                    <div class="summary-detail">
+
+                        <span>
+                            Celebrant
+                        </span>
+
+                        <strong id="summaryCelebrant">
+                            Not specified
+                        </strong>
+
+                    </div>
+
+
+                    <div class="summary-detail">
+
+                        <span>
+                            Theme
+                        </span>
+
+                        <strong id="summaryTheme">
+                            Not specified
+                        </strong>
+
+                    </div>
+
+
+                    <div class="summary-detail">
+
+                        <span>
+                            Color
+                        </span>
+
+                        <strong id="summaryColor">
+                            Not selected
+                        </strong>
+
+                    </div>
+
+
+                    <div class="summary-detail">
+
+                        <span>
+                            Character
+                        </span>
+
+                        <strong id="summaryCharacter">
+                            Not specified
+                        </strong>
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="estimated-total">
+
+                    <span>
+                        ESTIMATED PACKAGE PRICE
+                    </span>
+
+                    <strong id="totalPrice">
+                        ₱5,500
+                    </strong>
+
+                    <small>
+                        Final quotation may vary after
+                        venue assessment.
+                    </small>
+
+                </div>
+
+
+                <button type="button"
+                        id="requestQuotation"
+                        class="quotation-button">
+
+                    Request Quotation
+
+                </button>
+
+
+                <button type="button"
+                        id="resetCustomizer"
+                        class="reset-button">
+
+                    Start Over
+
+                </button>
+
+
+            </aside>
+
+
+        </section>
+
+    </main>
+
+
+
+    <!-- ========================================
+         SUCCESS MODAL
+    ======================================== -->
+
+    <div id="quotationModal"
+         class="quotation-modal">
+
+        <div class="quotation-modal-card">
+
+            <div class="success-icon">
+                ✓
+            </div>
+
+            <h2>
+                Styling Request Ready
+            </h2>
+
+            <p>
+                Your event styling preferences have been
+                prepared. You can proceed with the booking
+                process to submit your request to KQ Event
+                Styling.
+            </p>
+
+            <button type="button"
+                    id="closeQuotationModal">
+
+                Continue
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================
+         LOGIN REQUIRED MODAL
+    ========================================= -->
+
+    <div id="loginRequiredModal"
+         class="login-required-modal"
+         aria-hidden="true">
+
+        <div class="login-required-overlay"></div>
+
+        <div class="login-required-card">
+
+            <div class="login-required-icon">
+                🔐
+            </div>
+
+            <h3>
+                Login Required
+            </h3>
+
+            <p>
+                You need to login first to continue.
+            </p>
+
+            <p class="login-required-subtext">
+                Please login to your KQ Event Styling account
+                before submitting your booking or quotation request.
+            </p>
+
+            <div class="login-required-actions">
+
+                <button type="button"
+                        id="notNowBtn"
+                        class="login-not-now-btn">
+
+                    Not Now
+
+                </button>
+
+                <button type="button"
+                        id="loginRequiredBtn"
+                        class="login-required-btn">
+
+                    Login Now
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="customizer.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <!-- IMPORTANT FOR MOBILE RESPONSIVENESS -->
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>KQ Event Styling | Admin Dashboard</title>
+
+    <!-- ?v=4 forces browser to load the latest CSS -->
+    <link rel="stylesheet"
+          href="css/admin.css?v=4">
+
+</head>
+
+<body>
+
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+
+    <aside class="sidebar">
+
+        <!-- BRAND -->
+        <a href="index.html" class="brand">
+
+            <img src="kqlogo.png"
+                 alt="KQ Event Styling Logo"
+                 class="brand-logo">
+
+        </a>
+
+
+        <!-- NAVIGATION -->
+        <nav class="sidebar-nav">
+
+            <button type="button"
+                    class="nav-item active"
+                    data-section="dashboard">
+                📊 Dashboard
+            </button>
+
+
+            <button type="button"
+                    class="nav-item"
+                    data-section="bookings">
+                📅 Bookings
+            </button>
+
+
+            <button type="button"
+                    class="nav-item"
+                    data-section="quotations">
+                📝 Quotations
+            </button>
+
+
+            <button type="button"
+                    class="nav-item"
+                    data-section="payments">
+                💳 Payments
+            </button>
+
+
+            <button type="button"
+                    class="nav-item"
+                    data-section="sales">
+                💰 Sales
+            </button>
+
+
+            <button type="button"
+                    class="nav-item"
+                    data-section="inventory">
+                📦 Inventory
+            </button>
+
+        </nav>
+
+
+        <!-- SIDEBAR BOTTOM -->
+        <div class="sidebar-bottom">
+
+            <a href="index.html"
+               class="back-link">
+                ← User View
+            </a>
+
+
+            <button type="button"
+                    id="logoutBtn"
+                    class="logout-btn">
+                Logout
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN CONTENT
+         ===================================================== -->
+
+    <main class="main">
+
+
+        <!-- =================================================
+             TOP BAR
+             ================================================= -->
+
+        <header class="topbar">
+
+            <div>
+
+                <p class="eyebrow">
+                    KQ EVENT STYLING
+                </p>
+
+                <h1 id="pageTitle">
+                    Admin Dashboard
+                </h1>
+
+            </div>
+
+
+            <div class="admin-user">
+
+                <span class="avatar">
+                    A
+                </span>
+
+                <div>
+
+                    <strong>
+                        Administrator
+                    </strong>
+
+                    <small>
+                        Management Panel
+                    </small>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             DASHBOARD
+             ================================================= -->
+
+        <section id="dashboard"
+                 class="page-section active">
+
+            <div class="welcome">
+
+                <div>
+
+                    <span class="badge">
+                        OVERVIEW
+                    </span>
+
+                    <h2>
+                        Welcome back, Admin.
+                    </h2>
+
+                    <p>
+                        Manage KQ Event Styling bookings,
+                        payments, sales, and inventory.
+                    </p>
+
+                </div>
+
+
+                <button type="button"
+                        class="btn primary"
+                        data-section-jump="bookings">
+                    View Bookings
+                </button>
+
+            </div>
+
+
+            <!-- STATISTICS -->
+
+            <div class="stats-grid">
+
+                <article class="stat-card">
+
+                    <span>
+                        Pending Bookings
+                    </span>
+
+                    <strong id="statPending">
+                        0
+                    </strong>
+
+                    <small>
+                        Awaiting review
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Approved Bookings
+                    </span>
+
+                    <strong id="statApproved">
+                        0
+                    </strong>
+
+                    <small>
+                        Confirmed events
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Declined Bookings
+                    </span>
+
+                    <strong id="statDeclined">
+                        0
+                    </strong>
+
+                    <small>
+                        Booking requests
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Upcoming Events
+                    </span>
+
+                    <strong id="statUpcoming">
+                        0
+                    </strong>
+
+                    <small>
+                        Approved future events
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Unpaid
+                    </span>
+
+                    <strong id="statUnpaid">
+                        0
+                    </strong>
+
+                    <small>
+                        No down payment
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Partial Payments
+                    </span>
+
+                    <strong id="statPartial">
+                        0
+                    </strong>
+
+                    <small>
+                        Not fully paid
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Completed Payments
+                    </span>
+
+                    <strong id="statPaid">
+                        0
+                    </strong>
+
+                    <small>
+                        Fully paid
+                    </small>
+
+                </article>
+
+
+                <article class="stat-card accent">
+
+                    <span>
+                        Total Sales
+                    </span>
+
+                    <strong id="statSales">
+                        ₱0
+                    </strong>
+
+                    <small>
+                        Recorded payments
+                    </small>
+
+                </article>
+
+            </div>
+
+
+            <!-- DASHBOARD PANELS -->
+
+            <div class="two-col">
+
+                <article class="panel">
+
+                    <div class="panel-head">
+
+                        <h3>
+                            Upcoming Events
+                        </h3>
+
+                        <button type="button"
+                                class="text-btn"
+                                data-section-jump="bookings">
+                            View all
+                        </button>
+
+                    </div>
+
+                    <div id="upcomingList"
+                         class="mini-list"></div>
+
+                </article>
+
+
+                <article class="panel">
+
+                    <div class="panel-head">
+
+                        <h3>
+                            Inventory Status
+                        </h3>
+
+                        <button type="button"
+                                class="text-btn"
+                                data-section-jump="inventory">
+                            Manage
+                        </button>
+
+                    </div>
+
+                    <div id="dashboardInventory"
+                         class="mini-list"></div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             BOOKINGS
+             ================================================= -->
+
+        <section id="bookings"
+                 class="page-section">
+
+            <div class="section-head">
+
+                <div>
+
+                    <span class="badge">
+                        BOOKING MANAGEMENT
+                    </span>
+
+                    <h2>
+                        Booking Requests
+                    </h2>
+
+                    <p>
+                        Review client inquiries and manage
+                        event status.
+                    </p>
+
+                </div>
+
+
+                <button type="button"
+                        class="btn primary"
+                        id="calendarBtn">
+                    📅 Calendar View
+                </button>
+
+            </div>
+
+
+            <!-- BOOKING FILTER -->
+
+            <div class="filter-row">
+
+                <input id="bookingSearch"
+                       type="search"
+                       placeholder="Search client, email, event, or package...">
+
+
+                <select id="bookingStatusFilter">
+
+                    <option value="ALL">
+                        All Statuses
+                    </option>
+
+                    <option value="PENDING">
+                        Pending
+                    </option>
+
+                    <option value="APPROVED">
+                        Approved
+                    </option>
+
+                    <option value="DECLINED">
+                        Declined
+                    </option>
+
+                    <option value="CANCELLED">
+                        Cancelled
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- BOOKING TABLE -->
+
+            <div class="panel table-panel">
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Client
+                                </th>
+
+                                <th>
+                                    Event
+                                </th>
+
+                                <th>
+                                    Date
+                                </th>
+
+                                <th>
+                                    Package
+                                </th>
+
+                                <th>
+                                    Time
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Action
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="bookingTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <div id="emptyBookings"
+                     class="empty-state">
+                    No booking requests yet.
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             QUOTATIONS
+             ================================================= -->
+
+        <section id="quotations"
+                 class="page-section">
+
+            <div class="section-head">
+
+                <div>
+
+                    <span class="badge">
+                        QUOTATION MANAGEMENT
+                    </span>
+
+                    <h2>
+                        Styling Quotation Requests
+                    </h2>
+
+                    <p>
+                        Review customer styling preferences
+                        and quotation requests.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- QUOTATION FILTER -->
+
+            <div class="filter-row">
+
+                <input id="quotationSearch"
+                       type="search"
+                       placeholder="Search customer, package, event, or theme...">
+
+
+                <select id="quotationStatusFilter">
+
+                    <option value="ALL">
+                        All Statuses
+                    </option>
+
+                    <option value="REQUESTED">
+                        Requested
+                    </option>
+
+                    <option value="REVIEWING">
+                        Reviewing
+                    </option>
+
+                    <option value="APPROVED">
+                        Approved
+                    </option>
+
+                    <option value="REVISION">
+                        Revision
+                    </option>
+
+                    <option value="DECLINED">
+                        Declined
+                    </option>
+
+                    <option value="CONVERTED">
+                        Converted
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- QUOTATION TABLE -->
+
+            <div class="panel table-panel">
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Customer
+                                </th>
+
+                                <th>
+                                    Event
+                                </th>
+
+                                <th>
+                                    Package
+                                </th>
+
+                                <th>
+                                    Price
+                                </th>
+
+                                <th>
+                                    Theme
+                                </th>
+
+                                <th>
+                                    Color
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Action
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="quotationTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <div id="emptyQuotations"
+                     class="empty-state">
+                    No quotation requests yet.
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             PAYMENTS
+             ================================================= -->
+
+        <section id="payments"
+                 class="page-section">
+
+            <div class="section-head">
+
+                <div>
+
+                    <span class="badge">
+                        PAYMENT MANAGEMENT
+                    </span>
+
+                    <h2>
+                        Payment Management
+                    </h2>
+
+                    <p>
+                        Track customer payments and balances.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="stats-grid compact">
+
+                <article class="stat-card">
+
+                    <span>
+                        Total Payments
+                    </span>
+
+                    <strong id="paymentTotal">
+                        ₱0
+                    </strong>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Collected
+                    </span>
+
+                    <strong id="paymentCollected">
+                        ₱0
+                    </strong>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Outstanding
+                    </span>
+
+                    <strong id="paymentOutstanding">
+                        ₱0
+                    </strong>
+
+                </article>
+
+            </div>
+
+
+            <div class="panel table-panel">
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Client
+                                </th>
+
+                                <th>
+                                    Event
+                                </th>
+
+                                <th>
+                                    Date
+                                </th>
+
+                                <th>
+                                    Total
+                                </th>
+
+                                <th>
+                                    Paid
+                                </th>
+
+                                <th>
+                                    Balance
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Action
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="paymentTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <div id="emptyPayments"
+                     class="empty-state">
+                    No payment records yet.
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             SALES
+             ================================================= -->
+
+        <section id="sales"
+                 class="page-section">
+
+            <div class="section-head">
+
+                <div>
+
+                    <span class="badge">
+                        SALES MANAGEMENT
+                    </span>
+
+                    <h2>
+                        Sales & Revenue
+                    </h2>
+
+                    <p>
+                        Track revenue, expenses, and net income.
+                    </p>
+
+                </div>
+
+
+                <button type="button"
+                        class="btn primary"
+                        id="addExpenseBtn">
+                    + Add Expense
+                </button>
+
+            </div>
+
+
+            <div class="stats-grid compact">
+
+                <article class="stat-card">
+
+                    <span>
+                        Total Revenue
+                    </span>
+
+                    <strong id="salesRevenue">
+                        ₱0
+                    </strong>
+
+                </article>
+
+
+                <article class="stat-card">
+
+                    <span>
+                        Total Expenses
+                    </span>
+
+                    <strong id="salesExpenses">
+                        ₱0
+                    </strong>
+
+                </article>
+
+
+                <article class="stat-card accent">
+
+                    <span>
+                        Net Income
+                    </span>
+
+                    <strong id="salesNet">
+                        ₱0
+                    </strong>
+
+                </article>
+
+            </div>
+
+
+            <div class="two-col">
+
+                <article class="panel">
+
+                    <div class="panel-head">
+
+                        <h3>
+                            Sales per Booking
+                        </h3>
+
+                    </div>
+
+
+                    <div class="table-wrap">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Client
+                                    </th>
+
+                                    <th>
+                                        Event
+                                    </th>
+
+                                    <th>
+                                        Total
+                                    </th>
+
+                                    <th>
+                                        Collected
+                                    </th>
+
+                                    <th>
+                                        Balance
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody id="salesTableBody">
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </article>
+
+
+                <article class="panel">
+
+                    <div class="panel-head">
+
+                        <h3>
+                            Expenses
+                        </h3>
+
+                    </div>
+
+
+                    <div id="expenseList"
+                         class="expense-list"></div>
+
+                </article>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             INVENTORY
+             ================================================= -->
+
+        <section id="inventory"
+                 class="page-section">
+
+            <div class="section-head">
+
+                <div>
+
+                    <span class="badge">
+                        INVENTORY MANAGEMENT
+                    </span>
+
+                    <h2>
+                        Materials & Supplies
+                    </h2>
+
+                    <p>
+                        Monitor quantity, cost, and stock status.
+                    </p>
+
+                </div>
+
+
+                <button type="button"
+                        class="btn primary"
+                        id="addInventoryBtn">
+                    + Add Material
+                </button>
+
+            </div>
+
+
+            <div class="panel table-panel">
+
+                <div class="table-wrap">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Material
+                                </th>
+
+                                <th>
+                                    Category
+                                </th>
+
+                                <th>
+                                    Available
+                                </th>
+
+                                <th>
+                                    Unit
+                                </th>
+
+                                <th>
+                                    Cost / Item
+                                </th>
+
+                                <th>
+                                    Total Cost
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th>
+                                    Action
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="inventoryTableBody">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =====================================================
+         MODAL
+         ===================================================== -->
+
+    <div id="modal"
+         class="modal hidden"
+         aria-hidden="true">
+
+        <div class="modal-card">
+
+            <button type="button"
+                    class="modal-close"
+                    id="modalClose"
+                    aria-label="Close modal">
+                ×
+            </button>
+
+
+            <div id="modalContent"></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SCRIPTS
+         ===================================================== -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase-config.js"></script>
+
+    <script src="admin.js"></script>
+
+
+</body>
+
+</html>

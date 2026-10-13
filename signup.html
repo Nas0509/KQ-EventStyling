@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Create Account | KQ Event Styling</title>
+
+    <link rel="stylesheet"
+          href="login.css">
+
+
+    <style>
+
+        /* ========================================
+           SIGNUP FORM
+        ======================================== */
+
+        .signup-form .field {
+            margin-bottom: 18px;
+        }
+
+
+        /* ========================================
+           PASSWORD WRAPPER
+        ======================================== */
+
+        .password-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+            .password-wrap input {
+                width: 100%;
+                padding-right: 75px;
+            }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            border: none;
+            background: transparent;
+            color: #167cae;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+
+        /* ========================================
+           PASSWORD STRENGTH
+        ======================================== */
+
+        .password-strength {
+            margin-top: 8px;
+        }
+
+        .strength-bar {
+            height: 6px;
+            width: 100%;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.25s ease;
+            border-radius: 10px;
+        }
+
+        .strength-text {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+
+        /* ========================================
+           PASSWORD RULES
+        ======================================== */
+
+        .password-rules {
+            margin-top: 10px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border: 1px solid #e4edf2;
+        }
+
+            .password-rules p {
+                margin: 0 0 7px;
+                font-size: 0.8rem;
+                color: #66747e;
+            }
+
+            .password-rules ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .password-rules li {
+                font-size: 0.78rem;
+                margin: 5px 0;
+                color: #8a959d;
+            }
+
+                .password-rules li::before {
+                    content: "○";
+                    margin-right: 7px;
+                }
+
+                .password-rules li.valid {
+                    color: #198754;
+                }
+
+                    .password-rules li.valid::before {
+                        content: "✓";
+                        font-weight: bold;
+                    }
+
+
+        /* ========================================
+           CONFIRM PASSWORD
+        ======================================== */
+
+        .password-match {
+            display: block;
+            margin-top: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+            .password-match.match {
+                color: #198754;
+            }
+
+            .password-match.no-match {
+                color: #d9534f;
+            }
+
+
+        /* ========================================
+           TERMS
+        ======================================== */
+
+        .terms {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            margin: 7px 0 20px;
+            color: #66747e;
+            font-size: 0.82rem;
+            line-height: 1.4;
+        }
+
+            .terms input {
+                margin-top: 3px;
+                flex-shrink: 0;
+            }
+
+            .terms a {
+                color: #167cae;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+                .terms a:hover {
+                    text-decoration: underline;
+                }
+
+
+        /* ========================================
+           MESSAGE
+        ======================================== */
+
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+
+            .message.error {
+                color: #d9534f;
+            }
+
+            .message.success {
+                color: #198754;
+            }
+
+
+        /* ========================================
+           BUTTON
+        ======================================== */
+
+        .login-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+
+        /* ========================================
+           TOAST NOTIFICATION
+        ======================================== */
+
+        .toast {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            width: min(380px, calc(100% - 30px));
+            padding: 16px 18px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            z-index: 9999;
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+            .toast.show {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            .toast.success {
+                border-left: 5px solid #198754;
+            }
+
+            .toast.error {
+                border-left: 5px solid #d9534f;
+            }
+
+        .toast-icon {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .toast-message {
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: #66747e;
+        }
+
+        .toast-close {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #777;
+        }
+
+
+        /* ========================================
+           MOBILE
+        ======================================== */
+
+        @media (max-width: 600px) {
+
+            .toast {
+                top: 15px;
+                right: 15px;
+            }
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- ========================================
+         HEADER
+    ======================================== -->
+
+    <header class="site-header">
+
+        <a href="index.html"
+           class="brand">
+
+            <img src="kqlogo.png"
+                 alt="KQ Event Styling Logo">
+
+            <div class="brand-text">
+
+                <strong>KQ</strong>
+
+                <span>
+                    EVENT STYLING
+                </span>
+
+            </div>
+
+        </a>
+
+    </header>
+
+
+    <!-- ========================================
+         MAIN
+    ======================================== -->
+
+    <main class="login-page">
+
+        <section class="login-card">
+
+
+            <!-- LOGO -->
+
+            <div class="login-logo">
+
+                <img src="kqlogo.png"
+                     alt="KQ Event Styling">
+
+            </div>
+
+
+            <span class="badge">
+                KQ EVENT STYLING
+            </span>
+
+
+            <h1>
+                Create Account
+            </h1>
+
+
+            <p class="subtitle">
+                Create your customer account to book your event.
+            </p>
+
+
+            <!-- ========================================
+                 SIGNUP FORM
+            ======================================== -->
+
+            <form id="signupForm"
+                  class="signup-form"
+                  novalidate>
+
+
+                <!-- FULL NAME -->
+
+                <div class="field">
+
+                    <label for="fullName">
+                        Full Name
+                    </label>
+
+                    <input type="text"
+                           id="fullName"
+                           placeholder="Enter your full name"
+                           autocomplete="name"
+                           maxlength="100"
+                           required>
+
+                </div>
+
+
+                <!-- EMAIL -->
+
+                <div class="field">
+
+                    <label for="email">
+                        Email Address
+                    </label>
+
+                    <input type="email"
+                           id="email"
+                           placeholder="Enter your email"
+                           autocomplete="email"
+                           maxlength="150"
+                           required>
+
+                </div>
+
+
+                <!-- CONTACT -->
+
+                <div class="field">
+
+                    <label for="contactNumber">
+                        Contact Number
+                    </label>
+
+                    <input type="tel"
+                           id="contactNumber"
+                           placeholder="09XXXXXXXXX"
+                           autocomplete="tel"
+                           maxlength="13"
+                           required>
+
+                </div>
+
+
+                <!-- PASSWORD -->
+
+                <div class="field">
+
+                    <label for="password">
+                        Password
+                    </label>
+
+
+                    <div class="password-wrap">
+
+                        <input type="password"
+                               id="password"
+                               placeholder="Create a strong password"
+                               autocomplete="new-password"
+                               maxlength="72"
+                               required>
+
+
+                        <button type="button"
+                                class="password-toggle"
+                                id="togglePassword">
+
+                            Show
+
+                        </button>
+
+                    </div>
+
+
+                    <!-- STRENGTH -->
+
+                    <div class="password-strength">
+
+                        <div class="strength-bar">
+
+                            <div id="strengthFill"
+                                 class="strength-fill">
+                            </div>
+
+                        </div>
+
+
+                        <span id="strengthText"
+                              class="strength-text">
+
+                        </span>
+
+                    </div>
+
+
+                    <!-- RULES -->
+
+                    <div class="password-rules">
+
+                        <p>
+                            Your password must contain:
+                        </p>
+
+                        <ul>
+
+                            <li id="ruleLength">
+                                At least 8 characters
+                            </li>
+
+                            <li id="ruleUppercase">
+                                One uppercase letter
+                            </li>
+
+                            <li id="ruleLowercase">
+                                One lowercase letter
+                            </li>
+
+                            <li id="ruleNumber">
+                                One number
+                            </li>
+
+                            <li id="ruleSpecial">
+                                One special character
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CONFIRM PASSWORD -->
+
+                <div class="field">
+
+                    <label for="confirmPassword">
+                        Confirm Password
+                    </label>
+
+
+                    <div class="password-wrap">
+
+                        <input type="password"
+                               id="confirmPassword"
+                               placeholder="Re-enter your password"
+                               autocomplete="new-password"
+                               maxlength="72"
+                               required>
+
+
+                        <button type="button"
+                                class="password-toggle"
+                                id="toggleConfirmPassword">
+
+                            Show
+
+                        </button>
+
+                    </div>
+
+
+                    <span id="passwordMatch"
+                          class="password-match">
+                    </span>
+
+                </div>
+
+
+                <!-- TERMS -->
+
+                <label class="terms">
+
+                    <input type="checkbox"
+                           id="terms"
+                           required>
+
+                    <span>
+
+                        I agree to the
+                        <a href="#"
+                           onclick="return false;">
+                            Terms and Conditions
+                        </a>
+                        and acknowledge the Privacy Policy.
+
+                    </span>
+
+                </label>
+
+
+                <!-- CREATE ACCOUNT -->
+
+                <button type="submit"
+                        class="login-button"
+                        id="signupButton">
+
+                    Create Account
+
+                </button>
+
+
+                <!-- INLINE MESSAGE -->
+
+                <p id="signupMessage"
+                   class="message">
+                </p>
+
+
+            </form>
+
+
+            <!-- LOGIN -->
+
+            <p class="signup-text"
+               style="margin-top: 20px;">
+
+                Already have an account?
+
+                <a href="login.html">
+                    Login
+                </a>
+
+            </p>
+
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        © 2026 KQ Event Styling. All Rights Reserved.
+
+    </footer>
+
+
+    <!-- ========================================
+         TOAST
+    ======================================== -->
+
+    <div id="toast"
+         class="toast">
+
+        <div id="toastIcon"
+             class="toast-icon">
+        </div>
+
+
+        <div class="toast-content">
+
+            <div id="toastTitle"
+                 class="toast-title">
+            </div>
+
+
+            <div id="toastMessage"
+                 class="toast-message">
+            </div>
+
+        </div>
+
+
+        <button type="button"
+                id="toastClose"
+                class="toast-close">
+
+            ×
+
+        </button>
+
+    </div>
+
+
+    <!-- ========================================
+         SUPABASE
+    ======================================== -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase-config.js"></script>
+
+    <script src="signup.js"></script>
+
+
+</body>
+
+</html>
