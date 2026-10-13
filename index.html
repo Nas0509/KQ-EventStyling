@@ -784,311 +784,187 @@
          BOOKING
     ========================== -->
 
-    <section class="section booking-section"
-             id="booking">
-
+    <section class="section booking-section" id="booking">
         <div class="wrap">
-
-
             <div class="section-heading">
-
-                <span class="badge">
-                    BOOK YOUR EVENT
-                </span>
-
-
-                <h2>
-
-                    Let's Plan Your
-
-                    <span>
-                        Perfect Event.
-                    </span>
-
-                </h2>
-
-
-                <p>
-                    Fill out the form below to request a booking.
-                </p>
-
+                <span class="badge">BOOK YOUR EVENT</span>
+                <h2>Let's Plan Your <span>Perfect Event.</span></h2>
+                <p>Share your event details below. Our team will review your request and confirm availability.</p>
             </div>
-
-
 
             <div class="form-card booking-card">
-
-
                 <form id="bookingForm">
-
-
-                    <!-- NAME + EMAIL -->
+                    <div class="booking-step-heading">
+                        <span class="booking-step-number">01</span>
+                        <div>
+                            <h3>Contact Information</h3>
+                            <p>Tell us how we can reach you.</p>
+                        </div>
+                    </div>
 
                     <div class="form-row">
-
-
                         <div class="field">
-
-                            <label for="fullName">
-                                Full Name
-                            </label>
-
-
-                            <input type="text"
-                                   id="fullName"
-                                   name="fullName"
-                                   placeholder="Enter your full name"
-                                   required>
-
+                            <label for="fullName">Full Name <span class="required-mark">*</span></label>
+                            <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" autocomplete="name" required>
                         </div>
-
-
-
                         <div class="field">
-
-                            <label for="email">
-                                Email Address
-                            </label>
-
-
-                            <input type="email"
-                                   id="email"
-                                   name="email"
-                                   placeholder="Enter your email"
-                                   required>
-
+                            <label for="email">Email Address <span class="required-mark">*</span></label>
+                            <input type="email" id="email" name="email" placeholder="Enter your email" autocomplete="email" required>
                         </div>
-
-
                     </div>
-
-
-
-                    <!-- PHONE + EVENT TYPE -->
-
-                    <div class="form-row">
-
-
-                        <div class="field">
-
-                            <label for="phone">
-                                Contact Number
-                            </label>
-
-
-                            <input type="tel"
-                                   id="phone"
-                                   name="phone"
-                                   placeholder="Contact Number"
-                                   required>
-
-                        </div>
-
-
-
-                        <div class="field">
-
-                            <label for="eventType">
-                                Event Type
-                            </label>
-
-
-                            <select id="eventType"
-                                    name="eventType"
-                                    required>
-
-                                <option value="">
-                                    Select event type
-                                </option>
-
-                                <option value="Birthday">
-                                    Birthday
-                                </option>
-
-                                <option value="Wedding">
-                                    Wedding
-                                </option>
-
-                                <option value="Debut">
-                                    Debut
-                                </option>
-
-                                <option value="Corporate Event">
-                                    Corporate Event
-                                </option>
-
-                                <option value="Other">
-                                    Other
-                                </option>
-
-                            </select>
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- DATE + GUESTS -->
-
-                    <div class="form-row">
-
-
-                        <div class="field">
-
-                            <label for="eventDate">
-                                Event Date
-                            </label>
-
-
-                            <input type="date"
-                                   id="eventDate"
-                                   name="eventDate"
-                                   required>
-
-                        </div>
-
-
-
-                        <div class="field">
-
-                            <label for="guests">
-                                Number of Guests
-                            </label>
-
-
-                            <input type="number"
-                                   id="guests"
-                                   name="guests"
-                                   min="1"
-                                   placeholder="Number of guests"
-                                   required>
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- TIME SECTION -->
-
-                    <div id="timeSection">
-
-
-                        <div class="form-row">
-
-
-                            <div class="field">
-
-                                <label for="timeSlot">
-                                    Time Preference
-                                </label>
-
-
-                                <select id="timeSlot"
-                                        name="timeSlot">
-
-                                    <option value="">
-                                        Select Time Preference
-                                    </option>
-
-                                    <option value="MORNING">
-                                        MORNING
-                                    </option>
-
-                                    <option value="AFTERNOON">
-                                        AFTERNOON
-                                    </option>
-
-                                    <option value="NIGHT/EVENING">
-                                        NIGHT/EVENING
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-
-                            <div class="field">
-
-                                <label for="startTime">
-                                    What time will the event start?
-                                </label>
-
-
-                                <input type="time"
-                                       id="startTime"
-                                       name="startTime">
-
-                            </div>
-
-
-                        </div>
-
-
-                    </div>
-
-
-
-                    <!-- ADDITIONAL DETAILS -->
 
                     <div class="field">
+                        <label for="phone">Contact Number <span class="required-mark">*</span></label>
+                        <input type="tel" id="phone" name="phone" placeholder="e.g. 09XX XXX XXXX" autocomplete="tel" required>
+                    </div>
 
-                        <label for="message">
-                            Additional Details
-                        </label>
+                    <div class="booking-divider"></div>
 
+                    <div class="booking-step-heading">
+                        <span class="booking-step-number">02</span>
+                        <div>
+                            <h3>Event Details</h3>
+                            <p>Help us understand the size and schedule of your celebration.</p>
+                        </div>
+                    </div>
 
-                        <textarea id="message"
-                                  name="message"
-                                  rows="5"
-                                  placeholder="Tell us about your event..."></textarea>
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="eventType">Event Type <span class="required-mark">*</span></label>
+                            <select id="eventType" name="eventType" required>
+                                <option value="">Select event type</option>
+                                <option value="Birthday">Birthday</option>
+                                <option value="Wedding">Wedding</option>
+                                <option value="Debut">Debut</option>
+                                <option value="Corporate Event">Corporate Event</option>
+                                <option value="Christening">Christening</option>
+                                <option value="Anniversary">Anniversary</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="eventScale">Event Scale <span class="required-mark">*</span></label>
+                            <select id="eventScale" name="eventScale" required>
+                                <option value="">Select event scale</option>
+                                <option value="Small">Small — intimate gathering</option>
+                                <option value="Medium">Medium — standard celebration</option>
+                                <option value="Large">Large — grand event</option>
+                            </select>
+                        </div>
+                    </div>
 
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="eventDate">Event Date <span class="required-mark">*</span></label>
+                            <input type="date" id="eventDate" name="eventDate" required>
+                        </div>
+                        <div class="field">
+                            <label for="guests">Estimated Number of Guests <span class="required-mark">*</span></label>
+                            <input type="number" id="guests" name="guests" min="1" step="1" placeholder="e.g. 50" required>
+                        </div>
                     </div>
 
 
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="startTimeDisplay">
+                                Event Start Time <span class="required-mark">*</span>
+                            </label>
 
-                    <!-- BOOKING NOTE -->
+                            <div class="clock-picker-wrap">
+                                <button type="button"
+                                        id="startTimeDisplay"
+                                        class="clock-time-display"
+                                        aria-haspopup="dialog"
+                                        aria-expanded="false">
+                                    <span id="selectedTimeText">Choose event time</span>
+                                    <span class="clock-icon">◷</span>
+                                </button>
+
+                                <input type="hidden"
+                                       id="startTime"
+                                       name="startTime"
+                                       required>
+
+                                <div id="clockPicker" class="clock-picker" hidden>
+                                    <div class="clock-picker-header">
+                                        <div class="clock-current-time">
+                                            <button type="button" id="clockHourText">12</button>
+                                            <span>:</span>
+                                            <button type="button" id="clockMinuteText">00</button>
+                                            <span id="clockPeriodText">PM</span>
+                                        </div>
+
+                                        <div class="clock-tabs">
+                                            <button type="button" id="clockHoursTab" class="active">Hour</button>
+                                            <button type="button" id="clockMinutesTab">Minute</button>
+                                        </div>
+                                    </div>
+
+                                    <div id="clockFace" class="clock-face"></div>
+
+                                    <div class="clock-footer">
+                                        <div class="clock-periods">
+                                            <button type="button" id="clockAM">AM</button>
+                                            <button type="button" id="clockPM" class="active">PM</button>
+                                        </div>
+
+                                        <button type="button" id="clockCancel">Cancel</button>
+                                        <button type="button" id="clockDone">Done</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="field">
+                        <label for="location">Event Venue / Complete Address <span class="required-mark">*</span></label>
+                        <input type="text" id="location" name="location" placeholder="House number, street, barangay, city" autocomplete="street-address" required>
+                        <small class="field-help">Enter the venue where the event styling and setup will take place.</small>
+                    </div>
+
+                    <div class="booking-divider"></div>
+
+                    <div class="booking-step-heading">
+                        <span class="booking-step-number">03</span>
+                        <div>
+                            <h3>Package & Styling Preferences</h3>
+                            <p>Choose a package above, then tell us more about your preferred setup.</p>
+                        </div>
+                    </div>
+
+                    <div class="booking-selected-package" id="bookingSelectedPackage">
+                        <span class="selected-package-icon" aria-hidden="true">🎁</span>
+                        <div>
+                            <strong>Package selection</strong>
+                            <p>Choose Basic, Elegant, or Grand from the Packages section above.</p>
+                        </div>
+                        <a href="#packages" class="selected-package-link">View packages</a>
+                    </div>
+
+                    <div class="field">
+                        <label for="message">Theme, Colors & Additional Requests</label>
+                        <textarea id="message" name="message" rows="5" placeholder="Example: pastel pink theme, preferred colors, backdrop ideas, venue notes, or special requests..."></textarea>
+                    </div>
 
                     <div class="booking-note">
-
-                        <strong>
-                            Note:
-                        </strong>
-
-                        Your booking request will be reviewed
-                        by KQ Event Styling.
-
+                        <strong>Before you submit</strong>
+                        <p>Your request will be reviewed by KQ Event Styling. The date is not confirmed until the team checks availability and approves your booking. Any applicable rush fee, travel fee, and down payment will be confirmed based on your event details.</p>
                     </div>
 
+                    <label class="terms-check" for="termsAccepted">
+                        <input type="checkbox" id="termsAccepted" name="termsAccepted" required>
+                        <span>I have read and agree to the booking terms and conditions. <span class="required-mark">*</span></span>
+                    </label>
 
-
-                    <!-- SUBMIT -->
-
-                    <button type="submit"
-                            class="btn btn-primary submit-button">
-
-                        Submit Booking Request
-
-                    </button>
-
-
+                    <button type="submit" class="btn btn-primary submit-button">Submit Booking Request</button>
+                    <p class="form-required-note"><span class="required-mark">*</span> Required fields</p>
                 </form>
-
             </div>
-
         </div>
-
     </section>
 
-
-
-    <!-- =========================
-         CONTACT
-    ========================== -->
 
     <section class="section"
              id="contact">
@@ -1361,12 +1237,5 @@
 
     <script src="user-auth.js"></script>
 
-
 </body>
-
-</html>
-
-
-</body>
-
 </html>

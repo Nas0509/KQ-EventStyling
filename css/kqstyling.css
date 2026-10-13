@@ -1553,3 +1553,619 @@ body.logout-modal-open {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+/* =========================================================
+   EXPANDED BOOKING FORM
+========================================================= */
+
+.booking-card {
+    max-width: 980px;
+}
+
+.booking-step-heading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 4px 0 24px;
+}
+
+.booking-step-number {
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    color: var(--sky-dark);
+    background: var(--sky-tint);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.booking-step-heading h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.booking-step-heading p {
+    margin: 3px 0 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+}
+
+.booking-divider {
+    height: 1px;
+    margin: 12px 0 30px;
+    background: var(--line);
+}
+
+.required-mark {
+    color: var(--danger);
+}
+
+.field-help {
+    display: block;
+    margin-top: 7px;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+#timeSection {
+    display: none;
+    margin-top: 4px;
+    transition: all 0.3s ease-in-out;
+}
+
+.booking-selected-package {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 24px;
+    padding: 17px;
+    border: 1px solid #cceaf8;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--sky-tint), #ffffff);
+}
+
+.selected-package-icon {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 1.35rem;
+}
+
+.booking-selected-package strong {
+    display: block;
+    color: var(--ink);
+}
+
+.booking-selected-package p {
+    margin: 3px 0 0;
+    color: var(--ink-soft);
+    font-size: 0.86rem;
+}
+
+.selected-package-link {
+    margin-left: auto;
+    color: var(--sky-dark);
+    font-size: 0.86rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+    .selected-package-link:hover {
+        text-decoration: underline;
+    }
+
+.booking-note p {
+    margin-top: 5px;
+    line-height: 1.6;
+}
+
+.terms-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    margin: 0 0 22px;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+    .terms-check input {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+        margin-top: 3px;
+        accent-color: var(--sky-deep);
+        cursor: pointer;
+    }
+
+.form-required-note {
+    margin-top: 12px;
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.submit-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@media (max-width: 550px) {
+    .booking-card {
+        padding: 25px 18px;
+    }
+
+    .booking-step-heading {
+        align-items: flex-start;
+        gap: 11px;
+    }
+
+    .booking-step-number {
+        flex-basis: 40px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+    }
+
+    .booking-selected-package {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    .selected-package-link {
+        width: 100%;
+        margin-left: 58px;
+    }
+}
+
+
+/* =========================================
+   KQ EVENT STYLING - ROUND CLOCK PICKER
+========================================= */
+
+.clock-field {
+    position: relative;
+}
+
+.clock-picker-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.clock-time-display {
+    width: 100%;
+    min-height: 58px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+    .clock-time-display:hover {
+        border-color: var(--sky);
+    }
+
+.clock-icon {
+    font-size: 25px;
+    color: var(--sky-dark);
+}
+
+.clock-picker[hidden] {
+    display: none !important;
+}
+
+.clock-picker {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 2000;
+    width: min(340px, 100%);
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 18px 45px rgba(23, 35, 45, 0.18);
+}
+
+.clock-picker-header {
+    margin-bottom: 18px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--sky-tint);
+    text-align: center;
+}
+
+.clock-current-time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    color: var(--sky-dark);
+    font-size: 30px;
+    font-weight: 800;
+}
+
+    .clock-current-time button {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+
+        .clock-current-time button:hover {
+            background: #d8f1fc;
+        }
+
+.clock-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+    .clock-tabs button,
+    .clock-periods button,
+    .clock-footer > button {
+        padding: 8px 13px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fff;
+        color: var(--ink);
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+        .clock-tabs button.active,
+        .clock-periods button.active {
+            border-color: var(--sky-deep);
+            background: var(--sky-deep);
+            color: #fff;
+        }
+
+/* The actual circular clock face */
+.clock-face {
+    position: relative;
+    width: min(250px, 100%);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 18px;
+    overflow: hidden;
+    border: 1px solid #d8f1fc;
+    border-radius: 50%;
+    background: #f1faff;
+    box-shadow: inset 0 0 0 5px #fff;
+}
+
+.clock-number {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .clock-number:hover,
+    .clock-number.selected {
+        background: var(--sky-deep);
+        color: #fff;
+    }
+
+.clock-hand {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 35%;
+    border-radius: 3px;
+    background: var(--sky-deep);
+    transform-origin: 50% 0;
+    pointer-events: none;
+}
+
+.clock-center {
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    transform: translate(-50%, -50%);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--sky-deep);
+    pointer-events: none;
+}
+
+.clock-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.clock-periods {
+    display: flex;
+    gap: 5px;
+    margin-right: auto;
+}
+
+#clockDone {
+    border-color: var(--sky-deep);
+    background: var(--sky-deep);
+    color: #fff;
+}
+
+    #clockCancel:hover,
+    #clockDone:hover {
+        filter: brightness(0.95);
+    }
+
+@media (max-width: 400px) {
+    .clock-picker {
+        padding: 12px;
+    }
+
+    .clock-face {
+        width: min(225px, 100%);
+    }
+}
+
+
+/* ========================================
+   ROUND CLOCK PICKER - FINAL STYLES
+======================================== */
+
+.clock-field {
+    position: relative;
+    width: 100%;
+}
+
+.clock-picker-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.clock-time-display {
+    width: 100%;
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #ffffff;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .clock-time-display:hover,
+    .clock-time-display:focus-visible {
+        border-color: var(--sky-deep);
+        box-shadow: 0 0 0 4px rgba(85, 184, 232, 0.15);
+        outline: none;
+    }
+
+.clock-picker[hidden] {
+    display: none !important;
+}
+
+.clock-picker {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 2000;
+    width: min(340px, 100%);
+    max-width: 100%;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 18px 45px rgba(23, 35, 45, 0.18);
+}
+
+.clock-picker-header {
+    margin-bottom: 18px;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--sky-tint);
+    text-align: center;
+}
+
+.clock-current-time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    color: var(--sky-dark);
+    font-size: 30px;
+    font-weight: 800;
+}
+
+    .clock-current-time button {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+    }
+
+.clock-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+    .clock-tabs button,
+    .clock-periods button,
+    .clock-footer > button {
+        padding: 8px 13px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #ffffff;
+        color: var(--ink);
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+        .clock-tabs button.active,
+        .clock-periods button.active {
+            border-color: var(--sky-deep);
+            background: var(--sky-deep);
+            color: #ffffff;
+        }
+
+.clock-face {
+    position: relative;
+    width: min(250px, 100%);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 18px;
+    border: 1px solid #d8f1fc;
+    border-radius: 50%;
+    background: #f1faff;
+    box-shadow: inset 0 0 0 5px #ffffff;
+}
+
+.clock-period-prompt {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--sky-deep);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.clock-number {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    transform: translate(-50%, -50%);
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .clock-number:hover,
+    .clock-number.selected {
+        background: var(--sky-deep);
+        color: #ffffff;
+    }
+
+.clock-hand {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 35%;
+    border-radius: 3px;
+    background: var(--sky-deep);
+    transform-origin: 50% 0;
+    pointer-events: none;
+}
+
+.clock-center {
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    transform: translate(-50%, -50%);
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: var(--sky-deep);
+    pointer-events: none;
+}
+
+.clock-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.clock-periods {
+    display: flex;
+    gap: 5px;
+    margin-right: auto;
+}
+
+#clockDone {
+    border-color: var(--sky-deep);
+    background: var(--sky-deep);
+    color: #ffffff;
+}
+
+    #clockCancel:hover,
+    #clockDone:hover {
+        filter: brightness(0.95);
+    }
+
+@media (max-width: 400px) {
+    .clock-picker {
+        padding: 12px;
+    }
+
+    .clock-face {
+        width: min(225px, 100%);
+    }
+
+    .clock-current-time {
+        font-size: 26px;
+    }
+}
