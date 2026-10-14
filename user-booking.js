@@ -15,6 +15,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     const eventDate = document.getElementById("eventDate");
     const timeSection = document.getElementById("timeSection");
     const startTime = document.getElementById("startTime");
+    const paymentReferenceInput = document.getElementById("paymentReference");
+    const packageAmountText = document.getElementById("packageAmount");
+    const reservationFeeText = document.getElementById("reservationFeeAmount");
+    const remainingBalanceText = document.getElementById("remainingBalanceAmount");
 
     const loginModal = document.getElementById("loginRequiredModal");
     const notNowBtn = document.getElementById("notNowBtn");
@@ -26,6 +30,38 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     let selectedPackage =
         sessionStorage.getItem("kqSelectedPackage") || "";
+
+    const pesoFormat = new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        maximumFractionDigits: 0
+    });
+
+    function getPackageAmount(packageName) {
+        const priceMatch = String(packageName || "").match(/₱\s*([\d,]+(?:\.\d+)?)/);
+        return priceMatch ? Number(priceMatch[1].replace(/,/g, "")) || 0 : 0;
+    }
+
+    // Supabase currently permits only SMALL / BIG for bookings.package_type.
+    // The site offers three display packages, so both upper tiers use BIG.
+    function getDatabasePackageType(packageName) {
+        const amount = getPackageAmount(packageName);
+        if (amount === 7500) return "SMALL";
+        if (amount === 10000 || amount === 15000) return "BIG";
+        return "";
+    }
+
+    function updateReservationPayment() {
+        const total = getPackageAmount(selectedPackage);
+        const fee = Math.round(total * 0.2);
+
+        if (packageAmountText) packageAmountText.textContent = total ? pesoFormat.format(total) : "Select a package";
+        if (reservationFeeText) reservationFeeText.textContent = total ? pesoFormat.format(fee) : "—";
+        if (remainingBalanceText) remainingBalanceText.textContent = total ? pesoFormat.format(total - fee) : "—";
+        if (paymentReferenceInput) paymentReferenceInput.disabled = !total;
+
+        return { total, fee };
+    }
 
     // ========================================
     // CHECK BOOKING FORM
@@ -51,6 +87,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             });
 
             button.classList.add("selected");
+            updateReservationPayment();
 
             console.log("📦 Selected package:", selectedPackage);
         });
@@ -59,6 +96,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             button.classList.add("selected");
         }
     });
+
+    updateReservationPayment();
 
     // ========================================
     // EVENT DATE MINIMUM
@@ -556,6 +595,9 @@ document.addEventListener("DOMContentLoaded", async function () {
                 ? startTime.value
                 : "";
 
+            const paymentReference = paymentReferenceInput?.value.trim() || "";
+            const termsAccepted = document.getElementById("termsAccepted")?.checked || false;
+
             const message =
                 document.getElementById("message")?.value.trim() || "";
 
@@ -585,6 +627,23 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             if (!selectedStartTime) {
                 throw new Error("Please select your event start time.");
+            }
+
+            if (!selectedPackage) {
+                throw new Error("Please select a package before submitting your booking.");
+            }
+
+            const databasePackageType = getDatabasePackageType(selectedPackage);
+            if (!databasePackageType) {
+                throw new Error("This package is not recognized. Please select one of the listed packages again.");
+            }
+
+            if (!paymentReference) {
+                throw new Error("Please pay the 20% reservation fee using the QR code and enter the transaction reference number.");
+            }
+
+            if (!termsAccepted) {
+                throw new Error("Please accept the booking terms and conditions.");
             }
 
             if (!guests || guests < 1) {
@@ -632,15 +691,10 @@ document.addEventListener("DOMContentLoaded", async function () {
             // CALCULATE PACKAGE AMOUNT
             // ========================================
 
-            let amount = 0;
+            const { total: amount, fee: reservationFee } = updateReservationPayment();
 
-            if (selectedPackage) {
-                const priceMatch = selectedPackage.match(/₱\s*([\d,]+(?:\.\d+)?)/);
-
-                if (priceMatch) {
-                    amount =
-                        Number(priceMatch[1].replace(/,/g, "")) || 0;
-                }
+            if (!amount || !reservationFee) {
+                throw new Error("The selected package price is missing. Please choose the package again.");
             }
 
             console.log("💰 Package:", selectedPackage);
@@ -694,16 +748,22 @@ document.addEventListener("DOMContentLoaded", async function () {
                 // Stored in 24-hour format, e.g. 17:20
                 start_time: selectedStartTime,
 
-                message: message,
+                message: [
+                    message,
+                    `Reservation fee payment reference (pending verification): ${paymentReference}`
+                ].filter(Boolean).join("\n\n"),
 
-                package:
-                    selectedPackage || "Not selected",
+                package_type: databasePackageType,
 
                 amount: amount,
+                required_down_payment: reservationFee,
+                down_payment_amount: 0,
+                terms_accepted: termsAccepted,
+                terms_accepted_at: new Date().toISOString(),
                 status: "PENDING"
             };
 
-            console.log("📦 Booking data:", bookingData);
+            console.log("📦 Submitting booking:", bookingId, "Reservation fee:", reservationFee);
 
             // ========================================
             // INSERT TO SUPABASE
@@ -734,6 +794,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             sessionStorage.removeItem("kqReturnAfterLogin");
 
             selectedPackage = "";
+            if (paymentReferenceInput) paymentReferenceInput.value = "";
+            updateReservationPayment();
 
             packageButtons.forEach(function (button) {
                 button.classList.remove("selected");

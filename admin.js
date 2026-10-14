@@ -9,7 +9,7 @@ const defaultInventory = [
     { id: 3, name: "LED Lights", category: "Lighting", quantity: 5, unit: "pcs", cost: 500, reorder: 5 }
 ];
 
-let bookings = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let bookings = [];
 let payments = JSON.parse(localStorage.getItem(PAYMENT_KEY) || "[]");
 let expenses = JSON.parse(localStorage.getItem(EXPENSE_KEY) || "[]");
 let inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null") || defaultInventory;
@@ -33,7 +33,75 @@ function syncPayments() {
     payments = payments.filter(p => bookings.some(b => b.id === p.bookingId));
     save();
 }
-syncPayments();
+// Bookings come from Supabase so submissions are shared across devices.
+function normalizeBooking(row) {
+    return {
+        ...row,
+        fullName: row.full_name || "",
+        eventType: row.event_type || "",
+        eventDate: row.event_date || "",
+        startTime: row.start_time || "",
+        timeSlot: row.time_slot || "",
+        package: row.package || row.package_type || "",
+        adminNotes: row.admin_notes || "",
+        createdAt: row.created_at || ""
+    };
+}
+
+async function loadBookings() {
+    const emptyState = document.getElementById("emptyBookings");
+    if (emptyState) emptyState.textContent = "Loading bookings...";
+
+    const { data, error } = await window.supabaseClient
+        .from("bookings")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        bookings = [];
+        renderAll();
+        if (emptyState) {
+            emptyState.textContent = "Unable to load bookings. Check your connection and Supabase admin access, then refresh.";
+            emptyState.style.display = "block";
+        }
+        console.error("Booking loading error:", error);
+        return;
+    }
+
+    bookings = (data || []).map(normalizeBooking);
+    syncPayments();
+    renderAll();
+}
+
+async function requireAdmin() {
+    if (!window.supabaseClient) {
+        alert("Supabase is not connected. Check supabase-config.js.");
+        window.location.replace("login.html");
+        return false;
+    }
+
+    const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+    if (sessionError || !session) {
+        window.location.replace("login.html");
+        return false;
+    }
+
+    const { data: profile, error } = await window.supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+    if (error || profile?.role !== "admin") {
+        await window.supabaseClient.auth.signOut();
+        window.location.replace("login.html");
+        return false;
+    }
+
+    const adminEmail = document.querySelector(".admin-user strong");
+    if (adminEmail) adminEmail.textContent = session.user.email || "Administrator";
+    return true;
+}
 
 function showSection(id) {
     document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
@@ -52,7 +120,10 @@ function showSection(id) {
 
 document.querySelectorAll(".nav-item").forEach(btn => btn.addEventListener("click", () => showSection(btn.dataset.section)));
 document.querySelectorAll("[data-section-jump]").forEach(btn => btn.addEventListener("click", () => showSection(btn.dataset.sectionJump)));
-document.getElementById("logoutBtn").addEventListener("click", () => { alert("Admin logout selected."); });
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+    if (window.supabaseClient) await window.supabaseClient.auth.signOut();
+    window.location.href = "login.html";
+});
 
 function renderDashboard() {
     const pending = bookings.filter(b => b.status === "PENDING").length;
@@ -88,7 +159,13 @@ function renderBookings() {
         const matches = !q || [b.fullName, b.email, b.eventType, b.package, b.id].join(" ").toLowerCase().includes(q);
         return matches && (f === "ALL" || b.status === f);
     }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    document.getElementById("emptyBookings").style.display = rows.length ? "none" : "block";
+    const emptyBookings = document.getElementById("emptyBookings");
+    emptyBookings.style.display = rows.length ? "none" : "block";
+    if (!rows.length) {
+        emptyBookings.textContent = bookings.length
+            ? "No bookings match the current search or status filter."
+            : "No bookings are visible to this admin account. If Supabase Table Editor shows records, apply the admin booking access policies.";
+    }
     document.getElementById("bookingTableBody").innerHTML = rows.map(b =>`
         <tr>
             <td><strong>${escapeHtml(b.fullName)}</strong><br><small>${escapeHtml(b.email)}</small></td>
@@ -109,9 +186,9 @@ function renderPayments() {
     const approved = bookings.filter(b => b.status === "APPROVED" || b.status === "CANCELLED");
     const contract = approved.reduce((s, b) => s + Number((payments.find(p => p.bookingId === b.id) || {}).total || b.amount || 0), 0);
     const collected = approved.reduce((s, b) => s + Number((payments.find(p => p.bookingId === b.id) || {}).paid || 0), 0);
-    document.getElementById("paymentContract").textContent = money(contract);
+    document.getElementById("paymentTotal").textContent = money(contract);
     document.getElementById("paymentCollected").textContent = money(collected);
-    document.getElementById("paymentBalance").textContent = money(contract - collected);
+    document.getElementById("paymentOutstanding").textContent = money(contract - collected);
     document.getElementById("emptyPayments").style.display = approved.length ? "none" : "block";
     document.getElementById("paymentTableBody").innerHTML = approved.map(b => {
         const p = payments.find(x => x.bookingId === b.id) || { total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" };
@@ -141,17 +218,23 @@ function renderInventory() {
 
 function renderAll() { renderDashboard(); renderBookings(); renderPayments(); renderSales(); renderInventory(); }
 
-function changeStatus(id, newStatus) {
+async function changeStatus(id, newStatus) {
     const b = bookings.find(x => x.id === id); if (!b) return;
+    const { error } = await window.supabaseClient
+        .from("bookings")
+        .update({ status: newStatus })
+        .eq("id", id);
+    if (error) { alert(`Unable to update booking status: ${error.message}`); return; }
     b.status = newStatus;
-    b.statusUpdatedAt = new Date().toISOString();
     if (newStatus === "APPROVED" && !payments.find(p => p.bookingId === id)) payments.push({ bookingId: id, total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" });
     save(); renderAll();
-    alert(`Booking ${id} is now ${newStatus}. The client view will show the updated status on the same browser/device.`);
+    alert(`Booking ${id} is now ${newStatus}.`);
 }
 
-function deleteBooking(id) {
+async function deleteBooking(id) {
     if (!confirm("Delete this cancelled booking?")) return;
+    const { error } = await window.supabaseClient.from("bookings").delete().eq("id", id);
+    if (error) { alert(`Unable to delete booking: ${error.message}`); return; }
     bookings = bookings.filter(b => b.id !== id); payments = payments.filter(p => p.bookingId !== id); save(); renderAll();
 }
 
@@ -171,10 +254,36 @@ function viewBooking(id) {
             <div class="modal-field"><label>Start Time</label><input value="${escapeAttr(b.startTime || "")}" readonly></div>
             <div class="modal-field"><label>Package</label><input value="${escapeAttr(b.package || "")}" readonly></div>
             <div class="modal-field"><label>Total Amount</label><input value="${money(b.amount)}" readonly></div>
+            <div class="modal-field"><label>20% Reservation Fee</label><input value="${money(b.required_down_payment)}" readonly></div>
+            <div class="modal-field"><label>Reservation Payment Received</label><input value="${money(b.down_payment_amount)}" readonly></div>
+            <div class="modal-field"><label>Payment Check</label><input value="${Number(b.down_payment_amount) >= Number(b.required_down_payment) && Number(b.required_down_payment) > 0 ? "VERIFIED" : "PENDING VERIFICATION"}" readonly></div>
             <div class="modal-field full"><label>Client Request</label><textarea readonly>${escapeHtml(b.message || "")}</textarea></div>
             <div class="modal-field full"><label>Admin Notes / Reminders</label><textarea id="adminNotes">${escapeHtml(b.adminNotes || "")}</textarea></div>
         </div>
-        <div class="modal-actions"><button class="btn primary" onclick="saveNotes('${b.id}')">Save Notes</button></div>`);
+        <div class="modal-actions">
+            ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? `<button class="btn primary" onclick="verifyReservationFee('${escapeAttr(b.id)}')">Mark 20% Fee Verified</button>` : ""}
+            <button class="btn primary" onclick="saveNotes('${escapeAttr(b.id)}')">Save Notes</button>
+        </div>
+        ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? '<small class="field-help">Only mark this after checking the transaction reference in your payment account.</small>' : ""}`);
+}
+
+async function verifyReservationFee(id) {
+    const booking = bookings.find(item => item.id === id);
+    if (!booking) return;
+    const fee = Number(booking.required_down_payment) || 0;
+    if (!fee) { alert("This booking has no reservation fee recorded."); return; }
+    if (!confirm(`Have you verified the client's payment? This will record ${money(fee)} as received.`)) return;
+
+    const { error } = await window.supabaseClient
+        .from("bookings")
+        .update({ down_payment_amount: fee })
+        .eq("id", id);
+    if (error) { alert(`Unable to record the verified payment: ${error.message}`); return; }
+
+    booking.down_payment_amount = fee;
+    save();
+    renderAll();
+    viewBooking(id);
 }
 
 function saveNotes(id) {
@@ -991,4 +1100,21 @@ renderAll = function () {
 // INITIAL QUOTATION LOAD
 // ========================================
 
-loadQuotationRequests();
+async function initializeAdmin() {
+    try {
+        if (!(await requireAdmin())) return;
+        await loadBookings();
+        await loadQuotationRequests();
+        // Refresh periodically so new customer submissions appear without a manual reload.
+        window.setInterval(loadBookings, 30000);
+    } catch (error) {
+        console.error("Admin initialization error:", error);
+        const emptyState = document.getElementById("emptyBookings");
+        if (emptyState) {
+            emptyState.textContent = "Unable to connect to the admin data. Please refresh and try again.";
+            emptyState.style.display = "block";
+        }
+    }
+}
+
+initializeAdmin();

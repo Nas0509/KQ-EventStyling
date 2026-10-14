@@ -1669,6 +1669,105 @@ body.logout-modal-open {
     line-height: 1.6;
 }
 
+.reservation-payment {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 24px;
+    align-items: center;
+    margin: 0 0 24px;
+    padding: 22px;
+    border: 1px solid #cceaf8;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f1faff, #ffffff);
+}
+
+.reservation-payment h3 {
+    margin: 8px 0;
+    color: var(--ink);
+}
+
+.reservation-payment-details > p {
+    margin: 0 0 14px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+}
+
+.reservation-totals {
+    margin: 0 0 16px;
+}
+
+.reservation-totals div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.reservation-totals dt {
+    color: var(--ink-soft);
+}
+
+.reservation-totals dd {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 700;
+    text-align: right;
+}
+
+.reservation-totals div:nth-child(2) dd {
+    color: var(--sky-dark);
+    font-size: 1.05rem;
+}
+
+.reservation-payment-details label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.reservation-payment-details input {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font: inherit;
+}
+
+.reservation-payment-details input:disabled {
+    background: #f3f6f8;
+    cursor: not-allowed;
+}
+
+.reservation-qr-card {
+    display: grid;
+    justify-items: center;
+    gap: 7px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    text-align: center;
+}
+
+.reservation-qr-card img {
+    display: block;
+    width: min(100%, 190px);
+    aspect-ratio: 1;
+    object-fit: contain;
+}
+
+.reservation-qr-card strong {
+    color: var(--ink);
+}
+
+.reservation-qr-card span {
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+}
+
 .terms-check {
     display: flex;
     align-items: flex-start;
@@ -1721,6 +1820,15 @@ body.logout-modal-open {
     .booking-selected-package {
         flex-wrap: wrap;
         align-items: flex-start;
+    }
+
+    .reservation-payment {
+        grid-template-columns: 1fr;
+        padding: 18px;
+    }
+
+    .reservation-qr-card img {
+        width: min(100%, 220px);
     }
 
     .selected-package-link {
@@ -2139,7 +2247,7 @@ body.logout-modal-open {
     border-top: 1px solid var(--line);
 }
 
-.clock-periods {
+.clock-periods {g
     display: flex;
     gap: 5px;
     margin-right: auto;

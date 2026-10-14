@@ -14,7 +14,7 @@
           content="KQ Event Styling provides elegant and personalized event styling and decoration services in Caloocan">
 
     <link rel="stylesheet"
-          href="css/kqstyling.css">
+          href="css/kqstyling.css?v=20261013-reservation-fee">
 
     <style>
 
@@ -943,6 +943,27 @@
                         <a href="#packages" class="selected-package-link">View packages</a>
                     </div>
 
+                    <section class="reservation-payment" id="reservationPayment" aria-labelledby="reservationPaymentTitle">
+                        <div class="reservation-payment-details">
+                            <span class="badge">SECURE YOUR EVENT DATE</span>
+                            <h3 id="reservationPaymentTitle">20% Reservation Fee</h3>
+                            <p>Scan the InstaPay QR with your bank or e-wallet, then enter the transaction reference number below.</p>
+                            <dl class="reservation-totals">
+                                <div><dt>Package total</dt><dd id="packageAmount">Select a package</dd></div>
+                                <div><dt>Reservation fee (20%)</dt><dd id="reservationFeeAmount">—</dd></div>
+                                <div><dt>Remaining balance</dt><dd id="remainingBalanceAmount">—</dd></div>
+                            </dl>
+                            <label for="paymentReference">Payment transaction/reference number <span class="required-mark">*</span></label>
+                            <input type="text" id="paymentReference" name="paymentReference" maxlength="100" placeholder="Enter the reference shown by your payment app" autocomplete="off" required disabled>
+                            <small class="field-help">Your reservation fee will remain pending until KQ Event Styling verifies the transfer. Confirm the recipient name in your payment app before sending.</small>
+                        </div>
+                        <div class="reservation-qr-card">
+                            <img src="gcash-qr.png" alt="InstaPay QR code for KQ Event Styling reservation payments">
+                            <strong>Scan to pay</strong>
+                            <span>Use your bank or e-wallet app</span>
+                        </div>
+                    </section>
+
                     <div class="field">
                         <label for="message">Theme, Colors & Additional Requests</label>
                         <textarea id="message" name="message" rows="5" placeholder="Example: pastel pink theme, preferred colors, backdrop ideas, venue notes, or special requests..."></textarea>
@@ -950,7 +971,7 @@
 
                     <div class="booking-note">
                         <strong>Before you submit</strong>
-                        <p>Your request will be reviewed by KQ Event Styling. The date is not confirmed until the team checks availability and approves your booking. Any applicable rush fee, travel fee, and down payment will be confirmed based on your event details.</p>
+                        <p>Your request and reservation payment will be reviewed by KQ Event Styling. A QR transfer is not confirmed automatically; your event date is reserved only after the team verifies the payment and approves availability.</p>
                     </div>
 
                     <label class="terms-check" for="termsAccepted">
@@ -1233,7 +1254,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="user-booking.js"></script>
+    <script src="user-booking.js?v=20261014-small-big-package-fix"></script>
 
     <script src="user-auth.js"></script>
 
