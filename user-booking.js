@@ -103,16 +103,203 @@ document.addEventListener("DOMContentLoaded", async function () {
     // EVENT DATE MINIMUM
     // ========================================
 
-    if (eventDate) {
-        const today = new Date();
-        const localToday = [
-            today.getFullYear(),
-            String(today.getMonth() + 1).padStart(2, "0"),
-            String(today.getDate()).padStart(2, "0")
-        ].join("-");
-
-        eventDate.min = localToday;
+    const calendarMonthLabel = document.getElementById("calendarMonthLabel");
+    const calendarDays = document.getElementById("calendarDays");
+    const calendarHelp = document.getElementById("calendarHelp");
+    const calendarPrevious = document.getElementById("calendarPrevious");
+    const calendarNext = document.getElementById("calendarNext");
+    const bookingTimeSlots = document.getElementById("bookingTimeSlots");
+    const timeSlotInput = document.getElementById("timeSlot");
+    const slotButtons = Array.from(document.querySelectorAll(".time-slot-option"));
+    const today = new Date();
+    const localToday = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0")
+    ].join("-");
+    const displayedMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (eventDate?.value) {
+        const restoredDateParts = eventDate.value.split("-").map(Number);
+        if (restoredDateParts.length === 3 && restoredDateParts.every(Number.isFinite)) {
+            displayedMonth.setFullYear(restoredDateParts[0], restoredDateParts[1] - 1, 1);
+        }
     }
+    let availabilityByDate = new Map();
+    let availabilityLoaded = false;
+    let selectedTimeSlot = "";
+
+    if (eventDate) eventDate.min = localToday;
+
+    function dateToLocalIso(year, monthIndex, day) {
+        return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+
+    function getSlotForTime(value) {
+        const match = String(value || "").match(/^(\d{1,2}):(\d{2})/);
+        if (!match) return "";
+        const minutes = Number(match[1]) * 60 + Number(match[2]);
+        if (minutes >= 360 && minutes < 720) return "MORNING";
+        if (minutes >= 720 && minutes < 1080) return "AFTERNOON";
+        if (minutes >= 1080 && minutes < 1440) return "NIGHT";
+        return "";
+    }
+
+    function slotLabel(slot) {
+        return ({ MORNING: "Morning", AFTERNOON: "Afternoon", NIGHT: "Night" })[slot] || "";
+    }
+
+    function updateSelectedDateSlots() {
+        if (!bookingTimeSlots || !eventDate?.value) {
+            if (bookingTimeSlots) bookingTimeSlots.hidden = true;
+            return;
+        }
+
+        const availability = availabilityByDate.get(eventDate.value);
+        if (!availability || !availabilityLoaded) {
+            bookingTimeSlots.hidden = true;
+            return;
+        }
+
+        bookingTimeSlots.hidden = false;
+        slotButtons.forEach(button => {
+            const slot = button.dataset.slot;
+            const taken = Boolean(availability[slot]);
+            const status = button.querySelector("small");
+            button.disabled = taken;
+            button.classList.toggle("selected", selectedTimeSlot === slot);
+            if (status) status.textContent = taken ? "Already booked" : "Available";
+        });
+    }
+
+    function renderBookingCalendar() {
+        if (!calendarMonthLabel || !calendarDays) return;
+        const year = displayedMonth.getFullYear();
+        const month = displayedMonth.getMonth();
+        calendarMonthLabel.textContent = new Intl.DateTimeFormat("en", {
+            month: "long", year: "numeric"
+        }).format(displayedMonth);
+        calendarDays.innerHTML = "";
+
+        const firstWeekday = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let blank = 0; blank < firstWeekday; blank++) {
+            const empty = document.createElement("span");
+            empty.className = "booking-calendar-day outside-month";
+            empty.setAttribute("aria-hidden", "true");
+            calendarDays.appendChild(empty);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const iso = dateToLocalIso(year, month, day);
+            const date = new Date(year, month, day);
+            const data = availabilityByDate.get(iso);
+            const isFull = data && data.MORNING && data.AFTERNOON && data.NIGHT;
+            const past = iso < localToday;
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "booking-calendar-day";
+            button.textContent = String(day);
+            button.setAttribute("role", "gridcell");
+            button.setAttribute("aria-label", `${new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(date)}${isFull ? ", fully booked" : data && (data.MORNING || data.AFTERNOON || data.NIGHT) ? ", some time slots taken" : ", all time slots available"}`);
+            if (data && !isFull && (data.MORNING || data.AFTERNOON || data.NIGHT)) button.classList.add("partial");
+            if (isFull) button.classList.add("full");
+            if (eventDate?.value === iso) button.classList.add("selected");
+            button.disabled = past || !availabilityLoaded || !data || isFull;
+            button.addEventListener("click", () => {
+                if (!eventDate) return;
+                eventDate.value = iso;
+                selectedTimeSlot = "";
+                if (timeSlotInput) timeSlotInput.value = "";
+                if (startTime) startTime.value = "";
+                if (selectedTimeText) selectedTimeText.textContent = "Choose event time";
+                renderBookingCalendar();
+                updateSelectedDateSlots();
+                if (calendarHelp) {
+                    calendarHelp.textContent = `${new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(date)} selected. Choose one available time slot.`;
+                }
+            });
+            calendarDays.appendChild(button);
+        }
+    }
+
+    async function loadAvailabilityForMonth() {
+        if (!calendarDays || !window.supabaseClient) {
+            availabilityLoaded = false;
+            if (calendarHelp) calendarHelp.textContent = "Calendar availability is unavailable. Please refresh or try again later.";
+            renderBookingCalendar();
+            return;
+        }
+
+        availabilityLoaded = false;
+        if (calendarHelp) calendarHelp.textContent = "Loading date availability…";
+        renderBookingCalendar();
+        const start = dateToLocalIso(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
+        const end = dateToLocalIso(
+            displayedMonth.getFullYear(),
+            displayedMonth.getMonth(),
+            new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 0).getDate()
+        );
+        const { data, error } = await window.supabaseClient.rpc("kq_booking_slot_availability", {
+            p_start_date: start,
+            p_end_date: end
+        });
+
+        if (error) {
+            console.error("Booking calendar availability error:", error);
+            availabilityLoaded = false;
+            if (calendarHelp) calendarHelp.textContent = "Availability setup is not active yet. Run booking-slot-availability.sql in the Supabase SQL Editor, then refresh.";
+            renderBookingCalendar();
+            updateSelectedDateSlots();
+            return;
+        }
+
+        availabilityByDate = new Map((data || []).map(row => [row.event_date, {
+            MORNING: Boolean(row.morning_booked),
+            AFTERNOON: Boolean(row.afternoon_booked),
+            NIGHT: Boolean(row.night_booked)
+        }]));
+        availabilityLoaded = true;
+        renderBookingCalendar();
+        updateSelectedDateSlots();
+        if (calendarHelp && !eventDate?.value) calendarHelp.textContent = "Colors show admin-approved bookings only. Pending requests do not take a slot.";
+        if (eventDate?.value && calendarHelp) {
+            calendarHelp.textContent = `${eventDate.value} selected. Choose one available time slot.`;
+        }
+    }
+
+    calendarPrevious?.addEventListener("click", () => {
+        if (displayedMonth.getFullYear() === today.getFullYear() && displayedMonth.getMonth() === today.getMonth()) return;
+        displayedMonth.setMonth(displayedMonth.getMonth() - 1);
+        loadAvailabilityForMonth();
+    });
+    calendarNext?.addEventListener("click", () => {
+        displayedMonth.setMonth(displayedMonth.getMonth() + 1);
+        loadAvailabilityForMonth();
+    });
+
+    slotButtons.forEach(button => button.addEventListener("click", () => {
+        if (button.disabled) return;
+        selectedTimeSlot = button.dataset.slot || "";
+        if (timeSlotInput) timeSlotInput.value = selectedTimeSlot;
+        if (startTime && getSlotForTime(startTime.value) !== selectedTimeSlot) startTime.value = "";
+        if (selectedTimeText && !startTime?.value) selectedTimeText.textContent = `Choose a time in the ${slotLabel(selectedTimeSlot)} slot`;
+        updateSelectedDateSlots();
+    }));
+
+    renderBookingCalendar();
+    loadAvailabilityForMonth().then(() => {
+        if (eventDate?.value) {
+            const restoredSlot = timeSlotInput?.value || "";
+            selectedTimeSlot = restoredSlot;
+            updateSelectedDateSlots();
+        }
+    });
+    document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) loadAvailabilityForMonth();
+    });
+    window.setInterval(() => {
+        if (!document.hidden) loadAvailabilityForMonth();
+    }, 30000);
 
     // ========================================
     // LOGIN REQUIRED MODAL
@@ -354,6 +541,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     function openClock() {
         if (!clockPicker || !timeDisplay || !startTime) return;
 
+        if (!eventDate?.value) {
+            alert("Please choose an event date first.");
+            return;
+        }
+        if (!selectedTimeSlot) {
+            alert("Please choose an available time slot first.");
+            return;
+        }
+
         if (startTime.value) {
             const parts = startTime.value.split(":");
             const totalHour = Number(parts[0]);
@@ -361,6 +557,18 @@ document.addEventListener("DOMContentLoaded", async function () {
             clockHour = totalHour % 12 || 12;
             clockMinute = Number(parts[1]) || 0;
             clockPeriod = totalHour >= 12 ? "PM" : "AM";
+        } else {
+            clockMinute = 0;
+            if (selectedTimeSlot === "MORNING") {
+                clockHour = 9;
+                clockPeriod = "AM";
+            } else if (selectedTimeSlot === "AFTERNOON") {
+                clockHour = 2;
+                clockPeriod = "PM";
+            } else {
+                clockHour = 8;
+                clockPeriod = "PM";
+            }
         }
 
         clockMode = "hour";
@@ -423,6 +631,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             if (clockPeriod === "PM") {
                 hour24 += 12;
+            }
+
+            const proposedTime = `${String(hour24).padStart(2, "0")}:${String(clockMinute).padStart(2, "0")}`;
+            if (getSlotForTime(proposedTime) !== selectedTimeSlot) {
+                alert(`Choose a time within the ${slotLabel(selectedTimeSlot)} slot shown on the form.`);
+                return;
             }
 
             const formattedHour = String(hour24).padStart(2, "0");
@@ -629,6 +843,10 @@ document.addEventListener("DOMContentLoaded", async function () {
                 throw new Error("Please select your event start time.");
             }
 
+            if (!selectedTimeSlot || getSlotForTime(selectedStartTime) !== selectedTimeSlot) {
+                throw new Error("Please choose an available time slot and a start time within that slot.");
+            }
+
             if (!selectedPackage) {
                 throw new Error("Please select a package before submitting your booking.");
             }
@@ -644,6 +862,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             if (!termsAccepted) {
                 throw new Error("Please accept the booking terms and conditions.");
+            }
+
+            const designImageFile = window.kqDesignImageFile || null;
+            const designEstimate = window.kqDesignEstimate || null;
+            if (designImageFile && !designEstimate) {
+                throw new Error("Please run the design estimate first, or remove the image before submitting.");
             }
 
             if (!guests || guests < 1) {
@@ -724,6 +948,20 @@ document.addEventListener("DOMContentLoaded", async function () {
             const bookingId =
                 "KQ-" + crypto.randomUUID().replace(/-/g, "").substring(0, 12);
 
+            let designImagePath = null;
+            if (designImageFile && designEstimate) {
+                const extensionByType = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+                const extension = extensionByType[designImageFile.type];
+                if (!extension || designImageFile.size > 10 * 1024 * 1024) {
+                    throw new Error("The design image must be a JPG, PNG, or WebP file up to 10 MB.");
+                }
+                designImagePath = `${user.id}/${bookingId}.${extension}`;
+                const { error: uploadError } = await window.supabaseClient.storage
+                    .from("booking-designs")
+                    .upload(designImagePath, designImageFile, { contentType: designImageFile.type, upsert: false });
+                if (uploadError) throw new Error(`The design image could not be saved: ${uploadError.message}`);
+            }
+
             // ========================================
             // BOOKING DATA
             // ========================================
@@ -747,6 +985,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
                 // Stored in 24-hour format, e.g. 17:20
                 start_time: selectedStartTime,
+                time_slot: selectedTimeSlot,
 
                 message: [
                     message,
@@ -758,6 +997,11 @@ document.addEventListener("DOMContentLoaded", async function () {
                 amount: amount,
                 required_down_payment: reservationFee,
                 down_payment_amount: 0,
+                design_image_path: designImagePath,
+                ai_estimated_package: designEstimate?.package || null,
+                ai_estimated_price: designEstimate?.price || null,
+                ai_detected_features: designEstimate?.features || [],
+                ai_estimate_explanation: designEstimate?.explanation || null,
                 terms_accepted: termsAccepted,
                 terms_accepted_at: new Date().toISOString(),
                 status: "PENDING"
@@ -780,10 +1024,16 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             if (bookingError) {
                 console.error("❌ Supabase booking error:", bookingError);
+                if (designImagePath) {
+                    await window.supabaseClient.storage.from("booking-designs").remove([designImagePath]);
+                }
                 throw bookingError;
             }
 
             console.log("✅ BOOKING CREATED:", booking);
+
+            // Refresh the calendar after the server has reserved this date and slot.
+            await loadAvailabilityForMonth();
 
             // ========================================
             // CLEAR SAVED DATA
@@ -796,6 +1046,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             selectedPackage = "";
             if (paymentReferenceInput) paymentReferenceInput.value = "";
             updateReservationPayment();
+            document.getElementById("removeDesignImage")?.click();
 
             packageButtons.forEach(function (button) {
                 button.classList.remove("selected");
@@ -806,6 +1057,12 @@ document.addEventListener("DOMContentLoaded", async function () {
             // ========================================
 
             bookingForm.reset();
+            selectedTimeSlot = "";
+            if (eventDate) eventDate.value = "";
+            if (timeSlotInput) timeSlotInput.value = "";
+            if (bookingTimeSlots) bookingTimeSlots.hidden = true;
+            if (calendarHelp) calendarHelp.textContent = "Colors show admin-approved bookings only. Pending requests do not take a slot.";
+            renderBookingCalendar();
 
             if (timeSection) {
                 timeSection.style.display = "none";

@@ -14,7 +14,7 @@
           content="KQ Event Styling provides elegant and personalized event styling and decoration services in Caloocan">
 
     <link rel="stylesheet"
-          href="css/kqstyling.css?v=20261013-reservation-fee">
+          href="css/kqstyling.css?v=20261014-color-booking-calendar">
 
     <style>
 
@@ -855,8 +855,40 @@
 
                     <div class="form-row">
                         <div class="field">
-                            <label for="eventDate">Event Date <span class="required-mark">*</span></label>
-                            <input type="date" id="eventDate" name="eventDate" required>
+                            <label id="eventDateLabel">Event Date <span class="required-mark">*</span></label>
+                            <input type="hidden" id="eventDate" name="eventDate">
+                            <div class="booking-calendar" id="bookingCalendar" role="group" aria-labelledby="eventDateLabel">
+                                <div class="booking-calendar-header">
+                                    <button type="button" id="calendarPrevious" aria-label="Previous month">‹</button>
+                                    <strong id="calendarMonthLabel" aria-live="polite"></strong>
+                                    <button type="button" id="calendarNext" aria-label="Next month">›</button>
+                                </div>
+                                <div class="booking-calendar-grid booking-calendar-weekdays" aria-hidden="true">
+                                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                                </div>
+                                <div class="booking-calendar-grid" id="calendarDays" role="grid" aria-label="Calendar dates"></div>
+                                <div class="booking-calendar-legend" aria-label="Availability legend">
+                                    <span><i class="available"></i> All slots open</span>
+                                    <span><i class="partial"></i> Some slots taken</span>
+                                    <span><i class="full"></i> Fully booked</span>
+                                </div>
+                                <p class="calendar-help" id="calendarHelp" aria-live="polite">A slot is marked booked only after admin approval. Pending requests do not take the slot.</p>
+                            </div>
+                            <div class="booking-time-slots" id="bookingTimeSlots" hidden>
+                                <p class="time-slot-prompt" id="timeSlotPrompt">Choose an available time slot:</p>
+                                <div class="time-slot-options">
+                                    <button type="button" class="time-slot-option" data-slot="MORNING">
+                                        <strong>Morning</strong><span>6:00 AM–11:55 AM</span><small></small>
+                                    </button>
+                                    <button type="button" class="time-slot-option" data-slot="AFTERNOON">
+                                        <strong>Afternoon</strong><span>12:00 PM–5:55 PM</span><small></small>
+                                    </button>
+                                    <button type="button" class="time-slot-option" data-slot="NIGHT">
+                                        <strong>Night</strong><span>6:00 PM–11:55 PM</span><small></small>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="timeSlot" name="timeSlot">
+                            </div>
                         </div>
                         <div class="field">
                             <label for="guests">Estimated Number of Guests <span class="required-mark">*</span></label>
@@ -942,6 +974,41 @@
                         </div>
                         <a href="#packages" class="selected-package-link">View packages</a>
                     </div>
+
+                    <section class="design-estimator" aria-labelledby="designEstimatorTitle">
+                        <div class="design-estimator-heading">
+                            <span class="design-estimator-icon" aria-hidden="true">✦</span>
+                            <div>
+                                <span class="design-estimator-kicker">AI DESIGN ESTIMATE</span>
+                                <h3 id="designEstimatorTitle">Have a design in mind?</h3>
+                                <p>Upload a reference image to see which KQ package may fit the design.</p>
+                            </div>
+                        </div>
+                        <label class="design-upload-area" for="designImageInput">
+                            <span aria-hidden="true">＋</span>
+                            <strong>Choose a design image</strong>
+                            <small>JPG, PNG, or WebP · up to 10 MB</small>
+                        </label>
+                        <input id="designImageInput" class="design-image-input" type="file" accept="image/jpeg,image/png,image/webp">
+                        <div class="design-image-preview" id="designImagePreview" hidden>
+                            <img id="designPreviewImage" alt="Preview of uploaded event design">
+                            <div class="design-image-meta">
+                                <strong id="designImageName"></strong>
+                                <span id="designImageSize"></span>
+                            </div>
+                            <button type="button" id="removeDesignImage" class="design-remove-button">Remove</button>
+                        </div>
+                        <button type="button" id="analyzeDesignButton" class="design-estimate-button" disabled>Estimate from this image</button>
+                        <p class="design-estimate-status" id="designEstimateStatus" aria-live="polite">OpenAI will analyze this image to prepare an estimate. If you submit a booking, KQ admins can review the image.</p>
+                        <div class="design-estimate-result" id="designEstimateResult" hidden aria-live="polite">
+                            <span class="design-result-label">Suggested package</span>
+                            <strong id="designSuggestedPackage"></strong>
+                            <p id="designEstimatedPrice"></p>
+                            <ul id="designDetectedFeatures"></ul>
+                            <small>AI estimate only. Final price depends on venue measurements, materials, and KQ Event Styling's review.</small>
+                            <small>The estimate does not select a package or change your reservation fee. Choose the package you want in the cards above.</small>
+                        </div>
+                    </section>
 
                     <section class="reservation-payment" id="reservationPayment" aria-labelledby="reservationPaymentTitle">
                         <div class="reservation-payment-details">
@@ -1254,7 +1321,8 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="user-booking.js?v=20261014-small-big-package-fix"></script>
+    <script src="user-booking.js?v=20261014-design-image-booking"></script>
+    <script src="design-estimator.js?v=20261014-design-estimator-v1"></script>
 
     <script src="user-auth.js"></script>
 

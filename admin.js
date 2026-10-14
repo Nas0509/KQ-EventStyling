@@ -238,7 +238,7 @@ async function deleteBooking(id) {
     bookings = bookings.filter(b => b.id !== id); payments = payments.filter(p => p.bookingId !== id); save(); renderAll();
 }
 
-function viewBooking(id) {
+async function viewBooking(id) {
     const b = bookings.find(x => x.id === id); if (!b) return;
     openModal(`<h3>Booking Details</h3>
         <div class="modal-grid">
@@ -257,6 +257,9 @@ function viewBooking(id) {
             <div class="modal-field"><label>20% Reservation Fee</label><input value="${money(b.required_down_payment)}" readonly></div>
             <div class="modal-field"><label>Reservation Payment Received</label><input value="${money(b.down_payment_amount)}" readonly></div>
             <div class="modal-field"><label>Payment Check</label><input value="${Number(b.down_payment_amount) >= Number(b.required_down_payment) && Number(b.required_down_payment) > 0 ? "VERIFIED" : "PENDING VERIFICATION"}" readonly></div>
+            ${b.ai_estimated_package ? `<div class="modal-field"><label>AI Suggested Package</label><input value="${escapeAttr(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}" readonly></div>` : ""}
+            ${b.design_image_path ? `<div class="modal-field full"><label>Customer Design Reference</label><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></div>` : ""}
+            ${Array.isArray(b.ai_detected_features) && b.ai_detected_features.length ? `<div class="modal-field full"><label>AI Estimate Notes</label><p>${escapeHtml(b.ai_estimate_explanation || "Estimated from the visible design features.")}</p><ul class="admin-design-features">${b.ai_detected_features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}</ul><small class="field-help">AI estimate only; confirm final package and price with the customer.</small></div>` : ""}
             <div class="modal-field full"><label>Client Request</label><textarea readonly>${escapeHtml(b.message || "")}</textarea></div>
             <div class="modal-field full"><label>Admin Notes / Reminders</label><textarea id="adminNotes">${escapeHtml(b.adminNotes || "")}</textarea></div>
         </div>
@@ -265,6 +268,21 @@ function viewBooking(id) {
             <button class="btn primary" onclick="saveNotes('${escapeAttr(b.id)}')">Save Notes</button>
         </div>
         ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? '<small class="field-help">Only mark this after checking the transaction reference in your payment account.</small>' : ""}`);
+
+    if (b.design_image_path) {
+        const { data, error } = await window.supabaseClient.storage
+            .from("booking-designs")
+            .createSignedUrl(b.design_image_path, 60 * 10);
+        const image = document.getElementById("adminDesignImage");
+        const imageStatus = document.getElementById("adminDesignImageStatus");
+        if (error || !data?.signedUrl || !image || !imageStatus) {
+            if (imageStatus) imageStatus.textContent = "The private design image could not be opened. Check the Supabase storage policies.";
+        } else {
+            image.src = data.signedUrl;
+            image.hidden = false;
+            imageStatus.remove();
+        }
+    }
 }
 
 async function verifyReservationFee(id) {

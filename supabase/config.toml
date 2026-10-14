@@ -1,0 +1,4 @@
+project_id = "byllwuyybldobxiixzvx"
+
+[functions.estimate-event-design]
+verify_jwt = true

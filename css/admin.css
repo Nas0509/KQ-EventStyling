@@ -1224,3 +1224,5 @@ tbody tr:hover {
         padding: 18px;
     }
 }
+.admin-design-preview { display: block; width: 100%; max-height: 520px; margin-top: 8px; object-fit: contain; border: 1px solid #dce7ed; border-radius: 12px; background: #f7fafc; }
+.admin-design-features { margin: 8px 0 0 18px; color: #66747e; }
