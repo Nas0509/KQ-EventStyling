@@ -13,7 +13,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=4">
+          href="css/admin.css?v=9-booking-calendar-layout">
 
 </head>
 
@@ -55,7 +55,7 @@
             <button type="button"
                     class="nav-item"
                     data-section="quotations">
-                📝 Quotations
+                🔎 Ocular Inspections
             </button>
 
 
@@ -528,16 +528,16 @@
                 <div>
 
                     <span class="badge">
-                        QUOTATION MANAGEMENT
+                        OCULAR INSPECTION MANAGEMENT
                     </span>
 
                     <h2>
-                        Styling Quotation Requests
+                        Ocular Inspection Requests
                     </h2>
 
                     <p>
                         Review customer styling preferences
-                        and quotation requests.
+                        and inspection requests.
                     </p>
 
                 </div>
@@ -551,7 +551,7 @@
 
                 <input id="quotationSearch"
                        type="search"
-                       placeholder="Search customer, package, event, or theme...">
+                       placeholder="Search name, contact, venue, location, or payment reference...">
 
 
                 <select id="quotationStatusFilter">
@@ -602,31 +602,31 @@
                             <tr>
 
                                 <th>
+                                    Request ID
+                                </th>
+
+                                <th>
                                     Customer
                                 </th>
 
                                 <th>
-                                    Event
+                                    Request / Schedule
                                 </th>
 
                                 <th>
-                                    Package
+                                    Venue
                                 </th>
 
                                 <th>
-                                    Price
+                                    Inspection Fee
                                 </th>
 
                                 <th>
-                                    Theme
+                                    Location
                                 </th>
 
                                 <th>
-                                    Color
-                                </th>
-
-                                <th>
-                                    Status
+                                    Payment Reference
                                 </th>
 
                                 <th>
@@ -648,7 +648,7 @@
 
                 <div id="emptyQuotations"
                      class="empty-state">
-                    No quotation requests yet.
+                    No ocular inspection requests yet.
                 </div>
 
             </div>
@@ -1076,7 +1076,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="admin.js?v=20261014-design-reference-review"></script>
+    <script src="admin.js?v=20261015-booking-calendar-layout"></script>
 
 
 </body>

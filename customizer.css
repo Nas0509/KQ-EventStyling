@@ -1329,3 +1329,149 @@ body.quotation-modal-open {
         padding: 30px 22px;
     }
 }
+/* Free design upload and package matcher */
+.moodboard-estimator {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #cceaf8;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #f3fbff, #fff 72%);
+}
+.moodboard-heading { display: flex; gap: 12px; margin-bottom: 15px; }
+.moodboard-heading > span { display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #d8f1fc; color: #167cae; font-size: 1.25rem; }
+.moodboard-kicker { color: #167cae; font-size: .7rem; font-weight: 800; letter-spacing: .12em; }
+.moodboard-heading h3 { margin: 3px 0; color: #17232d; }
+.moodboard-heading p, .moodboard-status { margin: 0; color: #66747e; font-size: .85rem; line-height: 1.5; }
+.moodboard-upload { display: grid; min-height: 86px; place-content: center; justify-items: center; gap: 5px; border: 1.5px dashed #9dcfe5; border-radius: 12px; background: #fff; color: #17232d; cursor: pointer; text-align: center; }
+.moodboard-upload:hover { border-color: #167cae; background: #fafdff; }
+.moodboard-upload small { color: #66747e; }
+.moodboard-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; }
+.moodboard-preview { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; align-items: center; gap: 11px; margin-top: 10px; padding: 9px; border: 1px solid #dce7ed; border-radius: 11px; background: #fff; }
+.moodboard-preview[hidden], .moodboard-result[hidden] { display: none; }
+.moodboard-preview img { width: 82px; height: 68px; border-radius: 8px; object-fit: cover; }
+.moodboard-preview div { display: grid; min-width: 0; }
+.moodboard-preview strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.moodboard-preview span { color: #66747e; font-size: .78rem; }
+.moodboard-preview button { border: 0; background: transparent; color: #e05252; font-weight: 700; cursor: pointer; }
+.moodboard-status { margin-top: 9px; }
+.moodboard-status.error { color: #a62222; }
+.moodboard-result { margin-top: 12px; padding: 15px; border: 1px solid #cde8d5; border-radius: 12px; background: #f3fbf5; }
+.moodboard-result > span { color: #38764a; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.moodboard-result > strong { display: block; margin-top: 3px; color: #17232d; font-size: 1.1rem; }
+.moodboard-result > p { margin: 2px 0 8px; color: #167cae; font-size: 1.2rem; font-weight: 800; }
+.moodboard-result ul { margin: 0 0 8px 18px; padding: 0; color: #66747e; font-size: .83rem; }
+.moodboard-result small { display: block; color: #66747e; font-size: .75rem; line-height: 1.5; }
+
+@media (max-width: 550px) {
+    .moodboard-estimator { padding: 15px; }
+    .moodboard-preview { grid-template-columns: 64px minmax(0, 1fr); }
+    .moodboard-preview img { width: 64px; height: 58px; }
+    .moodboard-preview button { grid-column: 2; justify-self: start; }
+}
+
+/* Ocular appointment calendar mirrors the Book Now availability calendar. */
+.ocular-date-picker { position: relative; }
+.ocular-date-trigger {
+    display: flex;
+    width: 100%;
+    min-height: 54px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid #cbdde8;
+    border-radius: 12px;
+    background: #fff;
+    color: #173447;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.ocular-date-trigger:hover { border-color: #249bd3; }
+.ocular-date-trigger:focus-visible { outline: 3px solid rgba(36, 155, 211, .25); border-color: #167cae; }
+.ocular-date-trigger span:last-child { color: #167cae; }
+.ocular-calendar {
+    width: 100%;
+    max-width: 430px;
+    padding: 16px;
+    border: 1px solid #d7e5ee;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(28, 62, 82, .06);
+}
+.ocular-calendar-popup { position: absolute; top: calc(100% + 8px); left: 0; z-index: 40; }
+.ocular-calendar-popup[hidden] { display: none !important; }
+.ocular-calendar .booking-calendar-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 40px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+.ocular-calendar .booking-calendar-header strong { color: #173447; font-size: 1rem; }
+.ocular-calendar .booking-calendar-header button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid #d7e5ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #167cae;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.ocular-calendar .booking-calendar-header button:hover { background: #eef9fe; }
+.ocular-calendar .booking-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+    text-align: center;
+}
+.ocular-calendar .booking-calendar-weekdays {
+    margin-bottom: 6px;
+    color: #607687;
+    font-size: .76rem;
+    font-weight: 700;
+}
+.ocular-calendar .booking-calendar-day {
+    display: grid;
+    width: 100%;
+    aspect-ratio: 1;
+    min-width: 0;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: #e8f7ed;
+    color: #176b32;
+    font-size: .9rem;
+    cursor: pointer;
+}
+.ocular-calendar .booking-calendar-day:hover:not(:disabled) { outline: 2px solid #7bc892; }
+.ocular-calendar .booking-calendar-day.partial { background: #fff0d7; color: #8a5200; }
+.ocular-calendar .booking-calendar-day.full { background: #fde1e1; color: #a62222; text-decoration: line-through; }
+.ocular-calendar .booking-calendar-day.selected { outline: 2px solid #167cae; outline-offset: 1px; font-weight: 800; }
+.ocular-calendar .booking-calendar-day:disabled { cursor: not-allowed; opacity: .48; }
+.ocular-calendar .booking-calendar-day.outside-month { visibility: hidden; }
+.ocular-calendar .booking-calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 14px;
+    color: #607687;
+    font-size: .72rem;
+}
+.ocular-calendar .booking-calendar-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ocular-calendar .booking-calendar-legend i { width: 11px; height: 11px; border-radius: 50%; }
+.ocular-calendar .booking-calendar-legend i.available { background: #65bd7e; }
+.ocular-calendar .booking-calendar-legend i.partial { background: #edb04a; }
+.ocular-calendar .booking-calendar-legend i.full { background: #e87878; }
+.ocular-calendar .calendar-help { margin: 10px 0 0; color: #607687; font-size: .82rem; line-height: 1.5; }
+
+@media (max-width: 520px) {
+    .ocular-calendar { padding: 12px; }
+    .ocular-calendar .booking-calendar-grid { gap: 3px; }
+    .ocular-calendar .booking-calendar-legend { gap: 7px 10px; font-size: .68rem; }
+}

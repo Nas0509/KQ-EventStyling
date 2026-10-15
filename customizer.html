@@ -8,10 +8,10 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
-    <title>Customize Your Event | KQ Event Styling</title>
+    <title>For Ocular Inspection | KQ Event Styling</title>
 
     <link rel="stylesheet"
-          href="customizer.css">
+          href="customizer.css?v=20261015-ocular-booking-calendar">
 
 </head>
 
@@ -71,614 +71,102 @@
             </span>
 
             <h1>
-                Customize Your Event
+                For Ocular Inspection
             </h1>
 
-            <p>
-                Choose a styling package and personalize
-                your event based on your preferred theme,
-                colors, and celebration details.
-            </p>
+            <p>Request an ocular inspection by sharing your contact details and venue location. Package selection and event booking are handled separately on the Book Now page.</p>
 
         </section>
 
 
 
         <!-- ========================================
-             CUSTOMIZER
+             OCULAR INSPECTION REQUEST
         ======================================== -->
 
-        <section class="customizer-layout">
-
-
-            <!-- ====================================
-                 LEFT SIDE
-            ==================================== -->
-
+        <section class="customizer-layout ocular-only" style="display:block;max-width:760px;margin:0 auto;">
             <div class="customizer-form">
-
-
-                <!-- STEP 1 -->
-
                 <div class="customizer-card">
-
                     <div class="section-heading">
-
-                        <span class="step-number">
-                            01
-                        </span>
-
+                        <span class="step-number">01</span>
                         <div>
-
-                            <h2>
-                                Choose Styling Level
-                            </h2>
-
-                            <p>
-                                Select the type of styling
-                                that best fits your event.
-                            </p>
-
+                            <h2>Ocular Inspection Request</h2>
+                            <p>Share your contact and venue details to request an inspection. Travel/service fee depends on the distance from North Caloocan.</p>
                         </div>
-
                     </div>
-
-
-                    <div class="category-grid">
-
-
-                        <button type="button"
-                                class="category-option active"
-                                data-category="simple">
-
-                            <span class="category-title">
-                                Simple Styling
-                            </span>
-
-                            <span class="category-description">
-                                Simple backdrop styling
-                                for intimate celebrations.
-                            </span>
-
-                        </button>
-
-
-                        <button type="button"
-                                class="category-option"
-                                data-category="venue">
-
-                            <span class="category-title">
-                                Venue Styling
-                            </span>
-
-                            <span class="category-description">
-                                Backdrop styling with
-                                additional venue elements.
-                            </span>
-
-                        </button>
-
-
-                        <button type="button"
-                                class="category-option"
-                                data-category="full">
-
-                            <span class="category-title">
-                                Full Venue Styling
-                            </span>
-
-                            <span class="category-description">
-                                Complete venue styling
-                                with ceiling and entrance
-                                treatments.
-                            </span>
-
-                        </button>
-
-
-                    </div>
-
-                </div>
-
-
-
-                <!-- STEP 2 -->
-
-                <div class="customizer-card">
-
-                    <div class="section-heading">
-
-                        <span class="step-number">
-                            02
-                        </span>
-
-                        <div>
-
-                            <h2>
-                                Choose Package
-                            </h2>
-
-                            <p>
-                                Select the package you want
-                                to customize.
-                            </p>
-
-                        </div>
-
-                    </div>
-
-
-                    <div id="packageOptions"
-                         class="package-options">
-
-                    </div>
-
-                </div>
-
-
-
-                <!-- STEP 3 -->
-
-                <div class="customizer-card">
-
-                    <div class="section-heading">
-
-                        <span class="step-number">
-                            03
-                        </span>
-
-                        <div>
-
-                            <h2>
-                                Event Details
-                            </h2>
-
-                            <p>
-                                Tell us about your celebration.
-                            </p>
-
-                        </div>
-
-                    </div>
-
 
                     <div class="form-grid">
-
-
-                        <!-- EVENT TYPE -->
-
                         <div class="form-group">
-
-                            <label for="eventType">
-                                Event Type
-                            </label>
-
-                            <select id="eventType">
-
-                                <option value="">
-                                    Select event type
-                                </option>
-
-                                <option value="Birthday">
-                                    Birthday
-                                </option>
-
-                                <option value="Wedding">
-                                    Wedding
-                                </option>
-
-                                <option value="Debut">
-                                    Debut
-                                </option>
-
-                                <option value="Christening">
-                                    Christening
-                                </option>
-
-                                <option value="Anniversary">
-                                    Anniversary
-                                </option>
-
-                                <option value="Other">
-                                    Other
-                                </option>
-
-                            </select>
-
+                            <label for="ocularName">Name <span class="required-mark">*</span></label>
+                            <input id="ocularName" type="text" autocomplete="name" required>
                         </div>
-
-
-                        <!-- CELEBRANT -->
-
                         <div class="form-group">
-
-                            <label for="celebrantName">
-                                Celebrant / Couple Name
-                            </label>
-
-                            <input type="text"
-                                   id="celebrantName"
-                                   placeholder="Enter name">
-
+                            <label for="ocularEmail">Email <span class="required-mark">*</span></label>
+                            <input id="ocularEmail" type="email" autocomplete="email" required>
                         </div>
-
-
-                    </div>
-
-                </div>
-
-
-
-                <!-- STEP 4 -->
-
-                <div class="customizer-card">
-
-                    <div class="section-heading">
-
-                        <span class="step-number">
-                            04
-                        </span>
-
-                        <div>
-
-                            <h2>
-                                Choose Your Style
-                            </h2>
-
-                            <p>
-                                Personalize the visual style
-                                of your event.
-                            </p>
-
+                        <div class="form-group">
+                            <label for="ocularPhone">Contact Number <span class="required-mark">*</span></label>
+                            <input id="ocularPhone" type="tel" autocomplete="tel" required>
                         </div>
-
-                    </div>
-
-
-
-                    <!-- THEME -->
-
-                    <div class="style-section">
-
-                        <label>
-                            Theme / Concept
-                        </label>
-
-                        <input type="text"
-                               id="theme"
-                               placeholder="e.g. Princess, Cars, Elegant, Minimalist">
-
-
-                    </div>
-
-
-
-                    <!-- COLOR -->
-
-                    <div class="style-section">
-
-                        <label>Preferred Color</label>
-
-                        <div class="color-options">
-
-                            <button type="button"
-                                    class="color-option"
-                                    data-color="Baby Blue">
-
-                                <span class="color-circle blue"></span>
-                                Baby Blue
-
+                        <div class="form-group ocular-date-picker" id="inspectionDatePickerWrapper">
+                            <label id="inspectionDateLabel" for="inspectionDatePicker">Preferred Ocular Date <span class="required-mark">*</span></label>
+                            <input id="inspectionDate" type="hidden">
+                            <button id="inspectionDatePicker" class="ocular-date-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="inspectionCalendar">
+                                <span id="inspectionDateDisplay">Choose an inspection date</span><span aria-hidden="true">▾</span>
                             </button>
-
-
-                            <button type="button"
-                                    class="color-option"
-                                    data-color="Pink">
-
-                                <span class="color-circle pink"></span>
-                                Pink
-
-                            </button>
-
-
-                            <button type="button"
-                                    class="color-option"
-                                    data-color="White">
-
-                                <span class="color-circle white"></span>
-                                White
-
-                            </button>
-
-
-                            <button type="button"
-                                    class="color-option"
-                                    data-color="Gold">
-
-                                <span class="color-circle gold"></span>
-                                Gold
-
-                            </button>
-
-
-                            <button type="button"
-                                    class="color-option"
-                                    data-color="Silver">
-
-                                <span class="color-circle silver"></span>
-                                Silver
-
-                            </button>
-
-
-                            <!-- CUSTOM COLOR -->
-
-                            <button type="button"
-                                    id="customColorOption"
-                                    class="color-option custom-color-option"
-                                    data-color="Custom">
-
-                                <span id="customColorPreview"
-                                      class="color-circle custom">
-                                </span>
-
-                                <span>Custom</span>
-
-                            </button>
-
-                        </div>
-
-
-                        <!-- CUSTOM COLOR PICKER -->
-
-                        <div id="customColorPicker"
-                             class="custom-color-picker">
-
-                            <div class="custom-color-picker-content">
-
-                                <div id="customColorPreviewLarge"
-                                     class="custom-color-preview-large">
+                            <div class="booking-calendar ocular-calendar ocular-calendar-popup" id="inspectionCalendar" role="dialog" aria-labelledby="inspectionDateLabel" hidden>
+                                <div class="booking-calendar-header">
+                                    <button type="button" id="inspectionCalendarPrevious" aria-label="Previous month">‹</button>
+                                    <strong id="inspectionCalendarMonth" aria-live="polite"></strong>
+                                    <button type="button" id="inspectionCalendarNext" aria-label="Next month">›</button>
                                 </div>
-
-                                <div>
-                                    <strong>Choose your custom color</strong>
-
-                                    <p>
-                                        Select any color you want for your event styling.
-                                    </p>
+                                <div class="booking-calendar-grid booking-calendar-weekdays" aria-hidden="true">
+                                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
                                 </div>
-
-                                <input type="color"
-                                       id="customColorInput"
-                                       value="#249bd3"
-                                       aria-label="Choose custom color">
-
+                                <div class="booking-calendar-grid" id="inspectionCalendarDays" role="grid" aria-label="Ocular appointment dates"></div>
+                                <div class="booking-calendar-legend" aria-label="Availability legend">
+                                    <span><i class="available"></i> All slots open</span>
+                                    <span><i class="partial"></i> Some slots taken</span>
+                                    <span><i class="full"></i> Fully booked</span>
+                                </div>
+                                <p class="calendar-help" id="inspectionCalendarHelp" aria-live="polite">Loading availability…</p>
                             </div>
-
-                            <div id="customColorHex"
-                                 class="custom-color-hex">
-                                #249BD3
-                            </div>
-
                         </div>
-
+                        <div class="form-group">
+                            <label for="inspectionTime">Preferred Ocular Time <span class="required-mark">*</span></label>
+                            <input id="inspectionTime" type="time" required>
+                            <small id="inspectionTimeHelp" class="field-help">Choose a time from an available morning (6 AM–12 PM), afternoon (12 PM–6 PM), or night (6 PM–12 AM) slot.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="venueName">Venue Name <span class="required-mark">*</span></label>
+                            <input id="venueName" type="text" placeholder="Venue or establishment name" required>
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;padding:18px;border:1px solid #fda4af;border-left:5px solid #e11d48;border-radius:16px;background:#fff1f2;">
+                            <label for="inspectionCity" style="color:#be123c;">💡 INSPECTION FEE <span class="required-mark">*</span></label>
+                            <p style="margin:4px 0 10px;color:#68778a;font-size:14px;">Choose your venue city or municipality in Luzon to calculate the exact fee. The payment QR appears after the selected date and time pass the availability and travel-time check.</p>
+                            <input id="inspectionCity" type="text" list="inspectionCityOptions" placeholder="Choose a Luzon city or municipality" autocomplete="address-level2" aria-describedby="inspectionFeeHelp" required>
+                            <datalist id="inspectionCityOptions"></datalist>
+                            <div id="inspectionFeeAmount" aria-live="polite" style="margin-top:12px;padding:15px;border-radius:12px;background:#e9f8ef;color:#087443;font-weight:700;">Choose a Luzon city or municipality to see the inspection fee.</div>
+                            <small id="inspectionFeeHelp" class="field-help"></small>
+                            <div id="inspectionPaymentBlock" hidden style="margin-top:14px;padding:16px;border:1px solid #b9dfef;border-radius:14px;background:#f3faff;text-align:center;">
+                                <img src="gcash-qr.png" alt="GCash and InstaPay QR code for ocular inspection fee payment" style="display:block;width:min(100%,260px);height:auto;margin:0 auto 10px;border-radius:10px;">
+                                <strong>Scan to pay the exact inspection fee shown above</strong>
+                                <label for="inspectionPaymentReference" style="display:block;margin-top:12px;text-align:left;">Payment transaction/reference number <span class="required-mark">*</span></label>
+                                <input id="inspectionPaymentReference" type="text" maxlength="100" placeholder="Enter the reference from your payment app" autocomplete="off" required style="width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid #b9cddd;border-radius:10px;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label for="inspectionAddress">Street Address / Barangay <span class="required-mark">*</span></label>
+                            <input id="inspectionAddress" type="text" placeholder="House number, street, barangay, subdivision or landmark" autocomplete="street-address" required>
+                        </div>
                     </div>
 
-
-
-                    <!-- CHARACTER -->
-
-                    <div class="style-section">
-
-                        <label for="character">
-                            Character / Theme Reference
-                        </label>
-
-                        <input type="text"
-                               id="character"
-                               placeholder="e.g. Barbie, Bluey, Disney Princess">
-
-
+                    <div class="form-actions" style="margin-top:22px;">
+                        <button type="button" id="requestQuotation" class="quotation-button">Request Ocular Inspection</button>
+                        <button type="button" id="resetCustomizer" class="reset-button">Clear Form</button>
                     </div>
-
-
-
-                    <!-- ADDITIONAL REQUEST -->
-
-                    <div class="style-section">
-
-                        <label for="additionalRequest">
-                            Additional Request
-                        </label>
-
-                        <textarea id="additionalRequest"
-                                  rows="4"
-                                  placeholder="Tell us any special styling requests..."></textarea>
-
-                    </div>
-
                 </div>
-
-
-
-                <!-- NOTE -->
-
-                <div class="important-note">
-
-                    <strong>
-                        Important Note
-                    </strong>
-
-                    <p>
-                        Crew meal and transportation fees are
-                        not included. Package prices may vary
-                        depending on the venue. An ocular
-                        inspection may be required before
-                        final pricing.
-                    </p>
-
-                </div>
-
-
             </div>
-
-
-
-            <!-- ====================================
-                 RIGHT SIDE SUMMARY
-            ==================================== -->
-
-            <aside class="summary-card">
-
-
-                <div class="summary-top">
-
-                    <span>
-                        YOUR EVENT STYLE
-                    </span>
-
-                    <span id="summaryCategory"
-                          class="summary-badge">
-
-                        Simple Styling
-
-                    </span>
-
-                </div>
-
-
-                <h2 id="summaryPackage">
-                    Simple Package
-                </h2>
-
-
-                <div class="summary-divider">
-                </div>
-
-
-                <div class="summary-row">
-
-                    <span>
-                        Package
-                    </span>
-
-                    <strong id="summaryPrice">
-                        ₱5,500
-                    </strong>
-
-                </div>
-
-
-                <div class="summary-details">
-
-
-                    <div class="summary-detail">
-
-                        <span>
-                            Event
-                        </span>
-
-                        <strong id="summaryEvent">
-                            Not selected
-                        </strong>
-
-                    </div>
-
-
-                    <div class="summary-detail">
-
-                        <span>
-                            Celebrant
-                        </span>
-
-                        <strong id="summaryCelebrant">
-                            Not specified
-                        </strong>
-
-                    </div>
-
-
-                    <div class="summary-detail">
-
-                        <span>
-                            Theme
-                        </span>
-
-                        <strong id="summaryTheme">
-                            Not specified
-                        </strong>
-
-                    </div>
-
-
-                    <div class="summary-detail">
-
-                        <span>
-                            Color
-                        </span>
-
-                        <strong id="summaryColor">
-                            Not selected
-                        </strong>
-
-                    </div>
-
-
-                    <div class="summary-detail">
-
-                        <span>
-                            Character
-                        </span>
-
-                        <strong id="summaryCharacter">
-                            Not specified
-                        </strong>
-
-                    </div>
-
-
-                </div>
-
-
-                <div class="estimated-total">
-
-                    <span>
-                        ESTIMATED PACKAGE PRICE
-                    </span>
-
-                    <strong id="totalPrice">
-                        ₱5,500
-                    </strong>
-
-                    <small>
-                        Final quotation may vary after
-                        venue assessment.
-                    </small>
-
-                </div>
-
-
-                <button type="button"
-                        id="requestQuotation"
-                        class="quotation-button">
-
-                    Request Quotation
-
-                </button>
-
-
-                <button type="button"
-                        id="resetCustomizer"
-                        class="reset-button">
-
-                    Start Over
-
-                </button>
-
-
-            </aside>
-
-
         </section>
 
     </main>
@@ -690,7 +178,11 @@
     ======================================== -->
 
     <div id="quotationModal"
-         class="quotation-modal">
+         class="quotation-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="quotationModalTitle"
+         aria-hidden="true">
 
         <div class="quotation-modal-card">
 
@@ -698,21 +190,18 @@
                 ✓
             </div>
 
-            <h2>
-                Styling Request Ready
+            <h2 id="quotationModalTitle">
+                Ocular Inspection Request Saved
             </h2>
 
             <p>
-                Your event styling preferences have been
-                prepared. You can proceed with the booking
-                process to submit your request to KQ Event
-                Styling.
+                Your ocular inspection request is saved. KQ will verify your payment reference and contact you about the appointment.
             </p>
 
             <button type="button"
                     id="closeQuotationModal">
 
-                Continue
+                Done
 
             </button>
 
@@ -746,7 +235,7 @@
 
             <p class="login-required-subtext">
                 Please login to your KQ Event Styling account
-                before submitting your booking or quotation request.
+                before submitting your booking or ocular inspection request.
             </p>
 
             <div class="login-required-actions">
@@ -775,7 +264,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
-    <script src="customizer.js"></script>
+    <script src="customizer.js?v=20261015-ocular-travel-scheduling"></script>
+
 
 </body>
 

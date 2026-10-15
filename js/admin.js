@@ -300,7 +300,7 @@ async function loadQuotationRequests() {
             error
         } = await window.supabaseClient
 
-            .from("quotation_requests")
+            .from("ocular_inspection_requests")
 
             .select("*")
 
@@ -349,7 +349,7 @@ async function loadQuotationRequests() {
             table.innerHTML = `
                 <tr>
                     <td colspan="8">
-                        Unable to load quotation requests.
+                        Unable to load ocular inspection requests.
                     </td>
                 </tr>
             `;
@@ -877,7 +877,7 @@ async function updateQuotation(id) {
             error
         } = await window.supabaseClient
 
-            .from("quotation_requests")
+            .from("ocular_inspection_requests")
 
             .update({
 
@@ -926,7 +926,7 @@ async function updateQuotation(id) {
 
         alert(
             error.message ||
-            "Unable to update quotation request."
+            "Unable to update ocular inspection request."
         );
 
     }

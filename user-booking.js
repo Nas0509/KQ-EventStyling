@@ -28,8 +28,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     // SELECTED PACKAGE
     // ========================================
 
-    let selectedPackage =
-        sessionStorage.getItem("kqSelectedPackage") || "";
+    let selectedPackage = sessionStorage.getItem("kqSelectedPackage") || "";
 
     const pesoFormat = new Intl.NumberFormat("en-PH", {
         style: "currency",
@@ -42,18 +41,19 @@ document.addEventListener("DOMContentLoaded", async function () {
         return priceMatch ? Number(priceMatch[1].replace(/,/g, "")) || 0 : 0;
     }
 
-    // Supabase currently permits only SMALL / BIG for bookings.package_type.
-    // The site offers three display packages, so both upper tiers use BIG.
+    // The existing booking table stores package_type as SMALL or BIG.
     function getDatabasePackageType(packageName) {
         const amount = getPackageAmount(packageName);
-        if (amount === 7500) return "SMALL";
-        if (amount === 10000 || amount === 15000) return "BIG";
+        const selectedButton = Array.from(packageButtons).find(button => button.dataset.package === packageName);
+        const category = selectedButton?.dataset.packageCategory || (amount === 6500 ? "simple" : amount >= 7900 ? "venue" : "");
+        if (category === "simple") return "SMALL";
+        if (["venue", "full"].includes(category)) return "BIG";
         return "";
     }
 
     function updateReservationPayment() {
         const total = getPackageAmount(selectedPackage);
-        const fee = Math.round(total * 0.2);
+        const fee = Math.round(total * 0.3);
 
         if (packageAmountText) packageAmountText.textContent = total ? pesoFormat.format(total) : "Select a package";
         if (reservationFeeText) reservationFeeText.textContent = total ? pesoFormat.format(fee) : "—";
@@ -61,6 +61,30 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (paymentReferenceInput) paymentReferenceInput.disabled = !total;
 
         return { total, fee };
+    }
+
+    function updateSelectedPackageCard(packageName) {
+        const selectedPackageLabel = document.getElementById("bookingSelectedPackage");
+        const title = selectedPackageLabel?.querySelector("strong");
+        const description = selectedPackageLabel?.querySelector("p");
+        const editLink = selectedPackageLabel?.querySelector("a");
+
+        if (!packageName) {
+            if (title) title.textContent = "Package selection";
+            if (description) description.textContent = "Choose your package from the Packages section above.";
+            if (editLink) {
+                editLink.href = "#packages";
+                editLink.textContent = "View packages";
+            }
+            return;
+        }
+
+        if (title) title.textContent = packageName.split(" - ₱")[0];
+        if (description) description.textContent = "Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.";
+        if (editLink) {
+            editLink.href = "#packages";
+            editLink.textContent = "View package details";
+        }
     }
 
     // ========================================
@@ -82,6 +106,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             sessionStorage.setItem("kqSelectedPackage", selectedPackage);
 
+            updateSelectedPackageCard(selectedPackage);
+
             packageButtons.forEach(function (btn) {
                 btn.classList.remove("selected");
             });
@@ -97,6 +123,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     });
 
+    updateSelectedPackageCard(selectedPackage);
     updateReservationPayment();
 
     // ========================================
@@ -261,7 +288,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         availabilityLoaded = true;
         renderBookingCalendar();
         updateSelectedDateSlots();
-        if (calendarHelp && !eventDate?.value) calendarHelp.textContent = "Colors show admin-approved bookings only. Pending requests do not take a slot.";
+        if (calendarHelp && !eventDate?.value) calendarHelp.textContent = "Approved event bookings and accepted ocular inspections reserve one morning, afternoon, or night slot. Pending requests do not hold it.";
         if (eventDate?.value && calendarHelp) {
             calendarHelp.textContent = `${eventDate.value} selected. Choose one available time slot.`;
         }
@@ -796,6 +823,9 @@ document.addEventListener("DOMContentLoaded", async function () {
             const phone =
                 document.getElementById("phone")?.value.trim() || "";
 
+            const venueAddress =
+                document.getElementById("location")?.value.trim() || "";
+
             const eventType =
                 document.getElementById("eventType")?.value || "";
 
@@ -809,8 +839,8 @@ document.addEventListener("DOMContentLoaded", async function () {
                 ? startTime.value
                 : "";
 
-            const paymentReference = paymentReferenceInput?.value.trim() || "";
             const termsAccepted = document.getElementById("termsAccepted")?.checked || false;
+            const paymentReference = paymentReferenceInput?.value.trim() || "";
 
             const message =
                 document.getElementById("message")?.value.trim() || "";
@@ -856,12 +886,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                 throw new Error("This package is not recognized. Please select one of the listed packages again.");
             }
 
-            if (!paymentReference) {
-                throw new Error("Please pay the 20% reservation fee using the QR code and enter the transaction reference number.");
-            }
-
             if (!termsAccepted) {
                 throw new Error("Please accept the booking terms and conditions.");
+            }
+
+            if (!paymentReference) {
+                throw new Error("Please pay the 30% reservation fee using the QR code and enter the transaction reference number.");
             }
 
             const designImageFile = window.kqDesignImageFile || null;
@@ -988,6 +1018,8 @@ document.addEventListener("DOMContentLoaded", async function () {
                 time_slot: selectedTimeSlot,
 
                 message: [
+                    message.includes("Ocular request package:") ? "" : `Selected package: ${selectedPackage}`,
+                    venueAddress ? `Event venue: ${venueAddress}` : "",
                     message,
                     `Reservation fee payment reference (pending verification): ${paymentReference}`
                 ].filter(Boolean).join("\n\n"),
@@ -1008,15 +1040,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             };
 
             console.log("📦 Submitting booking:", bookingId, "Reservation fee:", reservationFee);
-
-            // ========================================
-            // INSERT TO SUPABASE
-            // ========================================
-
-            const {
-                data: booking,
-                error: bookingError
-            } = await window.supabaseClient
+            const { data: booking, error: bookingError } = await window.supabaseClient
                 .from("bookings")
                 .insert(bookingData)
                 .select()
@@ -1031,64 +1055,18 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             console.log("✅ BOOKING CREATED:", booking);
-
-            // Refresh the calendar after the server has reserved this date and slot.
             await loadAvailabilityForMonth();
 
-            // ========================================
-            // CLEAR SAVED DATA
-            // ========================================
-
             sessionStorage.removeItem("kqBookingFormDraft");
-            sessionStorage.removeItem("kqSelectedPackage");
+            sessionStorage.removeItem("kqBookingDraft");
             sessionStorage.removeItem("kqReturnAfterLogin");
-
+            sessionStorage.removeItem("kqSelectedPackage");
             selectedPackage = "";
             if (paymentReferenceInput) paymentReferenceInput.value = "";
+            updateSelectedPackageCard(selectedPackage);
             updateReservationPayment();
             document.getElementById("removeDesignImage")?.click();
-
-            packageButtons.forEach(function (button) {
-                button.classList.remove("selected");
-            });
-
-            // ========================================
-            // RESET FORM
-            // ========================================
-
-            bookingForm.reset();
-            selectedTimeSlot = "";
-            if (eventDate) eventDate.value = "";
-            if (timeSlotInput) timeSlotInput.value = "";
-            if (bookingTimeSlots) bookingTimeSlots.hidden = true;
-            if (calendarHelp) calendarHelp.textContent = "Colors show admin-approved bookings only. Pending requests do not take a slot.";
-            renderBookingCalendar();
-
-            if (timeSection) {
-                timeSection.style.display = "none";
-            }
-
-            if (startTime) {
-                startTime.required = false;
-            }
-
-            if (selectedTimeText) {
-                selectedTimeText.textContent = "Choose event time";
-            }
-
-            if (clockPicker) {
-                clockPicker.hidden = true;
-            }
-
-            if (timeDisplay) {
-                timeDisplay.setAttribute("aria-expanded", "false");
-            }
-
-            // ========================================
-            // SUCCESS MODAL
-            // ========================================
-
-            showBookingSuccessModal();
+            packageButtons.forEach(button => button.classList.remove("selected"));
 
         } catch (error) {
             console.error("❌ BOOKING SUBMISSION ERROR:", error);

@@ -27,7 +27,12 @@ function statusClass(status) { return String(status || "").toUpperCase().replace
 function syncPayments() {
     bookings.forEach(b => {
         if (!payments.find(p => p.bookingId === b.id)) {
-            payments.push({ bookingId: b.id, total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" });
+            const paid = Number(b.down_payment_amount) || 0;
+            payments.push({ bookingId: b.id, total: Number(b.amount) || 0, paid, status: paid > 0 ? "DOWN PAYMENT MADE" : "NO DOWN PAYMENT" });
+        } else if (String(b.payment_status || "").toUpperCase() === "PAID") {
+            const payment = payments.find(p => p.bookingId === b.id);
+            payment.paid = Math.max(Number(payment.paid) || 0, Number(b.down_payment_amount) || 0);
+            if (payment.paid < Number(payment.total)) payment.status = "DOWN PAYMENT MADE";
         }
     });
     payments = payments.filter(p => bookings.some(b => b.id === p.bookingId));
@@ -231,6 +236,25 @@ async function changeStatus(id, newStatus) {
     alert(`Booking ${id} is now ${newStatus}.`);
 }
 
+async function verifyReservationFee(id) {
+    const booking = bookings.find(item => item.id === id);
+    if (!booking) return;
+    const fee = Number(booking.required_down_payment) || 0;
+    if (!fee) { alert("This booking has no reservation fee recorded."); return; }
+    if (!confirm(`Have you verified the client's payment? This will record ${money(fee)} as received.`)) return;
+
+    const { error } = await window.supabaseClient
+        .from("bookings")
+        .update({ down_payment_amount: fee })
+        .eq("id", id);
+    if (error) { alert(`Unable to record the verified payment: ${error.message}`); return; }
+
+    booking.down_payment_amount = fee;
+    save();
+    renderAll();
+    viewBooking(id);
+}
+
 async function deleteBooking(id) {
     if (!confirm("Delete this cancelled booking?")) return;
     const { error } = await window.supabaseClient.from("bookings").delete().eq("id", id);
@@ -254,9 +278,8 @@ async function viewBooking(id) {
             <div class="modal-field"><label>Start Time</label><input value="${escapeAttr(b.startTime || "")}" readonly></div>
             <div class="modal-field"><label>Package</label><input value="${escapeAttr(b.package || "")}" readonly></div>
             <div class="modal-field"><label>Total Amount</label><input value="${money(b.amount)}" readonly></div>
-            <div class="modal-field"><label>20% Reservation Fee</label><input value="${money(b.required_down_payment)}" readonly></div>
+            <div class="modal-field"><label>30% Reservation Fee</label><input value="${money(b.required_down_payment)}" readonly></div>
             <div class="modal-field"><label>Reservation Payment Received</label><input value="${money(b.down_payment_amount)}" readonly></div>
-            <div class="modal-field"><label>Payment Check</label><input value="${Number(b.down_payment_amount) >= Number(b.required_down_payment) && Number(b.required_down_payment) > 0 ? "VERIFIED" : "PENDING VERIFICATION"}" readonly></div>
             ${b.ai_estimated_package ? `<div class="modal-field"><label>AI Suggested Package</label><input value="${escapeAttr(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}" readonly></div>` : ""}
             ${b.design_image_path ? `<div class="modal-field full"><label>Customer Design Reference</label><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></div>` : ""}
             ${Array.isArray(b.ai_detected_features) && b.ai_detected_features.length ? `<div class="modal-field full"><label>AI Estimate Notes</label><p>${escapeHtml(b.ai_estimate_explanation || "Estimated from the visible design features.")}</p><ul class="admin-design-features">${b.ai_detected_features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}</ul><small class="field-help">AI estimate only; confirm final package and price with the customer.</small></div>` : ""}
@@ -264,7 +287,7 @@ async function viewBooking(id) {
             <div class="modal-field full"><label>Admin Notes / Reminders</label><textarea id="adminNotes">${escapeHtml(b.adminNotes || "")}</textarea></div>
         </div>
         <div class="modal-actions">
-            ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? `<button class="btn primary" onclick="verifyReservationFee('${escapeAttr(b.id)}')">Mark 20% Fee Verified</button>` : ""}
+            ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? `<button class="btn primary" onclick="verifyReservationFee('${escapeAttr(b.id)}')">Mark 30% Fee Verified</button>` : ""}
             <button class="btn primary" onclick="saveNotes('${escapeAttr(b.id)}')">Save Notes</button>
         </div>
         ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? '<small class="field-help">Only mark this after checking the transaction reference in your payment account.</small>' : ""}`);
@@ -283,25 +306,6 @@ async function viewBooking(id) {
             imageStatus.remove();
         }
     }
-}
-
-async function verifyReservationFee(id) {
-    const booking = bookings.find(item => item.id === id);
-    if (!booking) return;
-    const fee = Number(booking.required_down_payment) || 0;
-    if (!fee) { alert("This booking has no reservation fee recorded."); return; }
-    if (!confirm(`Have you verified the client's payment? This will record ${money(fee)} as received.`)) return;
-
-    const { error } = await window.supabaseClient
-        .from("bookings")
-        .update({ down_payment_amount: fee })
-        .eq("id", id);
-    if (error) { alert(`Unable to record the verified payment: ${error.message}`); return; }
-
-    booking.down_payment_amount = fee;
-    save();
-    renderAll();
-    viewBooking(id);
 }
 
 function saveNotes(id) {
@@ -369,8 +373,8 @@ function saveInventory(id) {
 }
 function editInventory(id) { openInventoryForm(inventory.find(x => x.id === id)) }
 
-function openModal(html) { document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
-function closeModal() { document.getElementById("modal").classList.add("hidden") }
+function openModal(html) { document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card"); document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
+function closeModal() { document.getElementById("modal").classList.add("hidden"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card") }
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal() });
 
@@ -379,15 +383,23 @@ document.getElementById("bookingStatusFilter").addEventListener("change", render
 
 document.getElementById("calendarBtn").addEventListener("click", () => {
     const now = new Date(), year = now.getFullYear(), month = now.getMonth(), first = new Date(year, month, 1), last = new Date(year, month + 1, 0);
-    let html = `<h3>${now.toLocaleString("en-US", { month: "long" })} ${year}</h3><div class="calendar-grid">`;
-    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => html += `<div><strong>${d}</strong></div>`);
-    for (let i = 0; i < first.getDay(); i++)html += "<div></div>";
+    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const monthlyBookings = bookings.filter(b => b.eventDate?.startsWith(monthPrefix) && b.status !== "CANCELLED").length;
+    let html = `<div class="calendar-heading"><div><span class="calendar-eyebrow">BOOKING SCHEDULE</span><h3>${now.toLocaleString("en-US", { month: "long" })} ${year}</h3></div><span class="calendar-count">${monthlyBookings} booking${monthlyBookings === 1 ? "" : "s"} this month</span></div><div class="calendar-grid">`;
+    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => html += `<div class="calendar-weekday">${d}</div>`);
+    for (let i = 0; i < first.getDay(); i++) html += `<div class="calendar-day calendar-day-empty" aria-hidden="true"></div>`;
     for (let d = 1; d <= last.getDate(); d++) {
         const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const events = bookings.filter(b => b.eventDate === iso && b.status !== "CANCELLED");
-        html += `<div class="calendar-day"><strong>${d}</strong>${events.map(b => `<span class="calendar-event">${escapeHtml(b.fullName)}<br>${escapeHtml(b.status)}</span>`).join("")}</div>`;
+        const events = bookings.filter(b => b.eventDate === iso && b.status !== "CANCELLED").sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")));
+        const localToday = new Date();
+        const todayIso = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, "0")}-${String(localToday.getDate()).padStart(2, "0")}`;
+        const today = iso === todayIso;
+        html += `<div class="calendar-day${today ? " calendar-day-today" : ""}${events.length ? " calendar-day-booked" : ""}"><span class="calendar-date">${d}</span>${events.length ? `<div class="calendar-events">${events.map(b => `<div class="calendar-event"><strong>${escapeHtml(b.fullName || "Client")}</strong><span>${escapeHtml(b.startTime || b.timeSlot || "Time not set")}</span><span class="calendar-event-status">${escapeHtml(b.status)}</span></div>`).join("")}</div>` : `<span class="calendar-open-label">Available</span>`}</div>`;
     }
-    html += "</div>"; openModal(html);
+    for (let i = 0, trailing = (7 - ((first.getDay() + last.getDate()) % 7)) % 7; i < trailing; i++) html += `<div class="calendar-day calendar-day-empty" aria-hidden="true"></div>`;
+    html += `</div><p class="calendar-note"><span class="calendar-legend-dot"></span> Days with bookings show the client and scheduled time. Cancelled bookings do not block a date.</p>`;
+    openModal(html);
+    document.querySelector("#modal .modal-card").classList.add("calendar-modal-card");
 });
 
 function escapeHtml(v) { return String(v ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m])) }
@@ -401,6 +413,25 @@ renderAll();
 // ========================================
 
 let quotationRequests = [];
+
+let adminToastTimer;
+function showAdminToast(message, type = "success") {
+    let toast = document.getElementById("adminToast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "adminToast";
+        document.body.appendChild(toast);
+    }
+
+    window.clearTimeout(adminToastTimer);
+    toast.className = `admin-toast ${type === "error" ? "is-error" : "is-success"}`;
+    toast.setAttribute("role", type === "error" ? "alert" : "status");
+    toast.textContent = message;
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    adminToastTimer = window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+    }, 4000);
+}
 
 
 // ========================================
@@ -427,7 +458,7 @@ async function loadQuotationRequests() {
             error
         } = await window.supabaseClient
 
-            .from("quotation_requests")
+            .from("ocular_inspection_requests")
 
             .select("*")
 
@@ -476,7 +507,7 @@ async function loadQuotationRequests() {
             table.innerHTML = `
                 <tr>
                     <td colspan="8">
-                        Unable to load quotation requests.
+                        Unable to load ocular inspection requests.
                     </td>
                 </tr>
             `;
@@ -535,21 +566,17 @@ function renderQuotationRequests() {
             request => {
 
                 const searchable = [
-
-                    request.package_name,
-
-                    request.event_type,
-
-                    request.celebrant_name,
-
-                    request.theme,
-
-                    request.color,
-
-                    request.character,
-
+                    request.request_code,
+                    request.customer_name,
+                    request.customer_email,
+                    request.customer_contact,
+                    request.venue_name,
+                    request.inspection_city,
+                    request.inspection_province,
+                    request.inspection_region,
+                    request.inspection_address,
+                    request.inspection_date,
                     request.additional_request
-
                 ]
                     .filter(Boolean)
                     .join(" ")
@@ -588,130 +615,79 @@ function renderQuotationRequests() {
     table.innerHTML =
         rows.map(request => {
 
-            const color =
-                request.color || "";
-
-
-            const colorDisplay =
-                color.startsWith("#")
-
-                    ? `
-                        <span class="quotation-color">
-                            <span
-                                class="quotation-color-circle"
-                                style="background:${escapeAttr(color)}">
-                            </span>
-
-                            ${escapeHtml(color)}
-                        </span>
-                    `
-
-                    : escapeHtml(
-                        color || "Not specified"
-                    );
-
-
             return `
 
                 <tr>
 
                     <td>
-                        <strong>
-                            Customer
-                        </strong>
+                        <strong>${escapeHtml(request.request_code || `#${request.id}`)}</strong>
+                    </td>
+
+                    <td>
+                        <strong>${escapeHtml(request.customer_name || "Customer")}</strong>
 
                         <br>
 
-                        <small>
-                            ${escapeHtml(
-                request.user_id
-            )}
-                        </small>
+                        <small>${escapeHtml(request.customer_email || request.customer_contact || "Contact not provided")}</small>
                     </td>
 
 
                     <td>
 
-                        <strong>
-                            ${escapeHtml(
-                request.event_type
-            )}
-                        </strong>
+                        <strong>Ocular Inspection</strong>
 
                         <br>
 
-                        <small>
-                            ${escapeHtml(
-                request.celebrant_name ||
-                "No name"
-            )}
-                        </small>
+                        <small>${escapeHtml(request.inspection_date || "Date not set")} ${escapeHtml(request.inspection_time || "")}</small>
 
                     </td>
 
 
                     <td>
 
-                        ${escapeHtml(
-                request.package_name
-            )}
+                        <strong>${escapeHtml(request.venue_name || "Venue not provided")}</strong><br>
+                        <small>${escapeHtml(request.inspection_address || "")}</small>
 
                     </td>
 
 
                     <td>
 
-                        ${money(
-                request.package_price
-            )}
+                        ${money(request.inspection_fee)}
 
                     </td>
 
 
                     <td>
 
-                        ${escapeHtml(
-                request.theme ||
-                "Not specified"
-            )}
+                        ${escapeHtml([request.inspection_city, request.inspection_province, request.inspection_region].filter(Boolean).join(", ") || "Not specified")}
 
                     </td>
 
 
                     <td>
 
-                        ${colorDisplay}
+                        ${escapeHtml(request.additional_request || "Not provided")}
 
                     </td>
 
 
                     <td>
 
-                        <span
-                            class="status ${statusClass(
-                request.status
-            )}">
-
-                            ${escapeHtml(
-                request.status
-            )}
-
-                        </span>
-
-                    </td>
-
-
-                    <td>
-
-                        <div class="action-group">
+                        <div class="action-group ocular-action-group ${request.status === "REQUESTED" ? "is-pending" : "is-processed"}">
 
                             <button
-                                class="small-btn edit"
+                                class="small-btn edit ocular-view-action"
                                 onclick="viewQuotation('${request.id}')">
 
                                 View
 
                             </button>
+
+                            ${request.status === "REQUESTED" ? `
+                                <button class="small-btn approve" onclick="setOcularInspectionStatus('${request.id}', 'APPROVED')">Accept</button>
+                                <button class="small-btn decline" onclick="setOcularInspectionStatus('${request.id}', 'DECLINED')">Decline</button>
+                            ` : ""}
 
                         </div>
 
@@ -723,6 +699,29 @@ function renderQuotationRequests() {
 
         }).join("");
 
+}
+
+
+async function setOcularInspectionStatus(id, status) {
+    const isDeclining = status === "DECLINED";
+    if (isDeclining && !window.confirm("Decline this ocular inspection request?")) return;
+
+    try {
+        const result = status === "APPROVED"
+            ? await window.supabaseClient.rpc("kq_accept_ocular_inspection_request", { p_request_id: String(id) })
+            : await window.supabaseClient
+                .from("ocular_inspection_requests")
+                .update({ status, updated_at: new Date().toISOString() })
+                .eq("id", id);
+        const { error } = result;
+        if (error) throw error;
+
+        await loadQuotationRequests();
+        showAdminToast(isDeclining ? "Ocular inspection request declined." : "Ocular inspection request accepted.");
+    } catch (error) {
+        console.error("Ocular inspection status update failed:", error);
+        showAdminToast(error.message || "Unable to update ocular inspection request.", "error");
+    }
 }
 
 
@@ -743,31 +742,10 @@ async function viewQuotation(id) {
     if (!request) return;
 
 
-    const color =
-        request.color || "Not specified";
-
-
-    const colorPreview =
-        color.startsWith("#")
-
-            ? `
-                <span class="quotation-color">
-                    <span
-                        class="quotation-color-circle"
-                        style="background:${escapeAttr(color)}">
-                    </span>
-
-                    ${escapeHtml(color)}
-                </span>
-            `
-
-            : escapeHtml(color);
-
-
     openModal(`
 
         <h3>
-            Styling Quotation Request
+            Ocular Inspection Request
         </h3>
 
 
@@ -777,90 +755,35 @@ async function viewQuotation(id) {
             <div class="quotation-detail-row">
                 <span>Request ID</span>
                 <strong>
-                    #${escapeHtml(request.id)}
+                    ${escapeHtml(request.request_code || `#${request.id}`)}
                 </strong>
             </div>
+
+            <div class="quotation-detail-row"><span>Customer Name</span><strong>${escapeHtml(request.customer_name || "Not provided")}</strong></div>
+            <div class="quotation-detail-row"><span>Email</span><strong>${escapeHtml(request.customer_email || "Not provided")}</strong></div>
+            <div class="quotation-detail-row"><span>Contact Number</span><strong>${escapeHtml(request.customer_contact || "Not provided")}</strong></div>
+            <div class="quotation-detail-row"><span>Preferred Inspection</span><strong>${escapeHtml(request.inspection_date || "Date not selected")} ${escapeHtml(request.inspection_time || "")}</strong></div>
+            <div class="quotation-detail-row"><span>Venue Name</span><strong>${escapeHtml(request.venue_name || "Not provided")}</strong></div>
+            <div class="quotation-detail-row"><span>City / Municipality</span><strong>${escapeHtml([request.inspection_city, request.inspection_province, request.inspection_region].filter(Boolean).join(" — ") || "Not provided / estimate skipped")}</strong></div>
+            <div class="quotation-detail-row"><span>Venue Address</span><strong>${escapeHtml(request.inspection_address || "Not provided")}</strong></div>
+            <div class="quotation-detail-row"><span>Inspection Fee</span><strong>${request.inspection_fee == null ? "Not calculated" : money(request.inspection_fee)}</strong></div>
+            <div class="quotation-detail-row"><span>Distance from North Caloocan</span><strong>${request.inspection_distance_km == null ? "Not calculated" : `${escapeHtml(request.inspection_distance_km)} km`}</strong></div>
 
 
             <div class="quotation-detail-row">
-                <span>Event Type</span>
-                <strong>
-                    ${escapeHtml(
-        request.event_type
-    )}
-                </strong>
+                <span>Request Purpose</span>
+                <strong>Ocular / Venue Inspection</strong>
             </div>
-
 
             <div class="quotation-detail-row">
-                <span>Celebrant / Couple</span>
-                <strong>
-                    ${escapeHtml(
-        request.celebrant_name ||
-        "Not specified"
-    )}
-                </strong>
+                <span>Inspection Venue</span>
+                <strong>${escapeHtml(request.inspection_address || "Not specified")}</strong>
             </div>
 
 
-            <div class="quotation-detail-row">
-                <span>Styling Category</span>
-                <strong>
-                    ${escapeHtml(
-        request.category
-    )}
-                </strong>
-            </div>
+            ${request.design_estimate_package ? `<div class="quotation-detail-row"><span>Image-Matched Suggestion</span><strong>${escapeHtml(request.design_estimate_package)} — ${money(request.design_estimate_price)}</strong></div>` : ""}
 
-
-            <div class="quotation-detail-row">
-                <span>Package</span>
-                <strong>
-                    ${escapeHtml(
-        request.package_name
-    )}
-                </strong>
-            </div>
-
-
-            <div class="quotation-detail-row">
-                <span>Estimated Price</span>
-                <strong>
-                    ${money(
-        request.package_price
-    )}
-                </strong>
-            </div>
-
-
-            <div class="quotation-detail-row">
-                <span>Theme / Concept</span>
-                <strong>
-                    ${escapeHtml(
-        request.theme ||
-        "Not specified"
-    )}
-                </strong>
-            </div>
-
-
-            <div class="quotation-detail-row">
-                <span>Preferred Color</span>
-                <strong>
-                    ${colorPreview}
-                </strong>
-            </div>
-
-
-            <div class="quotation-detail-row">
-                <span>Character / Reference</span>
-                <strong>
-                    ${escapeHtml(
-        request.character ||
-        "Not specified"
-    )}
-                </strong>
-            </div>
+            ${request.design_image_path ? `<div class="modal-field full"><label>Customer Design Moodboard</label><p id="adminQuotationImageStatus" class="field-help">Loading private design image…</p><img id="adminQuotationDesignImage" class="admin-design-preview" alt="Customer-uploaded design moodboard" hidden>${Array.isArray(request.design_estimate_features) && request.design_estimate_features.length ? `<p>${escapeHtml(request.design_estimate_explanation || "Free preliminary visual estimate.")}</p><ul class="admin-design-features">${request.design_estimate_features.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}<small class="field-help">Preliminary estimate only; confirm package and final price with the customer.</small></div>` : ""}
 
 
         </div>
@@ -869,9 +792,14 @@ async function viewQuotation(id) {
         <div class="modal-field full"
              style="margin-top:18px;">
 
-            <label>
-                Additional Request
-            </label>
+            <label for="inspectionDistanceKm">Confirmed Route Distance from North Caloocan (km)</label>
+            <input id="inspectionDistanceKm" type="number" min="0" step="0.1" value="${request.inspection_distance_km ?? ""}" placeholder="Enter route distance">
+
+            <label for="inspectionFeeInput" style="margin-top:10px;">Inspection Fee (₱)</label>
+            <input id="inspectionFeeInput" type="number" min="0" step="100" value="${request.inspection_fee ?? ""}" placeholder="System-calculated fee">
+            <small class="field-help">System-calculated inspection fees are rounded up to the nearest ₱100.</small>
+
+            <label>${request.request_purpose === "OCULAR_INSPECTION" ? "Payment Reference" : "Additional Request"}</label>
 
             <textarea readonly>${escapeHtml(
         request.additional_request ||
@@ -974,6 +902,32 @@ async function viewQuotation(id) {
 
     `);
 
+    const inspectionDistanceInput = document.getElementById('inspectionDistanceKm');
+    const inspectionFeeInput = document.getElementById('inspectionFeeInput');
+    const recalculateInspectionFee = () => {
+        const distance = Number(inspectionDistanceInput?.value);
+        if (inspectionDistanceInput?.value !== '' && Number.isFinite(distance) && distance >= 0 && inspectionFeeInput) {
+            inspectionFeeInput.value = String(Math.ceil((1500 + (distance * 20)) / 100) * 100);
+        }
+    };
+    inspectionDistanceInput?.addEventListener('input', recalculateInspectionFee);
+    if (!request.inspection_fee && request.inspection_distance_km != null) recalculateInspectionFee();
+
+    if (request.design_image_path) {
+        const { data, error } = await window.supabaseClient.storage
+            .from("booking-designs")
+            .createSignedUrl(request.design_image_path, 60 * 10);
+        const image = document.getElementById("adminQuotationDesignImage");
+        const imageStatus = document.getElementById("adminQuotationImageStatus");
+        if (error || !data?.signedUrl || !image || !imageStatus) {
+            if (imageStatus) imageStatus.textContent = "The private design image could not be opened. Check the Supabase storage policies.";
+        } else {
+            image.src = data.signedUrl;
+            image.hidden = false;
+            imageStatus.remove();
+        }
+    }
+
 }
 
 
@@ -994,30 +948,36 @@ async function updateQuotation(id) {
             "quotationAdminNotes"
         )?.value.trim();
 
+    const feeValue = document.getElementById("inspectionFeeInput")?.value;
+    const distanceValue = document.getElementById("inspectionDistanceKm")?.value;
+    const inspectionFee = feeValue === "" || feeValue == null ? null : Number(feeValue);
+    const inspectionDistanceKm = distanceValue === "" || distanceValue == null ? null : Number(distanceValue);
+
+    if ((inspectionFee != null && (!Number.isFinite(inspectionFee) || inspectionFee < 0)) ||
+        (inspectionDistanceKm != null && (!Number.isFinite(inspectionDistanceKm) || inspectionDistanceKm < 0))) {
+        alert("Enter a valid non-negative travel fee and distance.");
+        return;
+    }
+
 
     if (!status) return;
 
 
     try {
 
-        const {
-            error
-        } = await window.supabaseClient
+        const updateValues = {
+            inspection_fee: inspectionFee,
+            inspection_distance_km: inspectionDistanceKm,
+            admin_notes: adminNotes,
+            updated_at: new Date().toISOString()
+        };
+        if (status !== "APPROVED") updateValues.status = status;
 
-            .from("quotation_requests")
+        const { error } = await window.supabaseClient
 
-            .update({
+            .from("ocular_inspection_requests")
 
-                status:
-                    status,
-
-                admin_notes:
-                    adminNotes,
-
-                updated_at:
-                    new Date().toISOString()
-
-            })
+            .update(updateValues)
 
             .eq(
                 "id",
@@ -1031,6 +991,14 @@ async function updateQuotation(id) {
 
         }
 
+        if (status === "APPROVED") {
+            const { error: acceptError } = await window.supabaseClient.rpc(
+                "kq_accept_ocular_inspection_request",
+                { p_request_id: String(id) }
+            );
+            if (acceptError) throw acceptError;
+        }
+
 
         closeModal();
 
@@ -1038,9 +1006,7 @@ async function updateQuotation(id) {
         await loadQuotationRequests();
 
 
-        alert(
-            "Quotation request updated successfully."
-        );
+        showAdminToast("Ocular inspection request updated successfully.");
 
 
     } catch (error) {
@@ -1051,10 +1017,7 @@ async function updateQuotation(id) {
         );
 
 
-        alert(
-            error.message ||
-            "Unable to update quotation request."
-        );
+        showAdminToast(error.message || "Unable to update ocular inspection request.", "error");
 
     }
 
