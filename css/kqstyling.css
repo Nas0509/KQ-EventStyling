@@ -691,6 +691,73 @@ img {
     transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+.package-gallery {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+    gap: 5px;
+    height: 204px;
+    padding: 5px;
+    background: #f1f6f9;
+}
+
+.package-gallery img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.package-gallery .package-gallery-cover { min-height: 0; }
+
+.package-gallery-thumbs {
+    display: none;
+}
+
+.package-gallery { display: block; height: 240px; padding: 0; overflow: hidden; }
+.package-gallery .package-gallery-cover { position: relative; z-index: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.package-gallery-next-image { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .55s ease-in-out; }
+.package-gallery.is-changing .package-gallery-next-image { opacity: 1; }
+.gallery-count { z-index: 2; right: 56px; bottom: 13px; }
+.gallery-control {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 50%;
+    color: #fff;
+    background: rgba(20,32,42,.64);
+    font-size: 1.15rem;
+    cursor: pointer;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity .2s ease, background-color .2s ease;
+}
+.package-card:hover .gallery-control, .package-card:focus-within .gallery-control { opacity: 1; }
+.gallery-control:hover, .gallery-control:focus-visible { background: rgba(20,32,42,.9); }
+.gallery-control-prev { left: 12px; }
+.gallery-control-next { right: 12px; }
+
+.gallery-count {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(20, 32, 42, .76);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
     .package-card:hover {
         transform: translateY(-8px);
         box-shadow: var(--shadow-lg);
@@ -760,6 +827,10 @@ img {
     flex-direction: column;
     flex: 1;
     padding: 30px;
+}
+
+@media (max-width: 480px) {
+    .package-gallery { height: 200px; }
 }
 
     .package-content h3 {
