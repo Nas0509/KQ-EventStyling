@@ -16,7 +16,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     const timeSection = document.getElementById("timeSection");
     const startTime = document.getElementById("startTime");
     const paymentReferenceInput = document.getElementById("paymentReference");
+    const bookingPhoneInput = document.getElementById("phone");
+    bookingPhoneInput?.addEventListener("input", () => {
+        bookingPhoneInput.value = bookingPhoneInput.value.replace(/\D/g, "").slice(0, 11);
+    });
     const packageAmountText = document.getElementById("packageAmount");
+    const bookingTravelFeeAmount = document.getElementById("bookingTravelFeeAmount");
+    const bookingTotalAmount = document.getElementById("bookingTotalAmount");
+    const bookingVenueCityInput = document.getElementById("bookingVenueCity");
+    const bookingVenueCityOptions = document.getElementById("bookingVenueCityOptions");
+    const bookingTravelFeeHelp = document.getElementById("bookingTravelFeeHelp");
     const reservationFeeText = document.getElementById("reservationFeeAmount");
     const remainingBalanceText = document.getElementById("remainingBalanceAmount");
 
@@ -29,12 +38,84 @@ document.addEventListener("DOMContentLoaded", async function () {
     // ========================================
 
     let selectedPackage = sessionStorage.getItem("kqSelectedPackage") || "";
+    let bookingTravelFee = null;
+    let bookingTravelDistanceKm = null;
+    let bookingTravelLocation = null;
 
     const pesoFormat = new Intl.NumberFormat("en-PH", {
         style: "currency",
         currency: "PHP",
         maximumFractionDigits: 0
     });
+
+    function normalizeBookingCity(value) {
+        return String(value || "")
+            .toLocaleLowerCase("en-PH")
+            .replace(/^(city of|municipality of)\s+/i, "")
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim();
+    }
+
+    function bookingCityLabel(city) {
+        return city.province && city.province !== city.region
+            ? `${city.name}, ${city.province} — ${city.region}`
+            : `${city.name} — ${city.region}`;
+    }
+
+    function findBookingCity(value) {
+        const cities = window.KQ_LUZON_CITY_COORDINATES || [];
+        const query = normalizeBookingCity(value);
+        if (!query) return null;
+        const exactLabel = cities.find(city => normalizeBookingCity(bookingCityLabel(city)) === query);
+        if (exactLabel) return exactLabel;
+        const matches = cities.filter(city => normalizeBookingCity(city.name) === query);
+        return matches.length === 1 ? matches[0] : null;
+    }
+
+    function getBookingTravelEstimate(city) {
+        const origin = window.KQ_NORTH_CALOOCAN_REFERENCE;
+        if (!city || !origin) return null;
+        const radians = degrees => degrees * Math.PI / 180;
+        const lat1 = radians(origin.lat), lat2 = radians(city.lat);
+        const deltaLat = radians(city.lat - origin.lat), deltaLng = radians(city.lng - origin.lng);
+        const haversine = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+        const distance = Math.round((6371 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine))) * 10) / 10;
+        const fee = Math.ceil(distance * 20 / 100) * 100;
+        return { distance, fee };
+    }
+
+    if (bookingVenueCityOptions && window.KQ_LUZON_CITY_COORDINATES) {
+        const fragment = document.createDocumentFragment();
+        window.KQ_LUZON_CITY_COORDINATES
+            .slice()
+            .sort((a, b) => bookingCityLabel(a).localeCompare(bookingCityLabel(b), "en"))
+            .forEach(city => {
+                const option = document.createElement("option");
+                option.value = bookingCityLabel(city);
+                fragment.appendChild(option);
+            });
+        bookingVenueCityOptions.appendChild(fragment);
+    }
+
+    function updateBookingTravelFee() {
+        const city = findBookingCity(bookingVenueCityInput?.value);
+        const estimate = getBookingTravelEstimate(city);
+        bookingTravelLocation = city;
+        bookingTravelDistanceKm = estimate?.distance ?? null;
+        bookingTravelFee = estimate?.fee ?? null;
+        if (bookingTravelFeeHelp) {
+            if (estimate) {
+                bookingTravelFeeHelp.textContent = `Estimated travel expense from North Caloocan: ${estimate.distance} km × ₱20/km = ${pesoFormat.format(estimate.fee)} (rounded up to the next ₱100).`;
+            } else if (bookingVenueCityInput?.value.trim()) {
+                bookingTravelFeeHelp.textContent = "Choose a Luzon city or municipality from the suggestions to calculate the travel expense.";
+            } else {
+                bookingTravelFeeHelp.textContent = "Choose your venue city to calculate the travel expense from North Caloocan at ₱20/km.";
+            }
+        }
+        updateReservationPayment();
+    }
+
+    bookingVenueCityInput?.addEventListener("input", updateBookingTravelFee);
 
     function getPackageAmount(packageName) {
         const priceMatch = String(packageName || "").match(/₱\s*([\d,]+(?:\.\d+)?)/);
@@ -52,15 +133,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     function updateReservationPayment() {
-        const total = getPackageAmount(selectedPackage);
-        const fee = Math.round(total * 0.3);
+        const packageTotal = getPackageAmount(selectedPackage);
+        const hasTravelEstimate = Boolean(bookingTravelLocation && Number.isFinite(bookingTravelFee));
+        const total = packageTotal + (hasTravelEstimate ? bookingTravelFee : 0);
+        const fee = packageTotal && hasTravelEstimate ? Math.round(total * 0.3) : 0;
 
-        if (packageAmountText) packageAmountText.textContent = total ? pesoFormat.format(total) : "Select a package";
-        if (reservationFeeText) reservationFeeText.textContent = total ? pesoFormat.format(fee) : "—";
-        if (remainingBalanceText) remainingBalanceText.textContent = total ? pesoFormat.format(total - fee) : "—";
-        if (paymentReferenceInput) paymentReferenceInput.disabled = !total;
+        if (packageAmountText) packageAmountText.textContent = packageTotal ? pesoFormat.format(packageTotal) : "Select a package";
+        if (bookingTravelFeeAmount) bookingTravelFeeAmount.textContent = hasTravelEstimate ? pesoFormat.format(bookingTravelFee) : "Select venue city";
+        if (bookingTotalAmount) bookingTotalAmount.textContent = fee ? pesoFormat.format(total) : "Select package and venue city";
+        if (reservationFeeText) reservationFeeText.textContent = fee ? pesoFormat.format(fee) : "—";
+        if (remainingBalanceText) remainingBalanceText.textContent = fee ? pesoFormat.format(total - fee) : "—";
+        if (paymentReferenceInput) paymentReferenceInput.disabled = !fee;
 
-        return { total, fee };
+        return { total: fee ? total : 0, fee };
     }
 
     function updateSelectedPackageCard(packageName) {
@@ -133,9 +218,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     const calendarMonthLabel = document.getElementById("calendarMonthLabel");
     const calendarDays = document.getElementById("calendarDays");
     const calendarHelp = document.getElementById("calendarHelp");
+    const bookingCalendar = document.getElementById("bookingCalendar");
+    const bookingDatePicker = document.getElementById("bookingDatePicker");
+    const eventDateTrigger = document.getElementById("eventDateTrigger");
+    const eventDateTriggerText = document.getElementById("eventDateTriggerText");
+    const bookingDatePrompt = document.getElementById("bookingDatePrompt");
     const calendarPrevious = document.getElementById("calendarPrevious");
     const calendarNext = document.getElementById("calendarNext");
     const bookingTimeSlots = document.getElementById("bookingTimeSlots");
+    const bookingTimePrompt = document.getElementById("bookingTimePrompt");
     const timeSlotInput = document.getElementById("timeSlot");
     const slotButtons = Array.from(document.querySelectorAll(".time-slot-option"));
     const today = new Date();
@@ -174,6 +265,37 @@ document.addEventListener("DOMContentLoaded", async function () {
     function slotLabel(slot) {
         return ({ MORNING: "Morning", AFTERNOON: "Afternoon", NIGHT: "Night" })[slot] || "";
     }
+
+    function setBookingCalendarOpen(isOpen) {
+        if (!bookingCalendar || !eventDateTrigger) return;
+        bookingCalendar.hidden = !isOpen;
+        eventDateTrigger.setAttribute("aria-expanded", String(isOpen));
+    }
+
+    function updateEventDateTrigger() {
+        if (!eventDateTriggerText) return;
+        if (!eventDate?.value) {
+            eventDateTriggerText.textContent = "Choose event date";
+            return;
+        }
+        const [year, month, day] = eventDate.value.split("-").map(Number);
+        eventDateTriggerText.textContent = new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(new Date(year, month - 1, day));
+    }
+
+    eventDateTrigger?.addEventListener("click", () => {
+        setBookingCalendarOpen(bookingCalendar?.hidden ?? true);
+    });
+    eventDate?.addEventListener("change", updateEventDateTrigger);
+    document.addEventListener("click", event => {
+        if (bookingDatePicker && !bookingDatePicker.contains(event.target)) setBookingCalendarOpen(false);
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && bookingCalendar && !bookingCalendar.hidden) {
+            setBookingCalendarOpen(false);
+            eventDateTrigger?.focus();
+        }
+    });
+    updateEventDateTrigger();
 
     function updateSelectedDateSlots() {
         if (!bookingTimeSlots || !eventDate?.value) {
@@ -235,7 +357,12 @@ document.addEventListener("DOMContentLoaded", async function () {
             button.addEventListener("click", () => {
                 if (!eventDate) return;
                 eventDate.value = iso;
+                updateEventDateTrigger();
+                setBookingCalendarOpen(false);
+                if (bookingDatePrompt) bookingDatePrompt.hidden = true;
                 selectedTimeSlot = "";
+                const clockTimePrompt = document.getElementById("clockTimePrompt");
+                if (clockTimePrompt) clockTimePrompt.hidden = true;
                 if (timeSlotInput) timeSlotInput.value = "";
                 if (startTime) startTime.value = "";
                 if (selectedTimeText) selectedTimeText.textContent = "Choose event time";
@@ -306,9 +433,35 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     slotButtons.forEach(button => button.addEventListener("click", () => {
         if (button.disabled) return;
+        if (bookingTimePrompt) bookingTimePrompt.hidden = true;
+        const clockTimePrompt = document.getElementById("clockTimePrompt");
+        if (clockTimePrompt) clockTimePrompt.hidden = true;
         selectedTimeSlot = button.dataset.slot || "";
         if (timeSlotInput) timeSlotInput.value = selectedTimeSlot;
         if (startTime && getSlotForTime(startTime.value) !== selectedTimeSlot) startTime.value = "";
+
+        // Changing the slot must immediately reset the picker to a valid time
+        // range, even if the clock dialog was already open.
+        clockMinute = 0;
+        if (startTime?.value) {
+            const [hour, minute] = startTime.value.split(":").map(Number);
+            clockHour = hour % 12 || 12;
+            clockMinute = minute || 0;
+            clockPeriod = hour >= 12 ? "PM" : "AM";
+        } else if (selectedTimeSlot === "MORNING") {
+            clockHour = 9;
+            clockPeriod = "AM";
+        } else if (selectedTimeSlot === "AFTERNOON") {
+            clockHour = 2;
+            clockPeriod = "PM";
+        } else {
+            clockHour = 8;
+            clockPeriod = "PM";
+        }
+        clockMode = "hour";
+        if (clockPicker && !clockPicker.hidden) closeClock();
+        updateClockDisplay();
+
         if (selectedTimeText && !startTime?.value) selectedTimeText.textContent = `Choose a time in the ${slotLabel(selectedTimeSlot)} slot`;
         updateSelectedDateSlots();
     }));
@@ -443,6 +596,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (eventDate) {
                 eventDate.dispatchEvent(new Event("change"));
             }
+            updateBookingTravelFee();
 
             console.log("✅ Booking draft restored.");
         } catch (error) {
@@ -456,6 +610,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const timeDisplay = document.getElementById("startTimeDisplay");
     const selectedTimeText = document.getElementById("selectedTimeText");
+    const clockTimePrompt = document.getElementById("clockTimePrompt");
     const clockPicker = document.getElementById("clockPicker");
     const clockFace = document.getElementById("clockFace");
     const hourText = document.getElementById("clockHourText");
@@ -487,6 +642,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         minutesTab.classList.toggle("active", clockMode === "minute");
         amButton.classList.toggle("active", clockPeriod === "AM");
         pmButton.classList.toggle("active", clockPeriod === "PM");
+        amButton.disabled = selectedTimeSlot !== "MORNING";
+        pmButton.disabled = selectedTimeSlot === "MORNING";
 
         renderClockFace();
     }
@@ -522,7 +679,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         clockFace.appendChild(hand);
 
         const values = clockMode === "hour"
-            ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+            ? selectedTimeSlot === "AFTERNOON"
+                ? [12, 1, 2, 3, 4, 5]
+                : [6, 7, 8, 9, 10, 11]
             : Array.from({ length: 12 }, (_, i) => i * 5);
 
         values.forEach((value, index) => {
@@ -569,11 +728,22 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!clockPicker || !timeDisplay || !startTime) return;
 
         if (!eventDate?.value) {
-            alert("Please choose an event date first.");
+            if (bookingDatePrompt) {
+                bookingDatePrompt.textContent = "Choose an available event date first. The calendar is open above.";
+                bookingDatePrompt.hidden = false;
+            }
+            setBookingCalendarOpen(true);
+            eventDateTrigger?.focus();
+            eventDateTrigger?.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
         }
         if (!selectedTimeSlot) {
-            alert("Please choose an available time slot first.");
+            if (bookingTimePrompt) {
+                bookingTimePrompt.textContent = "Choose an available Morning, Afternoon, or Night slot before setting the start time.";
+                bookingTimePrompt.hidden = false;
+            }
+            bookingTimeSlots?.scrollIntoView({ behavior: "smooth", block: "center" });
+            slotButtons.find(button => !button.disabled)?.focus();
             return;
         }
 
@@ -662,9 +832,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const proposedTime = `${String(hour24).padStart(2, "0")}:${String(clockMinute).padStart(2, "0")}`;
             if (getSlotForTime(proposedTime) !== selectedTimeSlot) {
-                alert(`Choose a time within the ${slotLabel(selectedTimeSlot)} slot shown on the form.`);
+                if (clockTimePrompt) {
+                    clockTimePrompt.textContent = `That time is outside the ${slotLabel(selectedTimeSlot)} slot. Choose a time between ${selectedTimeSlot === "MORNING" ? "6:00 AM and 11:55 AM" : selectedTimeSlot === "AFTERNOON" ? "12:00 PM and 5:55 PM" : "6:00 PM and 11:55 PM"}.`;
+                    clockTimePrompt.hidden = false;
+                }
                 return;
             }
+            if (clockTimePrompt) clockTimePrompt.hidden = true;
 
             const formattedHour = String(hour24).padStart(2, "0");
             const formattedMinute = String(clockMinute).padStart(2, "0");
@@ -826,6 +1000,11 @@ document.addEventListener("DOMContentLoaded", async function () {
             const venueAddress =
                 document.getElementById("location")?.value.trim() || "";
 
+            const venueCity =
+                bookingVenueCityInput?.value.trim() || "";
+
+            updateBookingTravelFee();
+
             const eventType =
                 document.getElementById("eventType")?.value || "";
 
@@ -834,6 +1013,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const guests =
                 Number(document.getElementById("guests")?.value) || 0;
+
+            const eventTheme =
+                document.getElementById("eventTheme")?.value.trim() || "";
+
+            const eventColors =
+                document.getElementById("eventColors")?.value.trim() || "";
 
             const selectedStartTime = startTime
                 ? startTime.value
@@ -857,8 +1042,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                 throw new Error("Please enter your email.");
             }
 
-            if (!phone) {
-                throw new Error("Please enter your contact number.");
+            if (!/^09\d{9}$/.test(phone)) {
+                throw new Error("Enter an 11-digit Philippine mobile number starting with 09.");
+            }
+
+            if (!bookingTravelLocation || !Number.isFinite(bookingTravelFee)) {
+                throw new Error("Choose your Luzon venue city from the suggestions to calculate the ₱20/km travel expense.");
             }
 
             if (!eventType) {
@@ -1019,8 +1208,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
                 message: [
                     message.includes("Ocular request package:") ? "" : `Selected package: ${selectedPackage}`,
+                    `Venue city: ${bookingTravelLocation ? bookingCityLabel(bookingTravelLocation) : venueCity}`,
                     venueAddress ? `Event venue: ${venueAddress}` : "",
-                    message,
+                    Number.isFinite(bookingTravelDistanceKm) ? `Estimated travel expense: ${bookingTravelDistanceKm} km city-center distance × ₱20/km = ${pesoFormat.format(bookingTravelFee)} (rounded up to the next ₱100).` : "",
+                    eventTheme ? `Theme: ${eventTheme}` : "",
+                    eventColors ? `Preferred colors: ${eventColors}` : "",
+                    message ? `Additional requests: ${message}` : "",
                     `Reservation fee payment reference (pending verification): ${paymentReference}`
                 ].filter(Boolean).join("\n\n"),
 
@@ -1062,11 +1255,23 @@ document.addEventListener("DOMContentLoaded", async function () {
             sessionStorage.removeItem("kqReturnAfterLogin");
             sessionStorage.removeItem("kqSelectedPackage");
             selectedPackage = "";
-            if (paymentReferenceInput) paymentReferenceInput.value = "";
+            bookingForm.reset();
+            selectedTimeSlot = "";
+            if (timeSlotInput) timeSlotInput.value = "";
+            if (eventDate) eventDate.value = "";
+            updateEventDateTrigger();
+            setBookingCalendarOpen(false);
+            updateSelectedDateSlots();
+            if (selectedTimeText) selectedTimeText.textContent = "Choose event time";
+            if (bookingTimePrompt) bookingTimePrompt.hidden = true;
+            if (bookingDatePrompt) bookingDatePrompt.hidden = true;
+            if (clockTimePrompt) clockTimePrompt.hidden = true;
             updateSelectedPackageCard(selectedPackage);
+            updateBookingTravelFee();
             updateReservationPayment();
             document.getElementById("removeDesignImage")?.click();
             packageButtons.forEach(button => button.classList.remove("selected"));
+            showBookingSuccessModal();
 
         } catch (error) {
             console.error("❌ BOOKING SUBMISSION ERROR:", error);

@@ -411,26 +411,12 @@ function isValidEmail(email) {
 function isValidContactNumber(
     contact
 ) {
-
-    const cleaned =
-        contact.replace(/[\s-]/g, "");
-
-
-    // 09XXXXXXXXX
-    const localFormat =
-        /^09\d{9}$/;
-
-
-    // +639XXXXXXXXX
-    const internationalFormat =
-        /^\+639\d{9}$/;
-
-
-    return (
-        localFormat.test(cleaned) ||
-        internationalFormat.test(cleaned)
-    );
+    return /^09\d{9}$/.test(contact);
 }
+
+contactInput.addEventListener("input", function () {
+    contactInput.value = contactInput.value.replace(/\D/g, "").slice(0, 11);
+});
 
 
 // ========================================
@@ -569,7 +555,7 @@ signupForm.addEventListener(
             showToast(
                 "error",
                 "Invalid Contact Number",
-                "Use 09XXXXXXXXX or +639XXXXXXXXX."
+                "Enter exactly 11 digits, starting with 09."
             );
 
             message.textContent =

@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     const authNavBtn =
         document.getElementById("authNavBtn");
 
+    const createAccountNavBtn =
+        document.getElementById("createAccountNavBtn");
+
     const logoutModal =
         document.getElementById("logoutModal");
 
@@ -42,6 +45,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     // ========================================
 
     function updateAuthButton(session) {
+
+        if (createAccountNavBtn) createAccountNavBtn.hidden = Boolean(session);
 
         if (!authNavBtn) {
 
@@ -102,7 +107,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                 openLogoutModal();
 
             };
-
 
         console.log(
             "👤 Logged-in user: Logout button displayed."

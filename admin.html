@@ -13,7 +13,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=9-booking-calendar-layout">
+          href="css/admin.css?v=20261017-compact-signout-confirmation">
 
 </head>
 
@@ -41,42 +41,55 @@
             <button type="button"
                     class="nav-item active"
                     data-section="dashboard">
-                📊 Dashboard
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="4" rx="1.5"></rect><rect x="13.5" y="10.5" width="7" height="10" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>
+                <span>Dashboard</span>
             </button>
 
 
             <button type="button"
                     class="nav-item"
                     data-section="bookings">
-                📅 Bookings
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2"></rect><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 13h.01M12 13h.01M16 13h.01M8 16.5h.01M12 16.5h.01"></path></svg>
+                <span>Bookings</span>
+            </button>
+
+            <button type="button"
+                    class="nav-item"
+                    data-section="archive">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4.5h16v4H4zM5.5 8.5v11h13v-11M9 12.5h6"></path></svg>
+                <span>Archive</span>
             </button>
 
 
             <button type="button"
                     class="nav-item"
                     data-section="quotations">
-                🔎 Ocular Inspections
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5M8.5 10.8h4.6M10.8 8.5v4.6"></path></svg>
+                <span>Ocular Inspections</span>
             </button>
 
 
             <button type="button"
                     class="nav-item"
                     data-section="payments">
-                💳 Payments
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 9h18M7 15h4"></path></svg>
+                <span>Payments</span>
             </button>
 
 
             <button type="button"
                     class="nav-item"
                     data-section="sales">
-                💰 Sales
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19.5h16M6 16V9.5h3V16M11 16V4.5h3V16M16 16v-4.5h3V16"></path></svg>
+                <span>Sales</span>
             </button>
 
 
             <button type="button"
                     class="nav-item"
                     data-section="inventory">
-                📦 Inventory
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12 3 8.5 4.5v9L12 21l-8.5-4.5v-9L12 3Z"></path><path d="m3.8 7.8 8.2 4.4 8.2-4.4M12 12.2V21M8 5.1l8.5 4.6"></path></svg>
+                <span>Inventory</span>
             </button>
 
         </nav>
@@ -84,19 +97,31 @@
 
         <!-- SIDEBAR BOTTOM -->
         <div class="sidebar-bottom">
-
-            <a href="index.html"
-               class="back-link">
-                ← User View
-            </a>
-
-
-            <button type="button"
-                    id="logoutBtn"
-                    class="logout-btn">
-                Logout
-            </button>
-
+            <div class="account-menu-wrap" id="accountMenuWrap">
+                <div class="sidebar-account-menu" id="sidebarAccountMenu" role="dialog" aria-label="Admin account menu" hidden>
+                    <div class="account-menu-heading">ACCOUNT</div>
+                    <div class="account-menu-profile">
+                        <span class="avatar" id="settingsAccountAvatar" aria-hidden="true">A</span>
+                        <div class="account-menu-identity">
+                            <strong id="settingsAccountName">Administrator</strong>
+                            <small id="settingsAccountEmail">Admin account</small>
+                        </div>
+                        <span class="account-menu-role">Admin</span>
+                    </div>
+                    <button type="button" id="editAccountBtn" class="account-menu-edit">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg>
+                        <span>Edit account details</span>
+                    </button>
+                    <div class="account-menu-divider"></div>
+                    <button type="button" id="logoutBtn" class="account-menu-logout">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10M14 8l4 4-4 4M8 12h10"></path></svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+                <button type="button" id="settingsMenuBtn" class="sidebar-settings-button" aria-label="Account settings" title="Account settings" aria-expanded="false" aria-controls="sidebarAccountMenu">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.3a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4Z"></path><path d="m19.2 13.5 1.1.9-1.5 2.6-1.4-.5a7.5 7.5 0 0 1-1.6.9l-.3 1.5h-3l-.3-1.5a7.5 7.5 0 0 1-1.6-.9l-1.4.5-1.5-2.6 1.1-.9a7.2 7.2 0 0 1 0-1.9l-1.1-.9 1.5-2.6 1.4.5a7.5 7.5 0 0 1 1.6-.9l.3-1.5h3l.3 1.5a7.5 7.5 0 0 1 1.6.9l1.4-.5 1.5 2.6-1.1.9a7.2 7.2 0 0 1 0 1.9Z"></path></svg>
+                </button>
+            </div>
         </div>
 
     </aside>
@@ -128,6 +153,18 @@
             </div>
 
 
+            <div class="admin-header-actions">
+                <div class="admin-notification-wrap">
+                    <button type="button" id="adminNotificationBtn" class="admin-notification-btn" aria-label="Open admin notifications" aria-expanded="false" aria-controls="adminNotificationPanel">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path></svg>
+                        <span id="adminNotificationCount" class="admin-notification-count" hidden>0</span>
+                    </button>
+                    <div id="adminNotificationPanel" class="admin-notification-panel" hidden>
+                        <div class="admin-notification-heading"><strong>Notifications</strong><button type="button" id="closeAdminNotifications" aria-label="Close notifications">×</button></div>
+                        <div id="adminNotificationsList"></div>
+                    </div>
+                </div>
+
             <div class="admin-user">
 
                 <span class="avatar">
@@ -147,6 +184,7 @@
                 </div>
 
             </div>
+            </div>
 
         </header>
 
@@ -163,16 +201,15 @@
                 <div>
 
                     <span class="badge">
-                        OVERVIEW
+                        BUSINESS OVERVIEW
                     </span>
 
                     <h2>
-                        Welcome back, Admin.
+                        Event operations at a glance
                     </h2>
 
                     <p>
-                        Manage KQ Event Styling bookings,
-                        payments, sales, and inventory.
+                        Review booking requests, track payments, and prepare for upcoming events.
                     </p>
 
                 </div>
@@ -187,146 +224,76 @@
             </div>
 
 
-            <!-- STATISTICS -->
+            <!-- BOOKING OVERVIEW -->
 
-            <div class="stats-grid">
+            <section class="dashboard-stat-section" aria-labelledby="bookingOverviewTitle">
+                <div class="dashboard-group-heading">
+                    <div>
+                        <h3 id="bookingOverviewTitle">Booking overview</h3>
+                        <p>Requests and scheduled events</p>
+                    </div>
+                </div>
 
-                <article class="stat-card">
+                <div class="stats-grid">
 
-                    <span>
-                        Pending Bookings
-                    </span>
-
-                    <strong id="statPending">
-                        0
-                    </strong>
-
-                    <small>
-                        Awaiting review
-                    </small>
-
+                <article class="stat-card dashboard-shortcut" data-section-jump="bookings" data-status-filter="PENDING" role="link" tabindex="0" aria-label="View pending bookings">
+                    <span>Pending Bookings</span>
+                    <strong id="statPending">0</strong>
+                    <small>Awaiting review</small>
                 </article>
 
-
-                <article class="stat-card">
-
-                    <span>
-                        Approved Bookings
-                    </span>
-
-                    <strong id="statApproved">
-                        0
-                    </strong>
-
-                    <small>
-                        Confirmed events
-                    </small>
-
+                <article class="stat-card dashboard-shortcut" data-section-jump="bookings" data-status-filter="APPROVED" role="link" tabindex="0" aria-label="View approved bookings">
+                    <span>Approved Bookings</span>
+                    <strong id="statApproved">0</strong>
+                    <small>Confirmed events</small>
                 </article>
 
-
-                <article class="stat-card">
-
-                    <span>
-                        Declined Bookings
-                    </span>
-
-                    <strong id="statDeclined">
-                        0
-                    </strong>
-
-                    <small>
-                        Booking requests
-                    </small>
-
+                <article class="stat-card dashboard-shortcut" data-section-jump="bookings" data-status-filter="DECLINED" role="link" tabindex="0" aria-label="View declined bookings">
+                    <span>Declined Bookings</span>
+                    <strong id="statDeclined">0</strong>
+                    <small>Booking requests</small>
                 </article>
 
-
-                <article class="stat-card">
-
-                    <span>
-                        Upcoming Events
-                    </span>
-
-                    <strong id="statUpcoming">
-                        0
-                    </strong>
-
-                    <small>
-                        Approved future events
-                    </small>
-
+                <article class="stat-card dashboard-shortcut" data-section-jump="bookings" data-status-filter="UPCOMING" role="link" tabindex="0" aria-label="View upcoming events">
+                    <span>Upcoming Events</span>
+                    <strong id="statUpcoming">0</strong>
+                    <small>Approved future events</small>
                 </article>
+                </div>
+            </section>
 
+            <!-- PAYMENT OVERVIEW -->
 
-                <article class="stat-card">
-
-                    <span>
-                        Unpaid
-                    </span>
-
-                    <strong id="statUnpaid">
-                        0
-                    </strong>
-
-                    <small>
-                        No down payment
-                    </small>
-
-                </article>
-
-
-                <article class="stat-card">
-
-                    <span>
-                        Partial Payments
-                    </span>
-
-                    <strong id="statPartial">
-                        0
-                    </strong>
-
-                    <small>
-                        Not fully paid
-                    </small>
-
-                </article>
-
-
-                <article class="stat-card">
-
-                    <span>
-                        Completed Payments
-                    </span>
-
-                    <strong id="statPaid">
-                        0
-                    </strong>
-
-                    <small>
-                        Fully paid
-                    </small>
-
-                </article>
-
-
-                <article class="stat-card accent">
-
-                    <span>
-                        Total Sales
-                    </span>
-
-                    <strong id="statSales">
-                        ₱0
-                    </strong>
-
-                    <small>
-                        Recorded payments
-                    </small>
-
-                </article>
-
-            </div>
+            <section class="dashboard-stat-section" aria-labelledby="paymentOverviewTitle">
+                <div class="dashboard-group-heading">
+                    <div>
+                        <h3 id="paymentOverviewTitle">Payment overview</h3>
+                        <p>Payment progress and recorded sales</p>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <article class="stat-card dashboard-shortcut" data-section-jump="payments" data-payment-filter="UNPAID" role="link" tabindex="0" aria-label="View unpaid payments">
+                        <span>Unpaid</span>
+                        <strong id="statUnpaid">0</strong>
+                        <small>No payment recorded</small>
+                    </article>
+                    <article class="stat-card dashboard-shortcut" data-section-jump="payments" data-payment-filter="PARTIAL" role="link" tabindex="0" aria-label="View partial payments">
+                        <span>Partial Payments</span>
+                        <strong id="statPartial">0</strong>
+                        <small>Payment still in progress</small>
+                    </article>
+                    <article class="stat-card dashboard-shortcut" data-section-jump="payments" data-payment-filter="PAID" role="link" tabindex="0" aria-label="View completed payments">
+                        <span>Completed Payments</span>
+                        <strong id="statPaid">0</strong>
+                        <small>Fully paid bookings</small>
+                    </article>
+                    <article class="stat-card accent dashboard-shortcut" data-section-jump="sales" role="link" tabindex="0" aria-label="View sales details">
+                        <span>Total Sales</span>
+                        <strong id="statSales">₱0</strong>
+                        <small>Total recorded payments</small>
+                    </article>
+                </div>
+            </section>
 
 
             <!-- DASHBOARD PANELS -->
@@ -376,8 +343,38 @@
 
                 </article>
 
+                <article class="panel dashboard-timeline-panel">
+                    <div class="panel-head"><h3>Recent Booking Timeline</h3><button type="button" class="text-btn" data-section-jump="bookings">Review requests</button></div>
+                    <div id="bookingTimeline" class="booking-timeline"></div>
+                </article>
+
+                <article class="panel dashboard-analytics-panel">
+                    <div class="panel-head"><div><h3>Demand & Peak Season</h3><small>Event dates in saved bookings</small></div><span id="analyticsBookingCount" class="analytics-count"></span></div>
+                    <div id="dashboardAnalytics" class="monthly-bars" role="img" aria-label="Monthly event demand chart"></div>
+                    <p id="peakSeasonInsight" class="peak-season-insight"></p>
+                </article>
+
             </div>
 
+        </section>
+
+        <section id="archive" class="page-section">
+            <div class="section-head">
+                <div>
+                    <span class="badge">RECORDS & FOLLOW-UP</span>
+                    <h2>Cancelled Bookings Archive</h2>
+                    <p>Cancelled event records and the reason entered by the admin.</p>
+                </div>
+            </div>
+            <div class="panel table-panel">
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Client</th><th>Event</th><th>Date & Time</th><th>Package</th><th>Cancellation Record</th><th>Action</th></tr></thead>
+                        <tbody id="archiveTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="emptyArchive" class="empty-state">No cancelled bookings have been archived.</div>
+            </div>
         </section>
 
 
@@ -411,7 +408,7 @@
                 <button type="button"
                         class="btn primary"
                         id="calendarBtn">
-                    📅 Calendar View
+                    📅 Booking Calendar
                 </button>
 
             </div>
@@ -438,6 +435,10 @@
 
                     <option value="APPROVED">
                         Approved
+                    </option>
+
+                    <option value="UPCOMING">
+                        Upcoming Events
                     </option>
 
                     <option value="DECLINED">
@@ -479,6 +480,10 @@
 
                                 <th>
                                     Package
+                                </th>
+
+                                <th>
+                                    Theme & Colors
                                 </th>
 
                                 <th>
@@ -542,8 +547,13 @@
 
                 </div>
 
-            </div>
+                <button type="button"
+                        class="btn primary"
+                        id="ocularCalendarBtn">
+                    🔎 Ocular Calendar
+                </button>
 
+            </div>
 
             <!-- QUOTATION FILTER -->
 
@@ -683,6 +693,15 @@
 
             </div>
 
+
+            <div class="filter-row payment-filter-row">
+                <select id="paymentStatusFilter" aria-label="Filter payments by status">
+                    <option value="ALL">All Payment Statuses</option>
+                    <option value="UNPAID">Unpaid</option>
+                    <option value="PARTIAL">Partial Payments</option>
+                    <option value="PAID">Fully Paid</option>
+                </select>
+            </div>
 
             <div class="stats-grid compact">
 
@@ -1076,7 +1095,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="admin.js?v=20261015-booking-calendar-layout"></script>
+    <script src="admin.js?v=20261017-account-menu-clipping-fix"></script>
 
 
 </body>

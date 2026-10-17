@@ -14,6 +14,29 @@ let payments = JSON.parse(localStorage.getItem(PAYMENT_KEY) || "[]");
 let expenses = JSON.parse(localStorage.getItem(EXPENSE_KEY) || "[]");
 let inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null") || defaultInventory;
 
+const accountMenuWrap = document.getElementById("accountMenuWrap");
+const settingsMenuBtn = document.getElementById("settingsMenuBtn");
+const sidebarAccountMenu = document.getElementById("sidebarAccountMenu");
+let currentAdminProfile = null;
+let currentAdminUser = null;
+
+function setAccountMenuOpen(open) {
+    if (!settingsMenuBtn || !sidebarAccountMenu) return;
+    sidebarAccountMenu.hidden = !open;
+    settingsMenuBtn.setAttribute("aria-expanded", String(open));
+    if (!open) return;
+
+    const buttonRect = settingsMenuBtn.getBoundingClientRect();
+    const menuRect = sidebarAccountMenu.getBoundingClientRect();
+    const edge = 12;
+    const left = Math.max(edge, Math.min(buttonRect.left, window.innerWidth - menuRect.width - edge));
+    let top = buttonRect.top - menuRect.height - edge;
+    if (top < edge) top = buttonRect.bottom + edge;
+    top = Math.max(edge, Math.min(top, window.innerHeight - menuRect.height - edge));
+    sidebarAccountMenu.style.left = `${left}px`;
+    sidebarAccountMenu.style.top = `${top}px`;
+}
+
 const money = n => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 }).format(Number(n) || 0);
 const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
@@ -93,7 +116,7 @@ async function requireAdmin() {
 
     const { data: profile, error } = await window.supabaseClient
         .from("profiles")
-        .select("role")
+        .select("role,full_name,contact_number,email")
         .eq("id", session.user.id)
         .single();
 
@@ -103,8 +126,27 @@ async function requireAdmin() {
         return false;
     }
 
-    const adminEmail = document.querySelector(".admin-user strong");
-    if (adminEmail) adminEmail.textContent = session.user.email || "Administrator";
+    if (profile.email && session.user.email && profile.email !== session.user.email) {
+        const { error: emailSyncError } = await window.supabaseClient
+            .from("profiles")
+            .update({ email: session.user.email })
+            .eq("id", session.user.id);
+        if (emailSyncError) console.warn("Unable to sync the confirmed account email:", emailSyncError);
+    }
+
+    const adminName = document.querySelector(".admin-user strong");
+    const displayName = profile.full_name?.trim() || "Administrator";
+    currentAdminProfile = profile;
+    currentAdminUser = session.user;
+    if (adminName) adminName.textContent = displayName;
+    const adminAvatar = document.querySelector(".admin-user .avatar");
+    if (adminAvatar) adminAvatar.textContent = displayName.slice(0, 1).toUpperCase();
+    const accountName = document.getElementById("settingsAccountName");
+    if (accountName) accountName.textContent = displayName;
+    const accountEmail = document.getElementById("settingsAccountEmail");
+    if (accountEmail) accountEmail.textContent = session.user.email || "Email unavailable";
+    const accountAvatar = document.getElementById("settingsAccountAvatar");
+    if (accountAvatar) accountAvatar.textContent = displayName.slice(0, 1).toUpperCase();
     return true;
 }
 
@@ -114,6 +156,7 @@ function showSection(id) {
     const titles = {
         dashboard: "Admin Dashboard",
         bookings: "Booking Management",
+        archive: "Cancelled Bookings Archive",
         quotations: "Quotation Management",
         payments: "Payment Management",
         sales: "Sales Management",
@@ -124,11 +167,212 @@ function showSection(id) {
 }
 
 document.querySelectorAll(".nav-item").forEach(btn => btn.addEventListener("click", () => showSection(btn.dataset.section)));
-document.querySelectorAll("[data-section-jump]").forEach(btn => btn.addEventListener("click", () => showSection(btn.dataset.sectionJump)));
-document.getElementById("logoutBtn").addEventListener("click", async () => {
-    if (window.supabaseClient) await window.supabaseClient.auth.signOut();
-    window.location.href = "login.html";
+function followDashboardShortcut(target) {
+    const section = target.dataset.sectionJump;
+    const status = target.dataset.statusFilter;
+    const paymentStatus = target.dataset.paymentFilter;
+    if (section === "bookings" && status) {
+        const statusFilter = document.getElementById("bookingStatusFilter");
+        const search = document.getElementById("bookingSearch");
+        if (statusFilter) statusFilter.value = status;
+        if (search) search.value = "";
+    }
+    if (section === "payments" && paymentStatus) {
+        const paymentFilter = document.getElementById("paymentStatusFilter");
+        if (paymentFilter) paymentFilter.value = paymentStatus;
+    }
+    showSection(section);
+}
+document.querySelectorAll("[data-section-jump]").forEach(target => {
+    target.addEventListener("click", () => followDashboardShortcut(target));
+    if (target.classList.contains("dashboard-shortcut")) {
+        target.addEventListener("keydown", event => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            followDashboardShortcut(target);
+        });
+    }
 });
+settingsMenuBtn?.addEventListener("click", () => {
+    setAccountMenuOpen(sidebarAccountMenu?.hidden ?? true);
+});
+window.addEventListener("resize", () => {
+    if (sidebarAccountMenu && !sidebarAccountMenu.hidden) setAccountMenuOpen(true);
+});
+document.addEventListener("click", event => {
+    if (accountMenuWrap && !accountMenuWrap.contains(event.target)) setAccountMenuOpen(false);
+});
+document.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || sidebarAccountMenu?.hidden) return;
+    setAccountMenuOpen(false);
+    settingsMenuBtn?.focus();
+});
+
+document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    setAccountMenuOpen(false);
+    openModal(`<div class="logout-confirmation">
+        <span class="logout-confirmation-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10M14 8l4 4-4 4M8 12h10"></path></svg></span>
+        <h3>Sign out of admin?</h3>
+        <p>You will need to sign in again to manage KQ Event Styling.</p>
+        <div class="modal-actions">
+            <button type="button" class="small-btn" id="cancelLogoutBtn">Stay signed in</button>
+            <button type="button" class="btn danger" id="confirmLogoutBtn">Sign out</button>
+        </div>
+    </div>`);
+    document.querySelector("#modal .modal-card")?.classList.add("logout-confirmation-card");
+    document.getElementById("cancelLogoutBtn")?.addEventListener("click", () => {
+        closeModal();
+        settingsMenuBtn?.focus();
+    });
+    document.getElementById("confirmLogoutBtn")?.addEventListener("click", async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        button.textContent = "Signing out…";
+        try {
+            if (window.supabaseClient) {
+                const { error } = await window.supabaseClient.auth.signOut();
+                if (error) throw error;
+            }
+            window.location.href = "login.html";
+        } catch (error) {
+            console.error("Admin sign-out error:", error);
+            closeModal();
+            showAdminToast("Could not sign out. Please try again.", "error");
+            settingsMenuBtn?.focus();
+        }
+    });
+});
+
+document.getElementById("editAccountBtn")?.addEventListener("click", openAccountSettings);
+
+function openAccountSettings() {
+    const user = currentAdminUser;
+    const profile = currentAdminProfile || {};
+    if (!user) {
+        showAdminToast("Account details are still loading. Please try again.", "error");
+        return;
+    }
+
+    const metadata = user.user_metadata || {};
+    const fullName = String(profile.full_name || metadata.full_name || "").trim();
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    const firstName = metadata.first_name || nameParts.shift() || "";
+    const lastName = metadata.last_name || nameParts.pop() || "";
+    const middleName = metadata.middle_name || nameParts.join(" ");
+    const contact = profile.contact_number || metadata.contact_number || "";
+
+    setAccountMenuOpen(false);
+    openModal(`<h3>Account details</h3>
+        <p class="account-settings-intro">Update the personal information connected to your admin account.</p>
+        <form id="accountSettingsForm" novalidate>
+            <div class="modal-grid account-settings-grid">
+                <div class="modal-field"><label for="accountFirstName">First name</label><input id="accountFirstName" name="firstName" value="${escapeAttr(firstName)}" autocomplete="given-name" required></div>
+                <div class="modal-field"><label for="accountMiddleName">Middle name</label><input id="accountMiddleName" name="middleName" value="${escapeAttr(middleName)}" autocomplete="additional-name"></div>
+                <div class="modal-field"><label for="accountLastName">Last name</label><input id="accountLastName" name="lastName" value="${escapeAttr(lastName)}" autocomplete="family-name" required></div>
+                <div class="modal-field"><label for="accountContactNumber">Contact number</label><input id="accountContactNumber" name="contactNumber" type="tel" value="${escapeAttr(contact)}" placeholder="09XXXXXXXXX" autocomplete="tel" required></div>
+                <div class="modal-field full"><label for="accountEmail">Email address</label><input id="accountEmail" name="email" type="email" value="${escapeAttr(user.email || "")}" autocomplete="email" required><small>Email changes may require confirmation through your inbox.</small></div>
+                <div class="modal-field"><label for="accountNewPassword">New password</label><input id="accountNewPassword" name="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current"></div>
+                <div class="modal-field"><label for="accountConfirmPassword">Confirm new password</label><input id="accountConfirmPassword" name="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Re-enter new password"></div>
+                <div class="modal-field full"><p id="accountSettingsMessage" class="account-settings-message" aria-live="polite" hidden></p></div>
+            </div>
+            <div class="modal-actions"><button type="button" class="small-btn" id="cancelAccountSettings">Cancel</button><button type="submit" class="btn primary" id="saveAccountSettings">Save changes</button></div>
+        </form>`);
+
+    document.getElementById("cancelAccountSettings").addEventListener("click", closeModal);
+    document.getElementById("accountSettingsForm").addEventListener("submit", saveAccountSettings);
+}
+
+async function saveAccountSettings(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const firstName = String(values.get("firstName") || "").trim();
+    const middleName = String(values.get("middleName") || "").trim();
+    const lastName = String(values.get("lastName") || "").trim();
+    const contactNumber = String(values.get("contactNumber") || "").trim();
+    const email = String(values.get("email") || "").trim();
+    const newPassword = String(values.get("newPassword") || "");
+    const confirmPassword = String(values.get("confirmPassword") || "");
+    const message = document.getElementById("accountSettingsMessage");
+    const saveButton = document.getElementById("saveAccountSettings");
+    const showError = text => {
+        message.textContent = text;
+        message.hidden = false;
+        message.classList.add("error");
+    };
+
+    const phoneDigits = contactNumber.replace(/[\s()-]/g, "");
+    if (!firstName || !lastName) return showError("Enter your first name and last name.");
+    if (!/^(09\d{9}|\+639\d{9})$/.test(phoneDigits)) return showError("Enter a valid 11-digit mobile number or a +63 mobile number.");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError("Enter a valid email address.");
+    if (newPassword && newPassword.length < 8) return showError("Your new password must contain at least 8 characters.");
+    if (newPassword !== confirmPassword) return showError("The new password and confirmation do not match.");
+
+    const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ");
+    const normalizedContact = phoneDigits.startsWith("09") ? `+63${phoneDigits.slice(1)}` : phoneDigits;
+    const emailChanged = email.toLowerCase() !== String(currentAdminUser?.email || "").toLowerCase();
+    const profileUpdate = {
+        full_name: fullName,
+        contact_number: normalizedContact
+    };
+    const authUpdate = {
+        data: {
+            full_name: fullName,
+            first_name: firstName,
+            middle_name: middleName,
+            last_name: lastName,
+            contact_number: normalizedContact
+        }
+    };
+    if (emailChanged) authUpdate.email = email;
+    if (newPassword) authUpdate.password = newPassword;
+
+    saveButton.disabled = true;
+    saveButton.textContent = "Saving…";
+    message.hidden = true;
+    message.classList.remove("error");
+
+    const { data: updatedProfile, error: profileError } = await window.supabaseClient
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", currentAdminUser.id)
+        .select("id")
+        .maybeSingle();
+
+    if (profileError || !updatedProfile) {
+        showError(profileError?.message || "Profile could not be updated. Check the profile table permissions and try again.");
+        saveButton.disabled = false;
+        saveButton.textContent = "Save changes";
+        return;
+    }
+
+    const { data: updatedAuth, error: authError } = await window.supabaseClient.auth.updateUser(authUpdate);
+    if (authError) {
+        currentAdminProfile = { ...currentAdminProfile, ...profileUpdate };
+        const adminName = document.querySelector(".admin-user strong");
+        if (adminName) adminName.textContent = fullName;
+        const adminAvatar = document.querySelector(".admin-user .avatar");
+        if (adminAvatar) adminAvatar.textContent = firstName.slice(0, 1).toUpperCase();
+        document.getElementById("settingsAccountName").textContent = fullName;
+        document.getElementById("settingsAccountAvatar").textContent = firstName.slice(0, 1).toUpperCase();
+        showError(`Profile details were saved, but the email or password update failed: ${authError.message}`);
+        saveButton.disabled = false;
+        saveButton.textContent = "Save changes";
+        return;
+    }
+
+    currentAdminProfile = { ...currentAdminProfile, ...profileUpdate };
+    currentAdminUser = updatedAuth.user || currentAdminUser;
+    const adminName = document.querySelector(".admin-user strong");
+    if (adminName) adminName.textContent = fullName;
+    const adminAvatar = document.querySelector(".admin-user .avatar");
+    if (adminAvatar) adminAvatar.textContent = firstName.slice(0, 1).toUpperCase();
+    document.getElementById("settingsAccountName").textContent = fullName;
+    document.getElementById("settingsAccountEmail").textContent = currentAdminUser.email || email;
+    document.getElementById("settingsAccountAvatar").textContent = firstName.slice(0, 1).toUpperCase();
+    closeModal();
+    showAdminToast(emailChanged ? "Account details saved. Confirm the email change using the message sent to your inbox." : "Account details saved.");
+}
 
 function renderDashboard() {
     const pending = bookings.filter(b => b.status === "PENDING").length;
@@ -155,14 +399,57 @@ function renderDashboard() {
         const low = Number(i.quantity) <= Number(i.reorder);
         return `<div class="mini-item"><div><strong>${escapeHtml(i.name)}</strong><small>${i.quantity} ${escapeHtml(i.unit)}</small></div><span class="status ${low ? "CANCELLED" : "APPROVED"}">${low ? "LOW STOCK" : "AVAILABLE"}</span></div>`;
     }).join("");
+
+    const timeline = document.getElementById("bookingTimeline");
+    if (timeline) {
+        const recent = [...bookings].sort((a, b) => new Date(b.createdAt || b.eventDate || 0) - new Date(a.createdAt || a.eventDate || 0)).slice(0, 6);
+        timeline.innerHTML = recent.length ? recent.map(booking => {
+            const created = booking.createdAt ? new Date(booking.createdAt).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "Date not recorded";
+            return `<div class="booking-timeline-item"><span class="booking-timeline-dot ${statusClass(booking.status)}"></span><div><div class="booking-timeline-heading"><strong>${escapeHtml(booking.fullName || "Client")}</strong><span class="status ${statusClass(booking.status)}">${escapeHtml(booking.status || "PENDING")}</span></div><small>${escapeHtml(booking.eventType || "Event")} · ${escapeHtml(booking.eventDate || "Date not set")}</small><small>Request received ${escapeHtml(created)}</small></div></div>`;
+        }).join("") : '<div class="empty-state">Booking activity will appear here.</div>';
+    }
+
+    const analytics = document.getElementById("dashboardAnalytics");
+    if (analytics) {
+        const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat("en", { month: "short" }).format(new Date(2020, index, 1)));
+        const monthly = Array(12).fill(0);
+        const datedBookings = bookings.filter(booking => booking.eventDate && !["CANCELLED", "DECLINED"].includes(booking.status));
+        datedBookings.forEach(booking => {
+            const month = Number(String(booking.eventDate).slice(5, 7)) - 1;
+            if (month >= 0 && month < 12) monthly[month]++;
+        });
+        const maxCount = Math.max(...monthly, 1);
+        analytics.innerHTML = monthNames.map((month, index) => {
+            const count = monthly[index];
+            const height = count ? Math.max(10, Math.round((count / maxCount) * 100)) : 4;
+            return `<div class="month-bar" title="${month}: ${count} event${count === 1 ? "" : "s"}"><span class="month-bar-count">${count || ""}</span><i style="height:${height}%"></i><small>${month}</small></div>`;
+        }).join("");
+        const countLabel = document.getElementById("analyticsBookingCount");
+        const insight = document.getElementById("peakSeasonInsight");
+        if (countLabel) countLabel.textContent = `${datedBookings.length} event dates`;
+        if (insight) {
+            const peakCount = Math.max(...monthly);
+            const peakIndex = monthly.indexOf(peakCount);
+            insight.textContent = datedBookings.length < 3
+                ? "Peak season estimate will appear after at least 3 event bookings are recorded."
+                : `Busiest recorded month: ${monthNames[peakIndex]} (${peakCount} event${peakCount === 1 ? "" : "s"}). Use this as a planning signal, not a guaranteed forecast.`;
+        }
+    }
+}
+
+function bookingMessageField(message, fieldName) {
+    const match = String(message || "").match(new RegExp(`^${fieldName}:\\s*(.*)$`, "im"));
+    return match?.[1]?.trim() || "";
 }
 
 function renderBookings() {
     const q = (document.getElementById("bookingSearch").value || "").toLowerCase();
     const f = document.getElementById("bookingStatusFilter").value;
     const rows = bookings.filter(b => {
-        const matches = !q || [b.fullName, b.email, b.eventType, b.package, b.id].join(" ").toLowerCase().includes(q);
-        return matches && (f === "ALL" || b.status === f);
+        const matches = !q || [b.fullName, b.email, b.eventType, b.package, b.id, b.message].join(" ").toLowerCase().includes(q);
+        const upcoming = b.status === "APPROVED" && new Date(b.eventDate) >= new Date(new Date().toDateString());
+        const matchesStatus = f === "ALL" || (f === "UPCOMING" ? upcoming : b.status === f);
+        return matches && matchesStatus;
     }).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     const emptyBookings = document.getElementById("emptyBookings");
     emptyBookings.style.display = rows.length ? "none" : "block";
@@ -175,27 +462,58 @@ function renderBookings() {
         <tr>
             <td><strong>${escapeHtml(b.fullName)}</strong><br><small>${escapeHtml(b.email)}</small></td>
             <td>${escapeHtml(b.eventType)}</td><td>${escapeHtml(b.eventDate)}</td>
-            <td>${escapeHtml(b.package || "Not selected")}</td><td>${escapeHtml(b.timeSlot || "")} ${escapeHtml(b.startTime || "")}</td>
+            <td>${escapeHtml(b.package || "Not selected")}</td>
+            <td class="booking-style-cell"><span><strong>Theme</strong> ${escapeHtml(bookingMessageField(b.message, "Theme") || "Not specified")}</span><span><strong>Colors</strong> ${escapeHtml(bookingMessageField(b.message, "Preferred colors") || "Not specified")}</span></td>
+            <td>${escapeHtml(b.timeSlot || "")} ${escapeHtml(b.startTime || "")}</td>
             <td><span class="status ${statusClass(b.status)}">${escapeHtml(b.status)}</span></td>
             <td><div class="action-group">
                 <button class="small-btn edit" onclick="viewBooking('${b.id}')">View</button>
                 ${b.status === "PENDING" ? `<button class="small-btn approve" onclick="changeStatus('${b.id}','APPROVED')">Approve</button><button class="small-btn decline" onclick="changeStatus('${b.id}','DECLINED')">Decline</button>` : ""}
-                ${b.status === "APPROVED" ? `<button class="small-btn edit" onclick="changeStatus('${b.id}','CANCELLED')">Cancel</button>` : ""}
-                ${b.status === "CANCELLED" ? `<button class="small-btn delete" onclick="deleteBooking('${b.id}')">Delete</button>` : ""}
+                ${b.status === "APPROVED" ? `<button class="small-btn decline" onclick="requestCancelBooking('${b.id}')">Cancel</button>` : ""}
             </div></td>
+        </tr>`).join("");
+}
+
+function renderArchive() {
+    const cancelled = bookings
+        .filter(booking => booking.status === "CANCELLED")
+        .sort((a, b) => new Date(b.updated_at || b.createdAt || 0) - new Date(a.updated_at || a.createdAt || 0));
+    const empty = document.getElementById("emptyArchive");
+    if (!empty) return;
+    empty.style.display = cancelled.length ? "none" : "block";
+    document.getElementById("archiveTableBody").innerHTML = cancelled.map(booking => `
+        <tr>
+            <td><strong>${escapeHtml(booking.fullName)}</strong><br><small>${escapeHtml(booking.email)}</small></td>
+            <td>${escapeHtml(booking.eventType)}</td>
+            <td>${escapeHtml(booking.eventDate)}<br><small>${escapeHtml(booking.timeSlot || "")} ${escapeHtml(booking.startTime || "")}</small></td>
+            <td>${escapeHtml(booking.package || "Not selected")}</td>
+            <td class="archive-record">${escapeHtml(bookingMessageField(booking.adminNotes, "Cancellation reason") || "No cancellation reason recorded")}</td>
+            <td><button class="small-btn edit" onclick="viewBooking('${escapeAttr(booking.id)}')">View record</button></td>
         </tr>`).join("");
 }
 
 function renderPayments() {
     syncPayments();
     const approved = bookings.filter(b => b.status === "APPROVED" || b.status === "CANCELLED");
+    const filter = document.getElementById("paymentStatusFilter")?.value || "ALL";
     const contract = approved.reduce((s, b) => s + Number((payments.find(p => p.bookingId === b.id) || {}).total || b.amount || 0), 0);
     const collected = approved.reduce((s, b) => s + Number((payments.find(p => p.bookingId === b.id) || {}).paid || 0), 0);
     document.getElementById("paymentTotal").textContent = money(contract);
     document.getElementById("paymentCollected").textContent = money(collected);
     document.getElementById("paymentOutstanding").textContent = money(contract - collected);
-    document.getElementById("emptyPayments").style.display = approved.length ? "none" : "block";
-    document.getElementById("paymentTableBody").innerHTML = approved.map(b => {
+    const visiblePayments = approved.filter(b => {
+        const status = (payments.find(p => p.bookingId === b.id) || {}).status || "NO DOWN PAYMENT";
+        if (filter === "UNPAID") return status === "NO DOWN PAYMENT";
+        if (filter === "PARTIAL") return status === "PARTIAL PAYMENT" || status === "DOWN PAYMENT MADE";
+        if (filter === "PAID") return status === "FULLY PAID";
+        return true;
+    });
+    const emptyPayments = document.getElementById("emptyPayments");
+    emptyPayments.style.display = visiblePayments.length ? "none" : "block";
+    emptyPayments.textContent = approved.length
+        ? "No payments match this status filter."
+        : "No payment records yet.";
+    document.getElementById("paymentTableBody").innerHTML = visiblePayments.map(b => {
         const p = payments.find(x => x.bookingId === b.id) || { total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" };
         return `<tr><td><strong>${escapeHtml(b.fullName)}</strong></td><td>${escapeHtml(b.eventType)}</td><td>${escapeHtml(b.eventDate)}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td><td>${money(Number(p.total) - Number(p.paid))}</td><td><span class="status ${p.status === "FULLY PAID" ? "APPROVED" : p.status === "NO DOWN PAYMENT" ? "PENDING" : "APPROVED"}">${escapeHtml(p.status)}</span></td><td><button class="small-btn edit" onclick="editPayment('${b.id}')">Update</button></td></tr>`;
     }).join("");
@@ -221,7 +539,7 @@ function renderInventory() {
     }).join("");
 }
 
-function renderAll() { renderDashboard(); renderBookings(); renderPayments(); renderSales(); renderInventory(); }
+function renderAll() { renderDashboard(); renderBookings(); renderArchive(); renderPayments(); renderSales(); renderInventory(); }
 
 async function changeStatus(id, newStatus) {
     const b = bookings.find(x => x.id === id); if (!b) return;
@@ -245,14 +563,49 @@ async function verifyReservationFee(id) {
 
     const { error } = await window.supabaseClient
         .from("bookings")
-        .update({ down_payment_amount: fee })
+        .update({ down_payment_amount: fee, payment_status: "DOWN PAYMENT MADE" })
         .eq("id", id);
     if (error) { alert(`Unable to record the verified payment: ${error.message}`); return; }
 
     booking.down_payment_amount = fee;
+    booking.payment_status = "DOWN PAYMENT MADE";
     save();
     renderAll();
     viewBooking(id);
+}
+
+function requestCancelBooking(id) {
+    const booking = bookings.find(item => item.id === id);
+    if (!booking) return;
+    openModal(`<h3>Cancel booking</h3>
+        <p class="field-help">Add the reason for cancellation. The booking record and reason will be kept in the Archive.</p>
+        <div class="modal-field full"><label for="cancellationReason">Cancellation reason</label><textarea id="cancellationReason" rows="4" maxlength="1000" placeholder="Enter the reason for cancellation"></textarea></div>
+        <div class="modal-actions"><button class="btn primary" onclick="confirmCancelBooking('${escapeAttr(id)}')">Confirm cancellation</button></div>`);
+}
+
+async function confirmCancelBooking(id) {
+    const booking = bookings.find(item => item.id === id);
+    const reason = document.getElementById("cancellationReason")?.value.trim() || "";
+    if (!booking || !reason) {
+        showAdminToast("Enter a cancellation reason to keep with the archived booking.", "error");
+        return;
+    }
+    const loggedAt = new Date().toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" });
+    const cancellationEntry = `Cancellation reason: ${reason}\nCancelled by admin on: ${loggedAt}`;
+    const notes = [cancellationEntry, booking.adminNotes].filter(Boolean).join("\n\n");
+    const { error } = await window.supabaseClient
+        .from("bookings")
+        .update({ status: "CANCELLED", admin_notes: notes })
+        .eq("id", id);
+    if (error) {
+        showAdminToast(error.message || "Unable to cancel this booking.", "error");
+        return;
+    }
+    booking.status = "CANCELLED";
+    booking.adminNotes = notes;
+    closeModal();
+    renderAll();
+    showAdminToast("Booking cancelled and saved in the Archive.");
 }
 
 async function deleteBooking(id) {
@@ -277,13 +630,15 @@ async function viewBooking(id) {
             <div class="modal-field"><label>Time Preference</label><input value="${escapeAttr(b.timeSlot || "")}" readonly></div>
             <div class="modal-field"><label>Start Time</label><input value="${escapeAttr(b.startTime || "")}" readonly></div>
             <div class="modal-field"><label>Package</label><input value="${escapeAttr(b.package || "")}" readonly></div>
+            <div class="modal-field"><label>Theme</label><input value="${escapeAttr(bookingMessageField(b.message, "Theme") || "Not specified")}" readonly></div>
+            <div class="modal-field"><label>Preferred Colors</label><input value="${escapeAttr(bookingMessageField(b.message, "Preferred colors") || "Not specified")}" readonly></div>
             <div class="modal-field"><label>Total Amount</label><input value="${money(b.amount)}" readonly></div>
             <div class="modal-field"><label>30% Reservation Fee</label><input value="${money(b.required_down_payment)}" readonly></div>
             <div class="modal-field"><label>Reservation Payment Received</label><input value="${money(b.down_payment_amount)}" readonly></div>
             ${b.ai_estimated_package ? `<div class="modal-field"><label>AI Suggested Package</label><input value="${escapeAttr(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}" readonly></div>` : ""}
             ${b.design_image_path ? `<div class="modal-field full"><label>Customer Design Reference</label><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></div>` : ""}
             ${Array.isArray(b.ai_detected_features) && b.ai_detected_features.length ? `<div class="modal-field full"><label>AI Estimate Notes</label><p>${escapeHtml(b.ai_estimate_explanation || "Estimated from the visible design features.")}</p><ul class="admin-design-features">${b.ai_detected_features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}</ul><small class="field-help">AI estimate only; confirm final package and price with the customer.</small></div>` : ""}
-            <div class="modal-field full"><label>Client Request</label><textarea readonly>${escapeHtml(b.message || "")}</textarea></div>
+            <div class="modal-field full"><label>Additional Requests & Booking Information</label><textarea readonly>${escapeHtml(b.message || "")}</textarea></div>
             <div class="modal-field full"><label>Admin Notes / Reminders</label><textarea id="adminNotes">${escapeHtml(b.adminNotes || "")}</textarea></div>
         </div>
         <div class="modal-actions">
@@ -308,9 +663,12 @@ async function viewBooking(id) {
     }
 }
 
-function saveNotes(id) {
+async function saveNotes(id) {
     const b = bookings.find(x => x.id === id); if (!b) return;
-    b.adminNotes = document.getElementById("adminNotes").value; save(); closeModal(); renderAll(); alert("Admin notes saved.");
+    const notes = document.getElementById("adminNotes").value;
+    const { error } = await window.supabaseClient.from("bookings").update({ admin_notes: notes }).eq("id", id);
+    if (error) { showAdminToast(error.message || "Unable to save admin notes.", "error"); return; }
+    b.adminNotes = notes; save(); closeModal(); renderAll(); showAdminToast("Admin notes saved.");
 }
 
 function editPayment(id) {
@@ -332,12 +690,19 @@ function editPayment(id) {
         <div class="modal-actions"><button class="btn primary" onclick="savePayment('${id}')">Save Payment</button></div>`);
 }
 
-function savePayment(id) {
+async function savePayment(id) {
     const p = payments.find(x => x.bookingId === id); if (!p) return;
-    p.paid = Math.max(0, Math.min(Number(p.total), Number(document.getElementById("paymentPaid").value) || 0));
+    const paid = Math.max(0, Math.min(Number(p.total), Number(document.getElementById("paymentPaid").value) || 0));
     const selected = document.getElementById("paymentStatus").value;
-    p.status = p.paid <= 0 ? "NO DOWN PAYMENT" : p.paid >= Number(p.total) ? "FULLY PAID" : selected === "DOWN PAYMENT MADE" && p.paid > 0 ? "DOWN PAYMENT MADE" : "PARTIAL PAYMENT";
-    p.updatedAt = new Date().toISOString(); save(); closeModal(); renderAll(); alert("Payment status updated.");
+    const status = paid <= 0 ? "NO DOWN PAYMENT" : paid >= Number(p.total) ? "FULLY PAID" : selected === "DOWN PAYMENT MADE" && paid > 0 ? "DOWN PAYMENT MADE" : "PARTIAL PAYMENT";
+    const { error } = await window.supabaseClient.from("bookings").update({ down_payment_amount: paid, payment_status: status }).eq("id", id);
+    if (error) { showAdminToast(error.message || "Unable to save payment update.", "error"); return; }
+    p.paid = paid;
+    p.status = status;
+    p.updatedAt = new Date().toISOString();
+    const booking = bookings.find(item => item.id === id);
+    if (booking) { booking.down_payment_amount = paid; booking.payment_status = status; }
+    save(); closeModal(); renderAll(); showAdminToast("Payment update saved.");
 }
 
 document.getElementById("addExpenseBtn").addEventListener("click", () => {
@@ -373,34 +738,48 @@ function saveInventory(id) {
 }
 function editInventory(id) { openInventoryForm(inventory.find(x => x.id === id)) }
 
-function openModal(html) { document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card"); document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
-function closeModal() { document.getElementById("modal").classList.add("hidden"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card") }
+function openModal(html) { document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card"); document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
+function closeModal() { document.getElementById("modal").classList.add("hidden"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card") }
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal() });
 
 document.getElementById("bookingSearch").addEventListener("input", renderBookings);
 document.getElementById("bookingStatusFilter").addEventListener("change", renderBookings);
+document.getElementById("paymentStatusFilter").addEventListener("change", renderPayments);
 
-document.getElementById("calendarBtn").addEventListener("click", () => {
+function renderAdminCalendar(calendarType) {
     const now = new Date(), year = now.getFullYear(), month = now.getMonth(), first = new Date(year, month, 1), last = new Date(year, month + 1, 0);
     const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
-    const monthlyBookings = bookings.filter(b => b.eventDate?.startsWith(monthPrefix) && b.status !== "CANCELLED").length;
-    let html = `<div class="calendar-heading"><div><span class="calendar-eyebrow">BOOKING SCHEDULE</span><h3>${now.toLocaleString("en-US", { month: "long" })} ${year}</h3></div><span class="calendar-count">${monthlyBookings} booking${monthlyBookings === 1 ? "" : "s"} this month</span></div><div class="calendar-grid">`;
+    const isOcular = calendarType === "ocular";
+    const calendarItems = isOcular
+        ? quotationRequests
+            .filter(request => String(request.status || "").toUpperCase() === "APPROVED" && request.inspection_date)
+            .map(request => ({ name: request.customer_name, date: request.inspection_date, time: request.inspection_time || "Time not set", label: "Ocular inspection" }))
+        : bookings
+            .filter(booking => String(booking.status || "").toUpperCase() === "APPROVED")
+            .map(booking => ({ name: booking.fullName, date: booking.eventDate, time: booking.startTime || booking.timeSlot || "Time not set", label: booking.eventType || "Event" }));
+    const monthlyCount = calendarItems.filter(item => item.date?.startsWith(monthPrefix)).length;
+    const calendarTitle = isOcular ? "OCULAR INSPECTION SCHEDULE" : "EVENT BOOKING SCHEDULE";
+    const itemLabel = isOcular ? "ocular inspection" : "event booking";
+    let html = `<div class="calendar-heading"><div><span class="calendar-eyebrow">${calendarTitle}</span><h3>${now.toLocaleString("en-US", { month: "long" })} ${year}</h3></div><span class="calendar-count">${monthlyCount} ${itemLabel}${monthlyCount === 1 ? "" : "s"} this month</span></div><div class="calendar-grid">`;
     ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => html += `<div class="calendar-weekday">${d}</div>`);
     for (let i = 0; i < first.getDay(); i++) html += `<div class="calendar-day calendar-day-empty" aria-hidden="true"></div>`;
     for (let d = 1; d <= last.getDate(); d++) {
         const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-        const events = bookings.filter(b => b.eventDate === iso && b.status !== "CANCELLED").sort((a, b) => String(a.startTime || "").localeCompare(String(b.startTime || "")));
+        const events = calendarItems.filter(item => item.date === iso).sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")));
         const localToday = new Date();
         const todayIso = `${localToday.getFullYear()}-${String(localToday.getMonth() + 1).padStart(2, "0")}-${String(localToday.getDate()).padStart(2, "0")}`;
         const today = iso === todayIso;
-        html += `<div class="calendar-day${today ? " calendar-day-today" : ""}${events.length ? " calendar-day-booked" : ""}"><span class="calendar-date">${d}</span>${events.length ? `<div class="calendar-events">${events.map(b => `<div class="calendar-event"><strong>${escapeHtml(b.fullName || "Client")}</strong><span>${escapeHtml(b.startTime || b.timeSlot || "Time not set")}</span><span class="calendar-event-status">${escapeHtml(b.status)}</span></div>`).join("")}</div>` : `<span class="calendar-open-label">Available</span>`}</div>`;
+        html += `<div class="calendar-day${today ? " calendar-day-today" : ""}${events.length ? " calendar-day-booked" : ""}"><span class="calendar-date">${d}</span>${events.length ? `<div class="calendar-events">${events.map(item => `<div class="calendar-event${isOcular ? " calendar-event-ocular" : ""}"><strong>${escapeHtml(item.name || "Client")}</strong><span>${escapeHtml(item.time)}</span><span class="calendar-event-type">${escapeHtml(item.label)}</span><span class="calendar-event-status">APPROVED</span></div>`).join("")}</div>` : `<span class="calendar-open-label">Available</span>`}</div>`;
     }
     for (let i = 0, trailing = (7 - ((first.getDay() + last.getDate()) % 7)) % 7; i < trailing; i++) html += `<div class="calendar-day calendar-day-empty" aria-hidden="true"></div>`;
-    html += `</div><p class="calendar-note"><span class="calendar-legend-dot"></span> Days with bookings show the client and scheduled time. Cancelled bookings do not block a date.</p>`;
+    html += `</div><p class="calendar-note"><span class="calendar-legend-dot${isOcular ? " calendar-legend-ocular" : ""}"></span> Only approved ${itemLabel}s are shown in this calendar.</p>`;
     openModal(html);
     document.querySelector("#modal .modal-card").classList.add("calendar-modal-card");
-});
+}
+
+document.getElementById("calendarBtn").addEventListener("click", () => renderAdminCalendar("booking"));
+document.getElementById("ocularCalendarBtn").addEventListener("click", () => renderAdminCalendar("ocular"));
 
 function escapeHtml(v) { return String(v ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m])) }
 function escapeAttr(v) { return escapeHtml(v) }
@@ -413,6 +792,50 @@ renderAll();
 // ========================================
 
 let quotationRequests = [];
+
+function updateAdminNotifications() {
+    const button = document.getElementById("adminNotificationBtn");
+    const countBadge = document.getElementById("adminNotificationCount");
+    const list = document.getElementById("adminNotificationsList");
+    if (!button || !countBadge || !list) return;
+    const items = [
+        ...bookings.filter(item => item.status === "PENDING").map(item => ({
+            section: "bookings",
+            title: `Booking request from ${item.fullName || "Client"}`,
+            detail: `${item.eventType || "Event"} · ${item.eventDate || "Date not set"}`
+        })),
+        ...quotationRequests.filter(item => String(item.status || "").toUpperCase() === "REQUESTED").map(item => ({
+            section: "quotations",
+            title: `Ocular inspection from ${item.customer_name || "Client"}`,
+            detail: `${item.venue_name || "Venue not set"} · ${item.inspection_date || "Date not set"}`
+        }))
+    ];
+    countBadge.textContent = items.length > 99 ? "99+" : String(items.length);
+    countBadge.hidden = items.length === 0;
+    button.setAttribute("aria-label", items.length ? `${items.length} pending admin notifications` : "No pending admin notifications");
+    list.innerHTML = items.length
+        ? items.slice(0, 8).map(item => `<button type="button" class="admin-notification-item" data-admin-notification-section="${item.section}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></button>`).join("")
+        : '<p class="admin-notification-empty">You are all caught up.</p>';
+}
+
+const adminNotificationBtn = document.getElementById("adminNotificationBtn");
+const adminNotificationPanel = document.getElementById("adminNotificationPanel");
+adminNotificationBtn?.addEventListener("click", () => {
+    const isOpen = adminNotificationPanel.hidden;
+    adminNotificationPanel.hidden = !isOpen;
+    adminNotificationBtn.setAttribute("aria-expanded", String(isOpen));
+});
+document.getElementById("closeAdminNotifications")?.addEventListener("click", () => {
+    adminNotificationPanel.hidden = true;
+    adminNotificationBtn.setAttribute("aria-expanded", "false");
+});
+adminNotificationPanel?.addEventListener("click", event => {
+    const target = event.target.closest("[data-admin-notification-section]");
+    if (!target) return;
+    showSection(target.dataset.adminNotificationSection);
+    adminNotificationPanel.hidden = true;
+    adminNotificationBtn.setAttribute("aria-expanded", "false");
+});
 
 let adminToastTimer;
 function showAdminToast(message, type = "success") {
@@ -482,6 +905,7 @@ async function loadQuotationRequests() {
 
 
         renderQuotationRequests();
+        updateAdminNotifications();
 
 
         console.log(
@@ -1073,6 +1497,7 @@ renderAll = function () {
     originalRenderAll();
 
     renderQuotationRequests();
+    updateAdminNotifications();
 
 };
 
@@ -1087,7 +1512,10 @@ async function initializeAdmin() {
         await loadBookings();
         await loadQuotationRequests();
         // Refresh periodically so new customer submissions appear without a manual reload.
-        window.setInterval(loadBookings, 30000);
+        window.setInterval(async () => {
+            await loadBookings();
+            await loadQuotationRequests();
+        }, 30000);
     } catch (error) {
         console.error("Admin initialization error:", error);
         const emptyState = document.getElementById("emptyBookings");

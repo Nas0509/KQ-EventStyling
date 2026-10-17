@@ -410,7 +410,11 @@
                            id="contactNumber"
                            placeholder="09XXXXXXXXX"
                            autocomplete="tel"
-                           maxlength="13"
+                           inputmode="numeric"
+                           minlength="11"
+                           maxlength="11"
+                           pattern="09[0-9]{9}"
+                           title="Enter exactly 11 digits, starting with 09."
                            required>
 
                 </div>
@@ -657,7 +661,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="signup.js"></script>
+    <script src="signup.js?v=20261017-strict-phone"></script>
 
 
 </body>

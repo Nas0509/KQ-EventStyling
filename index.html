@@ -14,7 +14,7 @@
           content="KQ Event Styling provides elegant and personalized event styling and decoration services in Caloocan">
 
     <link rel="stylesheet"
-          href="css/kqstyling.css?v=20261014-color-booking-calendar">
+          href="css/kqstyling.css?v=20261017-contact-card-professional">
 
     <style>
 
@@ -39,25 +39,23 @@
 
         <div class="wrap header-content">
 
-            <a href="index.html"
-               class="brand"
-               aria-label="KQ Event Styling Home">
+                <a href="index.html"
+                   class="brand"
+                   aria-label="KQ Event Styling Home">
 
-                <img src="kqlogo.png"
-                     alt="KQ Event Styling Logo"
-                     class="brand-logo">
+                    <img src="kqlogo.png"
+                         alt="KQ Event Styling Logo"
+                         class="brand-logo">
 
-                <div class="brand-text">
+                    <div class="brand-text">
 
-                    <strong>KQ</strong>
+                        <strong>KQ</strong>
 
-                    <span>
-                        EVENT STYLING
-                    </span>
+                        <span>EVENT STYLING</span>
 
-                </div>
+                    </div>
 
-            </a>
+                </a>
 
 
             <nav class="nav-links"
@@ -402,17 +400,17 @@
                 <div class="package-card">
                     <div class="package-content">
                         <span class="badge">SIMPLE STYLING</span>
-                        <h3>Ruth Package (Simple Styling • 2 Panel)</h3>
+                        <h3>Simple Styling</h3>
                         <h4>₱6,500</h4>
                         <ul>
                             <li>Venue styling with thematic backdrop</li>
-                            <li>7×8ft backdrop, 2 panels</li>
+                            <li>7×8ft backdrop</li>
                             <li>Thematic balloon garland and props</li>
                             <li>Celebrant name styro cut</li>
                             <li>Grass mat and basic backdrop lights</li>
                         </ul>
                         <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
-                        <a href="#booking" class="btn btn-primary package-button" data-package="Ruth Package (Simple Styling • 2 Panel) - ₱6,500" data-package-category="simple">Book This Package</a>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Simple Styling - ₱6,500" data-package-category="simple">Book This Package</a>
                     </div>
                 </div>
 
@@ -676,7 +674,7 @@
 
                     <div class="field">
                         <label for="phone">Contact Number <span class="required-mark">*</span></label>
-                        <input type="tel" id="phone" name="phone" placeholder="e.g. 09XX XXX XXXX" autocomplete="tel" required>
+                        <input type="tel" id="phone" name="phone" placeholder="09XXXXXXXXX" autocomplete="tel" inputmode="numeric" minlength="11" maxlength="11" pattern="09[0-9]{9}" title="Enter exactly 11 digits, starting with 09." required>
                     </div>
 
                     <div class="booking-divider"></div>
@@ -689,36 +687,29 @@
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="field">
-                            <label for="eventType">Event Type <span class="required-mark">*</span></label>
-                            <select id="eventType" name="eventType" required>
-                                <option value="">Select event type</option>
-                                <option value="Birthday">Birthday</option>
-                                <option value="Wedding">Wedding</option>
-                                <option value="Debut">Debut</option>
-                                <option value="Corporate Event">Corporate Event</option>
-                                <option value="Christening">Christening</option>
-                                <option value="Anniversary">Anniversary</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="eventScale">Event Scale <span class="required-mark">*</span></label>
-                            <select id="eventScale" name="eventScale" required>
-                                <option value="">Select event scale</option>
-                                <option value="Small">Small — intimate gathering</option>
-                                <option value="Medium">Medium — standard celebration</option>
-                                <option value="Large">Large — grand event</option>
-                            </select>
-                        </div>
+                    <div class="field">
+                        <label for="eventType">Event Type <span class="required-mark">*</span></label>
+                        <select id="eventType" name="eventType" required>
+                            <option value="">Select event type</option>
+                            <option value="Birthday">Birthday</option>
+                            <option value="Wedding">Wedding</option>
+                            <option value="Debut">Debut</option>
+                            <option value="Corporate Event">Corporate Event</option>
+                            <option value="Christening">Christening</option>
+                            <option value="Anniversary">Anniversary</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
                     <div class="form-row">
                         <div class="field">
-                            <label id="eventDateLabel">Event Date <span class="required-mark">*</span></label>
-                            <input type="hidden" id="eventDate" name="eventDate">
-                            <div class="booking-calendar" id="bookingCalendar" role="group" aria-labelledby="eventDateLabel">
+                            <label id="eventDateLabel" for="eventDateTrigger">Event Date <span class="required-mark">*</span></label>
+                            <div class="booking-date-picker" id="bookingDatePicker">
+                                <input type="hidden" id="eventDate" name="eventDate">
+                                <button type="button" class="booking-date-trigger" id="eventDateTrigger" aria-expanded="false" aria-controls="bookingCalendar">
+                                    <span id="eventDateTriggerText">Choose event date</span><span class="booking-date-chevron" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="booking-calendar" id="bookingCalendar" role="group" aria-labelledby="eventDateLabel" hidden>
                                 <div class="booking-calendar-header">
                                     <button type="button" id="calendarPrevious" aria-label="Previous month">‹</button>
                                     <strong id="calendarMonthLabel" aria-live="polite"></strong>
@@ -734,7 +725,9 @@
                                     <span><i class="full"></i> Fully booked</span>
                                 </div>
                                 <p class="calendar-help" id="calendarHelp" aria-live="polite">Approved event bookings and accepted ocular inspections reserve a time slot. Pending requests do not hold it.</p>
+                                </div>
                             </div>
+                            <small class="booking-date-prompt" id="bookingDatePrompt" role="status" hidden></small>
                             <div class="booking-time-slots" id="bookingTimeSlots" hidden>
                                 <p class="time-slot-prompt" id="timeSlotPrompt">Choose an available time slot:</p>
                                 <div class="time-slot-options">
@@ -748,6 +741,7 @@
                                         <strong>Night</strong><span>6:00 PM–11:55 PM</span><small></small>
                                     </button>
                                 </div>
+                                <small class="booking-time-prompt" id="bookingTimePrompt" role="status" hidden></small>
                                 <input type="hidden" id="timeSlot" name="timeSlot">
                             </div>
                         </div>
@@ -807,9 +801,17 @@
                                     </div>
                                 </div>
                             </div>
+                            <small class="booking-time-prompt" id="clockTimePrompt" role="status" hidden></small>
                         </div>
                     </div>
 
+
+                    <div class="field">
+                        <label for="bookingVenueCity">Venue City / Municipality <span class="required-mark">*</span></label>
+                        <input type="text" id="bookingVenueCity" name="venueCity" list="bookingVenueCityOptions" placeholder="Choose a Luzon city or municipality" autocomplete="address-level2" required>
+                        <datalist id="bookingVenueCityOptions"></datalist>
+                        <div class="booking-travel-fee" id="bookingTravelFeeHelp" aria-live="polite">Choose your venue city to calculate the travel expense from North Caloocan at ₱20/km.</div>
+                    </div>
 
                     <div class="field">
                         <label for="location">Event Venue / Complete Address <span class="required-mark">*</span></label>
@@ -836,19 +838,46 @@
                         <a href="#packages" class="selected-package-link">View packages</a>
                     </div>
 
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="eventTheme">Preferred Theme</label>
+                            <input type="text" id="eventTheme" name="eventTheme" maxlength="120" placeholder="e.g. princess, safari, minimalist">
+                        </div>
+                        <div class="field">
+                            <label for="eventColors">Preferred Colors</label>
+                            <input type="text" id="eventColors" name="eventColors" maxlength="120" placeholder="e.g. blush pink and gold">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="message">Additional Styling Requests</label>
+                        <textarea id="message" name="message" rows="4" placeholder="Backdrop ideas, special requests, or other details for your event..."></textarea>
+                    </div>
+
                     <section class="reservation-payment" id="reservationPayment" aria-labelledby="reservationPaymentTitle">
                         <div class="reservation-payment-details">
                             <span class="badge">SECURE YOUR EVENT DATE</span>
                             <h3 id="reservationPaymentTitle">30% Reservation Fee</h3>
                             <p>Scan the InstaPay QR with your bank or e-wallet, then enter the transaction reference number below.</p>
                             <dl class="reservation-totals">
-                                <div><dt>Package total</dt><dd id="packageAmount">Select a package</dd></div>
-                                <div><dt>Reservation fee (30%)</dt><dd id="reservationFeeAmount">—</dd></div>
-                                <div><dt>Remaining balance</dt><dd id="remainingBalanceAmount">—</dd></div>
+                                <div><dt>Package price</dt><dd id="packageAmount">Select a package</dd></div>
+                                <div><dt>Travel expense</dt><dd id="bookingTravelFeeAmount">Select venue city</dd></div>
+                                <div><dt>Total price</dt><dd id="bookingTotalAmount">—</dd></div>
                             </dl>
+                            <div class="reservation-fee-callout" aria-live="polite">
+                                <span class="reservation-fee-kicker">PAY THIS FIRST TO RESERVE YOUR DATE</span>
+                                <div class="reservation-fee-row">
+                                    <strong>Reservation fee <span>(30%)</span></strong>
+                                    <strong id="reservationFeeAmount">—</strong>
+                                </div>
+                            </div>
                             <label for="paymentReference">Payment transaction/reference number <span class="required-mark">*</span></label>
                             <input type="text" id="paymentReference" name="paymentReference" maxlength="100" placeholder="Enter the reference shown by your payment app" autocomplete="off" required disabled>
                             <small class="field-help">Your reservation fee will remain pending until KQ Event Styling verifies the transfer. Confirm the recipient name in your payment app before sending.</small>
+                            <div class="reservation-balance">
+                                <span>Remaining balance <small>Pay after the event</small></span>
+                                <strong id="remainingBalanceAmount">—</strong>
+                            </div>
                         </div>
                         <div class="reservation-qr-card">
                             <img src="gcash-qr.png" alt="InstaPay QR code for KQ Event Styling reservation payments">
@@ -856,11 +885,6 @@
                             <span>Use your bank or e-wallet app</span>
                         </div>
                     </section>
-
-                    <div class="field">
-                        <label for="message">Theme, Colors & Additional Requests</label>
-                        <textarea id="message" name="message" rows="5" placeholder="Example: pastel pink theme, preferred colors, backdrop ideas, venue notes, or special requests..."></textarea>
-                    </div>
 
                     <div class="booking-note">
                         <strong>Before you submit</strong>
@@ -917,19 +941,16 @@
 
                 <div class="form-card contact-card">
 
-                    <div class="feature-icon">
-                        📱
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M7 3.8h10A1.8 1.8 0 0 1 18.8 5.6v12.8a1.8 1.8 0 0 1-1.8 1.8H7a1.8 1.8 0 0 1-1.8-1.8V5.6A1.8 1.8 0 0 1 7 3.8Z"></path><path d="M9 6.8h6M10.5 17.2h3"></path></svg>
                     </div>
-
 
                     <h3>
                         Contact Number
                     </h3>
 
-
-                    <p>
-                        0961 137 0355
-                    </p>
+                    <a class="contact-value" href="tel:+639611370355">0961 137 0355</a>
+                    <span class="contact-note">Call or text for event inquiries</span>
 
                 </div>
 
@@ -937,19 +958,16 @@
 
                 <div class="form-card contact-card">
 
-                    <div class="feature-icon">
-                        📧
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="m4.5 7 7.5 6 7.5-6"></path></svg>
                     </div>
-
 
                     <h3>
                         Email
                     </h3>
 
-
-                    <p>
-                        kqeventstyling@gmail.com
-                    </p>
+                    <a class="contact-value" href="mailto:kqeventstyling@gmail.com">kqeventstyling@gmail.com</a>
+                    <span class="contact-note">Send us your event details</span>
 
                 </div>
 
@@ -957,19 +975,16 @@
 
                 <div class="form-card contact-card">
 
-                    <div class="feature-icon">
-                        📍
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M19 10.2c0 5-7 10.3-7 10.3S5 15.2 5 10.2a7 7 0 1 1 14 0Z"></path><circle cx="12" cy="10" r="2.4"></circle></svg>
                     </div>
-
 
                     <h3>
                         Location
                     </h3>
 
-
-                    <p>
-                        North Caloocan City, Philippines
-                    </p>
+                    <span class="contact-value">North Caloocan City</span>
+                    <span class="contact-note">Metro Manila, Philippines</span>
 
                 </div>
 
@@ -1147,8 +1162,9 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="user-booking.js?v=20261015-ocular-availability"></script>
-    <script src="user-auth.js"></script>
+    <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
+    <script src="user-booking.js?v=20261017-professor-recommendations"></script>
+            <script src="user-auth.js?v=20261017-remove-admin-return-control"></script>
 
 </body>
 </html>
