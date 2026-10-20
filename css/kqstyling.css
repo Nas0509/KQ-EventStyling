@@ -1890,6 +1890,7 @@ body.logout-modal-open {
 .booking-date-trigger:hover,
 .booking-date-trigger[aria-expanded="true"] { border-color: var(--sky-dark); }
 .booking-date-trigger[aria-expanded="true"] { color: var(--ink); }
+.booking-date-trigger.has-value { color: var(--ink); }
 .booking-date-chevron { color: var(--sky-dark); font-size: 1rem; }
 .booking-date-prompt { display: block; margin-top: 7px; color: #a65300; font-size: .82rem; }
 .booking-date-prompt[hidden] { display: none; }
@@ -1976,6 +1977,7 @@ body.logout-modal-open {
 .booking-calendar-legend i.full { background: #e87878; }
 .calendar-help, .time-slot-prompt { margin-top: 10px; color: var(--ink-soft); font-size: 0.82rem; }
 .booking-travel-fee { margin-top: 8px; color: var(--ink-soft); font-size: .82rem; line-height: 1.45; }
+
 .venue-city-field > #bookingVenueCity {
     cursor: pointer;
     padding-right: 42px;
@@ -3155,12 +3157,17 @@ body.logout-modal-open {
     .customer-history-actions > button, .customer-change-form-actions > button { flex: 1; }
 }
 .customer-reschedule-date-control { position: relative; }
+.customer-reschedule-date-control.booking-date-picker { width: 100%; max-width: none; }
 .customer-reschedule-date-control .booking-date-trigger { max-width: none; }
 .customer-reschedule-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.customer-reschedule-calendar { width: min(430px, calc(100vw - 48px)); }
+.customer-reschedule-calendar .booking-calendar-help { display: block; margin-top: 10px; color: var(--ink-soft); font-size: .76rem; line-height: 1.4; }
 .customer-reschedule-date-control .booking-date-trigger:focus-visible { outline: 3px solid rgba(41, 155, 211, .22); outline-offset: 2px; }
 .customer-reschedule-clock-wrap { z-index: 5; }
 .customer-reschedule-clock-wrap .clock-time-display:disabled { cursor: not-allowed; opacity: .62; }
 .customer-reschedule-clock-wrap .customer-reschedule-clock { position: absolute; z-index: 900; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.customer-reschedule-clock [data-reschedule-clock-done] { border-color: #1688bb; background: #1688bb; color: #fff; }
+.customer-reschedule-clock [data-reschedule-clock-done]:hover { border-color: #1179a8; background: #1179a8; }
 #clockPicker { z-index: 900; }
 .customer-reschedule-clock .clock-periods { display: none; }
 .customer-reschedule-clock .clock-footer > span { margin-right: auto; color: #607987; font-size: .8rem; }

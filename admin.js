@@ -552,6 +552,17 @@ function bookingMessageField(message, fieldName) {
     return match?.[1]?.trim() || "";
 }
 
+function bookingClientNotes(message) {
+    const text = String(message || "").trim();
+    if (!text) return "";
+    const requestMatch = text.match(/^Additional requests:\s*([\s\S]*?)(?=\n\s*\n|$)/im);
+    if (requestMatch) return requestMatch[1].trim();
+    return text.split(/\r?\n/)
+        .filter(line => !/^(Selected package|Venue city|Event venue|Estimated travel expense|Theme|Preferred colors|Reservation fee payment reference):/i.test(line.trim()))
+        .join("\n")
+        .trim();
+}
+
 let activeBookingMenuId = null;
 let activeBookingMenuTrigger = null;
 document.getElementById("bookingActionsPopover")?.addEventListener("toggle", event => {
@@ -833,7 +844,7 @@ async function viewBooking(id) {
     const b = bookings.find(x => x.id === id); if (!b) return;
     const recordField = (label, value) => `<div class="booking-record-field"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value || "—")}</dd></div>`;
     const status = String(b.status || "PENDING").toLowerCase().replace(/\s+/g, "-");
-    const requests = String(b.message || "").trim();
+    const clientNotes = bookingClientNotes(b.message);
     openModal(`<div class="booking-record">
         <header class="booking-record-header">
             <div class="booking-record-brand"><img src="kqlogo.png" alt="KQ Event Styling official logo"><span>OFFICIAL BOOKING RECORD</span></div>
@@ -849,11 +860,11 @@ async function viewBooking(id) {
         <section class="booking-record-section"><div class="booking-record-section-title"><span>03</span><h4>Package & Payment</h4></div><div class="booking-payment-summary">
             <div><span>Agreed total</span><strong>${money(b.amount)}</strong></div><div><span>Reservation fee (30%)</span><strong>${money(b.required_down_payment)}</strong></div><div><span>Payment received</span><strong>${money(b.down_payment_amount)}</strong></div>
         </div>${b.ai_estimated_package ? `<p class="booking-record-footnote">AI package suggestion: ${escapeHtml(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}</p>` : ""}</section>
-        ${requests ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>04</span><h4>Requests & Additional Information</h4></div><div class="booking-record-message">${escapeHtml(requests).replace(/\n/g, "<br>")}</div></section>` : ""}
+        <section class="booking-record-section"><div class="booking-record-section-title"><span>04</span><h4>Client Notes & Requests</h4><span class="booking-record-readonly-label">Read only</span></div><div class="booking-record-message">${clientNotes ? escapeHtml(clientNotes).replace(/\n/g, "<br>") : "No additional notes were provided by the client."}</div></section>
         ${b.design_image_path ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>05</span><h4>Customer Design Reference</h4></div><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></section>` : ""}
         ${Array.isArray(b.ai_detected_features) && b.ai_detected_features.length ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>06</span><h4>Design Estimate Notes</h4></div><p>${escapeHtml(b.ai_estimate_explanation || "Estimated from the visible design features.")}</p><ul class="admin-design-features">${b.ai_detected_features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}</ul><small class="field-help">AI estimate only; confirm final package and price with the customer.</small></section>` : ""}
-        <section class="booking-record-section booking-record-notes"><div class="booking-record-section-title"><span>✎</span><h4>Internal Notes</h4></div><p class="booking-record-note-help">Private reminders for your team. These notes are not shown to the client.</p><textarea id="adminNotes" placeholder="Add an internal reminder or follow-up note…">${escapeHtml(b.adminNotes || "")}</textarea></section>
-        <footer class="booking-record-footer"><span>Keep this reference number for booking inquiries.</span><button class="btn primary" onclick="saveNotes('${escapeAttr(b.id)}')">Save Notes</button></footer>
+        ${b.adminNotes ? `<section class="booking-record-section booking-record-notes"><div class="booking-record-section-title"><span>✎</span><h4>Internal Notes</h4><span class="booking-record-readonly-label">Admin only</span></div><p class="booking-record-message">${escapeHtml(b.adminNotes).replace(/\n/g, "<br>")}</p></section>` : ""}
+        <footer class="booking-record-footer"><span>Keep this reference number for booking inquiries.</span><button type="button" class="btn primary" onclick="closeModal()">Okay</button></footer>
     </div>`);
     document.querySelector("#modal .modal-card")?.classList.add("booking-record-modal-card");
     if (b.design_image_path) {
@@ -870,14 +881,6 @@ async function viewBooking(id) {
             imageStatus.remove();
         }
     }
-}
-
-async function saveNotes(id) {
-    const b = bookings.find(x => x.id === id); if (!b) return;
-    const notes = document.getElementById("adminNotes").value;
-    const { error } = await window.supabaseClient.from("bookings").update({ admin_notes: notes }).eq("id", id);
-    if (error) { showAdminToast(error.message || "Unable to save admin notes.", "error"); return; }
-    b.adminNotes = notes; save(); closeModal(); renderAll(); showAdminToast("Admin notes saved.");
 }
 
 function editPayment(id) {

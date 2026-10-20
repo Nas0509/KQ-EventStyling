@@ -174,7 +174,7 @@ const eventType =
 
 const inspectionAddress = document.getElementById("inspectionAddress");
 const inspectionCityInput = document.getElementById("inspectionCity");
-const inspectionCityOptions = document.getElementById("inspectionCityOptions");
+const inspectionCityDropdown = document.getElementById("inspectionCityList");
 const inspectionFeeAmount = document.getElementById("inspectionFeeAmount");
 const inspectionDateInput = document.getElementById("inspectionDate");
 const inspectionDatePicker = document.getElementById("inspectionDatePicker");
@@ -182,6 +182,19 @@ const inspectionDateDisplay = document.getElementById("inspectionDateDisplay");
 const inspectionDatePickerWrapper = document.getElementById("inspectionDatePickerWrapper");
 const inspectionCalendar = document.getElementById("inspectionCalendar");
 const inspectionTimeInput = document.getElementById("inspectionTime");
+const inspectionTimeDisplay = document.getElementById("inspectionTimeDisplay");
+const inspectionTimeDisplayText = document.getElementById("inspectionTimeDisplayText");
+const inspectionClockPicker = document.getElementById("inspectionClockPicker");
+const inspectionClockFace = document.getElementById("inspectionClockFace");
+const inspectionClockHourText = document.getElementById("inspectionClockHour");
+const inspectionClockMinuteText = document.getElementById("inspectionClockMinute");
+const inspectionClockPeriodText = document.getElementById("inspectionClockPeriodText");
+const inspectionClockHoursTab = document.getElementById("inspectionClockHoursTab");
+const inspectionClockMinutesTab = document.getElementById("inspectionClockMinutesTab");
+const inspectionClockAm = document.getElementById("inspectionClockAm");
+const inspectionClockPm = document.getElementById("inspectionClockPm");
+const inspectionClockDone = document.getElementById("inspectionClockDone");
+const inspectionClockCancel = document.getElementById("inspectionClockCancel");
 const inspectionCalendarDays = document.getElementById("inspectionCalendarDays");
 const inspectionCalendarMonthLabel = document.getElementById("inspectionCalendarMonth");
 const inspectionCalendarHelp = document.getElementById("inspectionCalendarHelp");
@@ -212,6 +225,106 @@ function getInspectionSlotForTime(value) {
     if (minutes >= 1080 && minutes < 1440) return "NIGHT";
     return "";
 }
+
+let inspectionClockHour = 1;
+let inspectionClockMinute = 0;
+let inspectionClockPeriod = "AM";
+let inspectionClockMode = "hour";
+
+function renderInspectionClock() {
+    if (!inspectionClockFace) return;
+    inspectionClockHourText.textContent = String(inspectionClockHour).padStart(2, "0");
+    inspectionClockMinuteText.textContent = String(inspectionClockMinute).padStart(2, "0");
+    inspectionClockPeriodText.textContent = inspectionClockPeriod;
+    inspectionClockHoursTab.classList.toggle("active", inspectionClockMode === "hour");
+    inspectionClockMinutesTab.classList.toggle("active", inspectionClockMode === "minute");
+    inspectionClockAm.classList.toggle("active", inspectionClockPeriod === "AM");
+    inspectionClockPm.classList.toggle("active", inspectionClockPeriod === "PM");
+    inspectionClockAm.setAttribute("aria-pressed", String(inspectionClockPeriod === "AM"));
+    inspectionClockPm.setAttribute("aria-pressed", String(inspectionClockPeriod === "PM"));
+    inspectionClockFace.replaceChildren();
+
+    const hand = document.createElement("div");
+    hand.className = "clock-hand";
+    const center = document.createElement("div");
+    center.className = "clock-center";
+    const values = inspectionClockMode === "hour"
+        ? [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        : Array.from({ length: 12 }, (_, index) => index * 5);
+    const selectedValue = inspectionClockMode === "hour" ? inspectionClockHour : inspectionClockMinute;
+    // The hand starts pointing right; use the selected dial item's position
+    // (12/00 at the top) so both the hand and highlight share the same angle.
+    const selectedAngle = values.indexOf(selectedValue) * 30 - 90;
+    hand.style.transform = `rotate(${selectedAngle}deg)`;
+    inspectionClockFace.append(hand);
+    values.forEach((value, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `clock-number${value === selectedValue ? " selected" : ""}`;
+        button.textContent = String(value).padStart(2, "0");
+        const radians = (index * 30 - 90) * Math.PI / 180;
+        button.style.left = `${50 + 40 * Math.cos(radians)}%`;
+        button.style.top = `${50 + 40 * Math.sin(radians)}%`;
+        button.addEventListener("click", () => {
+            if (inspectionClockMode === "hour") {
+                inspectionClockHour = value;
+                inspectionClockMode = "minute";
+            } else inspectionClockMinute = value;
+            renderInspectionClock();
+        });
+        inspectionClockFace.append(button);
+    });
+    inspectionClockFace.append(center);
+}
+
+function closeInspectionClock() {
+    if (!inspectionClockPicker || !inspectionTimeDisplay) return;
+    inspectionClockPicker.hidden = true;
+    inspectionTimeDisplay.setAttribute("aria-expanded", "false");
+}
+
+inspectionTimeDisplay?.addEventListener("click", () => {
+    if (inspectionTimeInput?.value) {
+        const [hours, minutes] = inspectionTimeInput.value.split(":").map(Number);
+        inspectionClockHour = hours % 12 || 12;
+        inspectionClockMinute = minutes || 0;
+        inspectionClockPeriod = hours >= 12 ? "PM" : "AM";
+    } else {
+        inspectionClockHour = 1;
+        inspectionClockMinute = 0;
+        inspectionClockPeriod = "AM";
+    }
+    inspectionClockMode = "hour";
+    renderInspectionClock();
+    inspectionClockPicker.hidden = false;
+    inspectionTimeDisplay.setAttribute("aria-expanded", "true");
+});
+inspectionClockHoursTab?.addEventListener("click", () => { inspectionClockMode = "hour"; renderInspectionClock(); });
+inspectionClockMinutesTab?.addEventListener("click", () => { inspectionClockMode = "minute"; renderInspectionClock(); });
+inspectionClockHourText?.addEventListener("click", () => { inspectionClockMode = "hour"; renderInspectionClock(); });
+inspectionClockMinuteText?.addEventListener("click", () => { inspectionClockMode = "minute"; renderInspectionClock(); });
+inspectionClockAm?.addEventListener("click", () => { inspectionClockPeriod = "AM"; renderInspectionClock(); });
+inspectionClockPm?.addEventListener("click", () => { inspectionClockPeriod = "PM"; renderInspectionClock(); });
+inspectionClockDone?.addEventListener("click", () => {
+    const hour24 = inspectionClockHour % 12 + (inspectionClockPeriod === "PM" ? 12 : 0);
+    const value = `${String(hour24).padStart(2, "0")}:${String(inspectionClockMinute).padStart(2, "0")}`;
+    inspectionTimeInput.value = value;
+    inspectionTimeDisplayText.textContent = `${String(inspectionClockHour).padStart(2, "0")}:${String(inspectionClockMinute).padStart(2, "0")} ${inspectionClockPeriod}`;
+    closeInspectionClock();
+    void updateInspectionTimeAvailability();
+});
+inspectionClockCancel?.addEventListener("click", closeInspectionClock);
+document.addEventListener("click", event => {
+    if (inspectionClockPicker && !inspectionClockPicker.hidden && !event.composedPath().includes(inspectionClockPicker) && !event.composedPath().includes(inspectionTimeDisplay)) {
+        closeInspectionClock();
+    }
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && inspectionClockPicker && !inspectionClockPicker.hidden) {
+        closeInspectionClock();
+        inspectionTimeDisplay?.focus();
+    }
+});
 
 function setInspectionCalendarOpen(isOpen) {
     if (!inspectionCalendar || !inspectionDatePicker) return;
@@ -286,6 +399,7 @@ function renderInspectionCalendar() {
             updateInspectionDateDisplay();
             setInspectionCalendarOpen(false);
             if (inspectionTimeInput) inspectionTimeInput.value = "";
+            if (inspectionTimeDisplayText) inspectionTimeDisplayText.textContent = "Choose an inspection time";
             renderInspectionCalendar();
             if (inspectionCalendarHelp) {
                 inspectionCalendarHelp.textContent = `${new Intl.DateTimeFormat("en", { dateStyle: "long" }).format(date)} selected. Pick a time in an open slot.`;
@@ -405,7 +519,6 @@ inspectionCalendarNext?.addEventListener("click", () => {
     inspectionDisplayedMonth.setMonth(inspectionDisplayedMonth.getMonth() + 1);
     loadInspectionAvailabilityForMonth();
 });
-inspectionTimeInput?.addEventListener("input", updateInspectionTimeAvailability);
 renderInspectionCalendar();
 loadInspectionAvailabilityForMonth();
 document.addEventListener("visibilitychange", () => {
@@ -485,21 +598,71 @@ function updateInspectionFeeEstimate() {
     if (paymentBlock) paymentBlock.hidden = true;
 }
 
-if (inspectionCityOptions) {
-    const fragment = document.createDocumentFragment();
-    PH_LUZON_CITY_COORDINATES
-        .slice()
-        .sort((a, b) => getCityLabel(a).localeCompare(getCityLabel(b), "en"))
-        .forEach(city => {
-            const option = document.createElement("option");
-            option.value = getCityLabel(city);
-            fragment.appendChild(option);
+const inspectionCities = PH_LUZON_CITY_COORDINATES
+    .slice()
+    .sort((a, b) => getCityLabel(a).localeCompare(getCityLabel(b), "en"));
+function renderInspectionCityOptions() {
+    if (!inspectionCityDropdown || !inspectionCityInput) return;
+    const query = normalizeCityName(inspectionCityInput.value);
+    const matches = inspectionCities.filter(city =>
+        normalizeCityName(`${city.name} ${city.province || ""} ${city.region || ""}`).includes(query)
+    );
+    inspectionCityDropdown.replaceChildren();
+    matches.forEach(city => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "ocular-city-dropdown-option";
+        option.setAttribute("role", "option");
+        option.textContent = city.province && city.province !== city.region
+            ? `${city.name}, ${city.province}`
+            : `${city.name}, ${city.region || "Luzon"}`;
+        option.addEventListener("click", () => {
+            inspectionCityInput.value = getCityLabel(city);
+            inspectionCityInput.dispatchEvent(new Event("input", { bubbles: true }));
+            inspectionCityDropdown.hidden = true;
+            inspectionCityInput.setAttribute("aria-expanded", "false");
         });
-    inspectionCityOptions.appendChild(fragment);
+        inspectionCityDropdown.appendChild(option);
+    });
+    if (!matches.length) {
+        const empty = document.createElement("div");
+        empty.className = "ocular-city-dropdown-empty";
+        empty.textContent = "No matching locations found.";
+        inspectionCityDropdown.appendChild(empty);
+    }
 }
+function toggleInspectionCityList(open) {
+    if (!inspectionCityDropdown || !inspectionCityInput) return;
+    if (open) renderInspectionCityOptions();
+    inspectionCityDropdown.hidden = !open;
+    inspectionCityInput.setAttribute("aria-expanded", String(open));
+}
+inspectionCityInput?.addEventListener("click", () => toggleInspectionCityList(inspectionCityDropdown?.hidden ?? true));
 inspectionCityInput?.addEventListener("input", () => {
+    toggleInspectionCityList(true);
     updateInspectionFeeEstimate();
     updateInspectionTimeAvailability();
+});
+inspectionCityInput?.addEventListener("keydown", event => {
+    if (event.key === "ArrowDown") {
+        event.preventDefault();
+        toggleInspectionCityList(true);
+        inspectionCityDropdown?.querySelector("button")?.focus();
+    } else if (event.key === "Enter" && inspectionCityDropdown && !inspectionCityDropdown.hidden) {
+        event.preventDefault();
+        inspectionCityDropdown.querySelector("button")?.click();
+    } else if (event.key === "Escape") {
+        toggleInspectionCityList(false);
+    }
+});
+inspectionCityDropdown?.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        toggleInspectionCityList(false);
+        inspectionCityInput?.focus();
+    }
+});
+document.addEventListener("click", event => {
+    if (!event.target.closest(".ocular-city-field")) toggleInspectionCityList(false);
 });
 
 const celebrantName =
@@ -927,16 +1090,9 @@ async function requestQuotation() {
             return;
         }
 
-        const { data: profile, error: profileError } = await window.supabaseClient
-            .from("profiles")
-            .select("full_name, email, contact_number")
-            .eq("id", user.id)
-            .maybeSingle();
-        if (profileError) console.warn("Profile lookup warning:", profileError);
-
-        const customerName = nameInput?.value.trim() || profile?.full_name || user.user_metadata?.full_name || "";
-        const customerEmail = emailInput?.value.trim() || profile?.email || user.email || "";
-        const customerContact = phoneInput?.value.trim() || profile?.contact_number || user.user_metadata?.contact_number || "";
+        const customerName = nameInput?.value.trim() || "";
+        const customerEmail = emailInput?.value.trim() || "";
+        const customerContact = phoneInput?.value.trim() || "";
 
         if (!customerName || !customerEmail || !customerContact || !preferredDate || !preferredTime || !venueName || !inspectionAddressValue) {
             alert("Please complete your name, email, contact number, preferred ocular date and time, venue name, and venue address.");
@@ -1145,6 +1301,8 @@ function clearOcularRequestForm() {
         const field = document.getElementById(id);
         if (field) field.value = "";
     });
+    if (inspectionTimeDisplayText) inspectionTimeDisplayText.textContent = "Choose an inspection time";
+    closeInspectionClock();
     updateInspectionDateDisplay();
     setInspectionCalendarOpen(false);
     updateInspectionFeeEstimate();
@@ -1153,30 +1311,6 @@ function clearOcularRequestForm() {
 }
 
 resetCustomizer?.addEventListener("click", clearOcularRequestForm);
-
-(async function prefillOcularContact() {
-    if (!window.supabaseClient) return;
-    try {
-        const { data: { user } } = await window.supabaseClient.auth.getUser();
-        if (!user) return;
-        const { data: profile } = await window.supabaseClient
-            .from("profiles")
-            .select("full_name, email, contact_number")
-            .eq("id", user.id)
-            .maybeSingle();
-        const values = {
-            ocularName: profile?.full_name || user.user_metadata?.full_name || "",
-            ocularEmail: profile?.email || user.email || "",
-            ocularPhone: profile?.contact_number || user.user_metadata?.contact_number || ""
-        };
-        Object.entries(values).forEach(([id, value]) => {
-            const field = document.getElementById(id);
-            if (field && !field.value) field.value = value;
-        });
-    } catch (error) {
-        console.warn("Ocular contact details could not be prefilled:", error);
-    }
-})();
 
 // ========================================
 // CLICK OUTSIDE MODAL

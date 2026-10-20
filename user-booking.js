@@ -333,6 +333,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     function updateEventDateTrigger() {
         if (!eventDateTriggerText) return;
+        eventDateTrigger?.classList.toggle("has-value", Boolean(eventDate?.value));
         if (!eventDate?.value) {
             eventDateTriggerText.textContent = "Choose event date";
             return;
@@ -716,19 +717,17 @@ document.addEventListener("DOMContentLoaded", async function () {
         const selectedValue =
             clockMode === "hour" ? clockHour : clockMinute;
 
-        const selectedAngle =
-            clockMode === "hour"
-                ? (clockHour % 12) * 30
-                : clockMinute * 6;
-
-        hand.style.transform = `rotate(${selectedAngle}deg)`;
-        clockFace.appendChild(hand);
-
         const values = clockMode === "hour"
             ? selectedTimeSlot === "AFTERNOON"
                 ? [12, 1, 2, 3, 4, 5]
                 : [6, 7, 8, 9, 10, 11]
             : Array.from({ length: 12 }, (_, i) => i * 5);
+        const selectedIndex = values.indexOf(selectedValue);
+        // The hand is drawn vertically down from the center. Convert the
+        // selected dial position (whose 12 o'clock point is at -90 degrees)
+        // into the CSS rotation needed from that downward starting direction.
+        hand.style.transform = `rotate(${selectedIndex * 30 - 180}deg)`;
+        clockFace.appendChild(hand);
 
         values.forEach((value, index) => {
             const button = document.createElement("button");
@@ -802,13 +801,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         } else {
             clockMinute = 0;
             if (selectedTimeSlot === "MORNING") {
-                clockHour = 9;
+                clockHour = 6;
                 clockPeriod = "AM";
             } else if (selectedTimeSlot === "AFTERNOON") {
-                clockHour = 2;
+                clockHour = 12;
                 clockPeriod = "PM";
             } else {
-                clockHour = 8;
+                clockHour = 6;
                 clockPeriod = "PM";
             }
         }

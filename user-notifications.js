@@ -140,7 +140,7 @@
                 hour = hours % 12 || 12;
                 minute = minutes || 0;
             } else {
-                hour = slot === "MORNING" ? 9 : slot === "AFTERNOON" ? 2 : slot === "NIGHT" ? 8 : 9;
+                hour = slot === "MORNING" ? 6 : slot === "AFTERNOON" ? 12 : slot === "NIGHT" ? 6 : 1;
                 minute = 0;
             }
             mode = "hour";
@@ -180,7 +180,7 @@
                 ? slot === "AFTERNOON" ? [12, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11]
                 : Array.from({ length: 12 }, (_, index) => index * 5);
             const activeValue = mode === "hour" ? hour : minute;
-            const angle = mode === "hour" ? (hour % 12) * 30 : minute * 6;
+            const angle = values.indexOf(activeValue) * 30 - 180;
             hand.style.transform = `rotate(${angle}deg)`;
             face.append(hand);
             values.forEach((value, index) => {
@@ -202,7 +202,7 @@
         };
         const setSlot = nextSlot => {
             slot = nextSlot || "";
-            hour = slot === "MORNING" ? 9 : slot === "AFTERNOON" ? 2 : slot === "NIGHT" ? 8 : 9;
+            hour = slot === "MORNING" ? 6 : slot === "AFTERNOON" ? 12 : slot === "NIGHT" ? 6 : 1;
             minute = 0;
             mode = "hour";
             input.value = "";
@@ -316,7 +316,7 @@
         form.className = "customer-change-form";
         form.dataset.requestKind = kind;
         form.dataset.bookingId = String(booking.id);
-        const rescheduleFields = isReschedule ? `<div class="customer-change-form-row"><label>Event type<input type="text" value="${escapeHtml(booking.event_type || "Event")}" readonly></label><label>Estimated number of guests<input type="text" value="${escapeHtml(booking.guests ?? "Not set")}" readonly></label></div><label><span class="customer-change-label">Event date <span class="required-mark">*</span></span><div class="customer-reschedule-date-control"><button type="button" class="booking-date-trigger" data-reschedule-date-trigger><span data-reschedule-date-label>Choose event date</span><span class="booking-date-chevron" aria-hidden="true">▾</span></button><input class="customer-reschedule-date-input" type="date" name="requested_event_date" min="${minDate}" aria-label="Event date" tabindex="-1"></div></label><div class="booking-time-slots customer-reschedule-slots"><p class="time-slot-prompt">Choose an available time slot:</p><div class="time-slot-options"><button type="button" class="time-slot-option is-pending" data-reschedule-slot="MORNING" disabled><strong>Morning</strong><span>6:00 AM–11:55 AM</span><small>Choose a date</small></button><button type="button" class="time-slot-option is-pending" data-reschedule-slot="AFTERNOON" disabled><strong>Afternoon</strong><span>12:00 PM–5:55 PM</span><small>Choose a date</small></button><button type="button" class="time-slot-option is-pending" data-reschedule-slot="NIGHT" disabled><strong>Night</strong><span>6:00 PM–11:55 PM</span><small>Choose a date</small></button></div><small class="booking-time-prompt customer-reschedule-help" role="status" aria-live="polite">Select a date to check availability.</small><input type="hidden" name="requested_time_slot"></div><label><span class="customer-change-label">Event start time <span class="required-mark">*</span></span><div class="clock-picker-wrap customer-reschedule-clock-wrap"><button type="button" class="clock-time-display" data-reschedule-clock-toggle aria-haspopup="dialog" aria-expanded="false" disabled><span data-reschedule-clock-label>Choose a time after selecting a slot</span><span class="clock-icon" aria-hidden="true">◷</span></button><input type="hidden" name="requested_start_time" required><div class="clock-picker customer-reschedule-clock" data-reschedule-clock role="dialog" aria-label="Choose event start time" hidden><div class="clock-picker-header"><div class="clock-current-time"><button type="button" data-reschedule-clock-hour>09</button><span>:</span><button type="button" data-reschedule-clock-minute>00</button><span data-reschedule-clock-period>AM</span></div><div class="clock-tabs"><button type="button" class="active" data-reschedule-clock-tab="hour">Hour</button><button type="button" data-reschedule-clock-tab="minute">Minute</button></div></div><div class="clock-face" data-reschedule-clock-face></div><div class="clock-footer"><span data-reschedule-clock-slot-note></span><button type="button" data-reschedule-clock-cancel>Cancel</button><button type="button" data-reschedule-clock-done>Done</button></div></div></div></label>` : "";
+        const rescheduleFields = isReschedule ? `<div class="customer-change-form-row"><label>Event type<input type="text" value="${escapeHtml(booking.event_type || "Event")}" readonly></label><label>Estimated number of guests<input type="text" value="${escapeHtml(booking.guests ?? "Not set")}" readonly></label></div><label><span class="customer-change-label">Event date <span class="required-mark">*</span></span><div class="customer-reschedule-date-control booking-date-picker"><button type="button" class="booking-date-trigger" data-reschedule-date-trigger aria-expanded="false"><span data-reschedule-date-label>Choose event date</span><span class="booking-date-chevron" aria-hidden="true">▾</span></button><input type="hidden" name="requested_event_date"><div class="booking-calendar customer-reschedule-calendar" data-reschedule-calendar role="group" hidden><div class="booking-calendar-header"><button type="button" data-reschedule-month-prev aria-label="Previous month">‹</button><strong data-reschedule-month-label></strong><button type="button" data-reschedule-month-next aria-label="Next month">›</button></div><div class="booking-calendar-grid booking-calendar-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="booking-calendar-grid" data-reschedule-calendar-days role="grid" aria-label="Calendar dates"></div><div class="booking-calendar-legend"><span><i class="available"></i>All slots open</span><span><i class="partial"></i>Some slots taken</span><span><i class="full"></i>Fully booked</span></div><small class="booking-calendar-help" data-reschedule-calendar-help role="status" aria-live="polite">Loading date availability…</small></div></div></label><div class="booking-time-slots customer-reschedule-slots"><p class="time-slot-prompt">Choose an available time slot:</p><div class="time-slot-options"><button type="button" class="time-slot-option is-pending" data-reschedule-slot="MORNING" disabled><strong>Morning</strong><span>6:00 AM–11:55 AM</span><small>Choose a date</small></button><button type="button" class="time-slot-option is-pending" data-reschedule-slot="AFTERNOON" disabled><strong>Afternoon</strong><span>12:00 PM–5:55 PM</span><small>Choose a date</small></button><button type="button" class="time-slot-option is-pending" data-reschedule-slot="NIGHT" disabled><strong>Night</strong><span>6:00 PM–11:55 PM</span><small>Choose a date</small></button></div><small class="booking-time-prompt customer-reschedule-help" role="status" aria-live="polite">Select a date to check availability.</small><input type="hidden" name="requested_time_slot"></div><label><span class="customer-change-label">Event start time <span class="required-mark">*</span></span><div class="clock-picker-wrap customer-reschedule-clock-wrap"><button type="button" class="clock-time-display" data-reschedule-clock-toggle aria-haspopup="dialog" aria-expanded="false" disabled><span data-reschedule-clock-label>Choose a time after selecting a slot</span><span class="clock-icon" aria-hidden="true">◷</span></button><input type="hidden" name="requested_start_time" required><div class="clock-picker customer-reschedule-clock" data-reschedule-clock role="dialog" aria-label="Choose event start time" hidden><div class="clock-picker-header"><div class="clock-current-time"><button type="button" data-reschedule-clock-hour>09</button><span>:</span><button type="button" data-reschedule-clock-minute>00</button><span data-reschedule-clock-period>AM</span></div><div class="clock-tabs"><button type="button" class="active" data-reschedule-clock-tab="hour">Hour</button><button type="button" data-reschedule-clock-tab="minute">Minute</button></div></div><div class="clock-face" data-reschedule-clock-face></div><div class="clock-footer"><span data-reschedule-clock-slot-note></span><button type="button" data-reschedule-clock-cancel>Cancel</button><button type="button" data-reschedule-clock-done>Done</button></div></div></div></label>` : "";
         form.innerHTML = `<div class="customer-change-form-head"><div><span class="customer-history-eyebrow">BOOKING CHANGE</span><h3>${isReschedule ? "Request a reschedule" : "Request cancellation"}</h3></div><button type="button" data-customer-action="close-form" aria-label="Close request form">×</button></div><p class="customer-history-policy-copy">${isReschedule ? "If the request is made 30 or more days before your current event date, the new date is applied automatically with no penalty. Less than 30 days requires admin approval; your reservation fee is non-refundable even if declined." : "Cancellation requests must be reviewed by the admin. Your reservation fee is non-refundable."}</p>${rescheduleFields}<label>Reason<textarea name="reason" rows="4" minlength="10" maxlength="1000" required placeholder="Please explain your request (at least 10 characters)."></textarea></label><div class="customer-change-form-actions"><button type="button" class="customer-history-action" data-customer-action="close-form">Back</button><button type="submit" class="customer-history-action is-primary">${isReschedule ? "Submit reschedule request" : "Submit cancellation request"}</button></div>`;
         historyContent.prepend(form);
         if (isReschedule) {
@@ -324,15 +324,104 @@
             const dateInput = form.querySelector('[name="requested_event_date"]');
             const dateTrigger = form.querySelector("[data-reschedule-date-trigger]");
             const dateLabel = form.querySelector("[data-reschedule-date-label]");
+            const calendar = form.querySelector("[data-reschedule-calendar]");
+            const days = form.querySelector("[data-reschedule-calendar-days]");
+            const monthLabel = form.querySelector("[data-reschedule-month-label]");
+            const calendarHelp = form.querySelector("[data-reschedule-calendar-help]");
+            const minDateIso = minDate;
+            const month = new Date();
+            month.setDate(1);
+            const availabilityByDate = new Map();
+            let availabilityMonth = "";
+            let monthLoaded = false;
+            let monthRequestId = 0;
+            const isoDate = (year, monthIndex, day) => `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const renderCalendar = () => {
+                const year = month.getFullYear();
+                const monthIndex = month.getMonth();
+                const monthKey = isoDate(year, monthIndex, 1).slice(0, 7);
+                monthLabel.textContent = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(month);
+                days.innerHTML = "";
+                for (let blank = 0; blank < new Date(year, monthIndex, 1).getDay(); blank++) {
+                    const spacer = document.createElement("span");
+                    spacer.className = "booking-calendar-day outside-month";
+                    spacer.setAttribute("aria-hidden", "true");
+                    days.appendChild(spacer);
+                }
+                const count = new Date(year, monthIndex + 1, 0).getDate();
+                for (let day = 1; day <= count; day++) {
+                    const date = isoDate(year, monthIndex, day);
+                    const availability = availabilityByDate.get(date);
+                    const full = availability && availability.MORNING && availability.AFTERNOON && availability.NIGHT;
+                    const anyTaken = availability && Object.values(availability).some(Boolean);
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "booking-calendar-day";
+                    button.textContent = String(day);
+                    button.setAttribute("role", "gridcell");
+                    button.setAttribute("aria-label", `${new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(new Date(year, monthIndex, day))}${full ? ", fully booked" : anyTaken ? ", some time slots taken" : ", all time slots available"}`);
+                    if (anyTaken && !full) button.classList.add("partial");
+                    if (full) button.classList.add("full");
+                    if (dateInput.value === date) button.classList.add("selected");
+                    button.disabled = date < minDateIso || !monthLoaded || !availability || full;
+                    button.addEventListener("click", () => {
+                        dateInput.value = date;
+                        dateLabel.textContent = displayDate(date);
+                        dateTrigger.classList.add("has-value");
+                        dateTrigger.setAttribute("aria-expanded", "false");
+                        calendar.hidden = true;
+                        renderCalendar();
+                        void loadRescheduleSlots(form, booking, date);
+                    });
+                    days.appendChild(button);
+                }
+                const currentMonth = new Date();
+                currentMonth.setDate(1);
+                const prev = form.querySelector("[data-reschedule-month-prev]");
+                prev.disabled = year === currentMonth.getFullYear() && monthIndex === currentMonth.getMonth();
+                if (availabilityMonth !== monthKey) void loadCalendarAvailability();
+            };
+            const loadCalendarAvailability = async () => {
+                const year = month.getFullYear();
+                const monthIndex = month.getMonth();
+                const monthKey = isoDate(year, monthIndex, 1).slice(0, 7);
+                if (availabilityMonth === monthKey) return;
+                availabilityMonth = monthKey;
+                monthLoaded = false;
+                const requestId = ++monthRequestId;
+                calendarHelp.textContent = "Loading date availability…";
+                renderCalendar();
+                const start = isoDate(year, monthIndex, 1);
+                const end = isoDate(year, monthIndex, new Date(year, monthIndex + 1, 0).getDate());
+                const { data, error } = await supabase.rpc("kq_booking_slot_availability", { p_start_date: start, p_end_date: end });
+                if (requestId !== monthRequestId) return;
+                if (error) {
+                    availabilityMonth = monthKey;
+                    calendarHelp.textContent = "Could not load availability. Please try again.";
+                    renderCalendar();
+                    return;
+                }
+                (data || []).forEach(row => availabilityByDate.set(String(row.event_date).slice(0, 10), {
+                    MORNING: Boolean(row.morning_booked), AFTERNOON: Boolean(row.afternoon_booked), NIGHT: Boolean(row.night_booked)
+                }));
+                monthLoaded = true;
+                calendarHelp.textContent = "Choose an available date. Days show all slots open, some slots taken, or fully booked.";
+                renderCalendar();
+            };
             dateTrigger.addEventListener("click", () => {
-                if (typeof dateInput.showPicker === "function") {
-                    try { dateInput.showPicker(); } catch { dateInput.focus(); dateInput.click(); }
-                } else { dateInput.focus(); dateInput.click(); }
+                calendar.hidden = !calendar.hidden;
+                dateTrigger.setAttribute("aria-expanded", String(!calendar.hidden));
             });
-            dateInput.addEventListener("change", () => {
-                dateLabel.textContent = dateInput.value ? displayDate(dateInput.value) : "Choose event date";
-                void loadRescheduleSlots(form, booking, dateInput.value);
+            form.querySelector("[data-reschedule-month-prev]").addEventListener("click", () => {
+                if (form.querySelector("[data-reschedule-month-prev]").disabled) return;
+                month.setMonth(month.getMonth() - 1);
+                renderCalendar();
             });
+            form.querySelector("[data-reschedule-month-next]").addEventListener("click", () => {
+                month.setMonth(month.getMonth() + 1);
+                renderCalendar();
+            });
+            renderCalendar();
         }
         form.scrollIntoView({ block: "start", behavior: "smooth" });
     }

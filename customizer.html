@@ -11,7 +11,7 @@
     <title>For Ocular Inspection | KQ Event Styling</title>
 
     <link rel="stylesheet"
-          href="customizer.css?v=20261015-ocular-booking-calendar">
+          href="customizer.css?v=20261020-ocular-booking-location-picker">
 
 </head>
 
@@ -98,15 +98,15 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="ocularName">Name <span class="required-mark">*</span></label>
-                            <input id="ocularName" type="text" autocomplete="name" required>
+                            <input id="ocularName" type="text" placeholder="Enter your full name" autocomplete="off" required>
                         </div>
                         <div class="form-group">
                             <label for="ocularEmail">Email <span class="required-mark">*</span></label>
-                            <input id="ocularEmail" type="email" autocomplete="email" required>
+                            <input id="ocularEmail" type="email" placeholder="Enter your email" autocomplete="off" required>
                         </div>
                         <div class="form-group">
                             <label for="ocularPhone">Contact Number <span class="required-mark">*</span></label>
-                            <input id="ocularPhone" type="tel" autocomplete="tel" required>
+                            <input id="ocularPhone" type="tel" placeholder="09XXXXXXXXX" autocomplete="off" required>
                         </div>
                         <div class="form-group ocular-date-picker" id="inspectionDatePickerWrapper">
                             <label id="inspectionDateLabel" for="inspectionDatePicker">Preferred Ocular Date <span class="required-mark">*</span></label>
@@ -134,7 +134,36 @@
                         </div>
                         <div class="form-group">
                             <label for="inspectionTime">Preferred Ocular Time <span class="required-mark">*</span></label>
-                            <input id="inspectionTime" type="time" required>
+                            <div class="clock-picker-wrap ocular-time-picker-wrap">
+                                <button type="button" id="inspectionTimeDisplay" class="clock-time-display" aria-haspopup="dialog" aria-expanded="false">
+                                    <span id="inspectionTimeDisplayText">Choose an inspection time</span>
+                                    <span class="clock-icon" aria-hidden="true">◷</span>
+                                </button>
+                                <input id="inspectionTime" type="hidden" required>
+                                <div id="inspectionClockPicker" class="clock-picker" role="dialog" aria-label="Choose preferred ocular time" hidden>
+                                    <div class="clock-picker-header">
+                                        <div class="clock-current-time">
+                                            <button type="button" id="inspectionClockHour">01</button>
+                                            <span>:</span>
+                                            <button type="button" id="inspectionClockMinute">00</button>
+                                            <span id="inspectionClockPeriodText">AM</span>
+                                        </div>
+                                        <div class="clock-tabs">
+                                            <button type="button" id="inspectionClockHoursTab" class="active">Hour</button>
+                                            <button type="button" id="inspectionClockMinutesTab">Minute</button>
+                                        </div>
+                                    </div>
+                                    <div id="inspectionClockFace" class="clock-face"></div>
+                                    <div class="clock-footer">
+                                        <div class="clock-periods" aria-label="AM or PM">
+                                            <button type="button" id="inspectionClockAm" class="active" aria-pressed="true">AM</button>
+                                            <button type="button" id="inspectionClockPm" aria-pressed="false">PM</button>
+                                        </div>
+                                        <button type="button" id="inspectionClockCancel">Cancel</button>
+                                        <button type="button" id="inspectionClockDone">Done</button>
+                                    </div>
+                                </div>
+                            </div>
                             <small id="inspectionTimeHelp" class="field-help">Choose a time from an available morning (6 AM–12 PM), afternoon (12 PM–6 PM), or night (6 PM–12 AM) slot.</small>
                         </div>
                         <div class="form-group">
@@ -144,15 +173,17 @@
                         <div class="form-group" style="grid-column:1/-1;padding:18px;border:1px solid #fda4af;border-left:5px solid #e11d48;border-radius:16px;background:#fff1f2;">
                             <label for="inspectionCity" style="color:#be123c;">💡 INSPECTION FEE <span class="required-mark">*</span></label>
                             <p style="margin:4px 0 10px;color:#68778a;font-size:14px;">Choose your venue city or municipality in Luzon to calculate the exact fee. The payment QR appears after the selected date and time pass the availability and travel-time check.</p>
-                            <input id="inspectionCity" type="text" list="inspectionCityOptions" placeholder="Choose a Luzon city or municipality" autocomplete="address-level2" aria-describedby="inspectionFeeHelp" required>
-                            <datalist id="inspectionCityOptions"></datalist>
+                            <div class="ocular-city-field">
+                                <input id="inspectionCity" type="text" placeholder="Type or choose a Luzon city or municipality" autocomplete="off" aria-describedby="inspectionFeeHelp" aria-haspopup="listbox" aria-expanded="false" aria-controls="inspectionCityList" required>
+                                <div id="inspectionCityList" class="ocular-city-dropdown" role="listbox" hidden></div>
+                            </div>
                             <div id="inspectionFeeAmount" aria-live="polite" style="margin-top:12px;padding:15px;border-radius:12px;background:#e9f8ef;color:#087443;font-weight:700;">Choose a Luzon city or municipality to see the inspection fee.</div>
                             <small id="inspectionFeeHelp" class="field-help"></small>
                             <div id="inspectionPaymentBlock" hidden style="margin-top:14px;padding:16px;border:1px solid #b9dfef;border-radius:14px;background:#f3faff;text-align:center;">
                                 <img src="gcash-qr.png" alt="GCash and InstaPay QR code for ocular inspection fee payment" style="display:block;width:min(100%,260px);height:auto;margin:0 auto 10px;border-radius:10px;">
                                 <strong>Scan to pay the exact inspection fee shown above</strong>
                                 <label for="inspectionPaymentReference" style="display:block;margin-top:12px;text-align:left;">Payment transaction/reference number <span class="required-mark">*</span></label>
-                                <input id="inspectionPaymentReference" type="text" maxlength="100" placeholder="Enter the reference from your payment app" autocomplete="off" required style="width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid #b9cddd;border-radius:10px;">
+                                <input id="inspectionPaymentReference" type="text" maxlength="40" placeholder="Enter the reference from your payment app" autocomplete="off" required style="width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid #b9cddd;border-radius:10px;">
                             </div>
                         </div>
                         <div class="form-group" style="grid-column:1/-1;">
@@ -265,7 +296,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
-    <script src="customizer.js?v=20261017-simple-styling-package-name"></script>
+    <script src="customizer.js?v=20261020-ocular-booking-location-picker"></script>
 
 
 </body>

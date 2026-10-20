@@ -352,6 +352,199 @@ body {
     gap: 16px;
 }
 
+.ocular-city-field > #inspectionCity {
+    padding-right: 42px;
+    background-image: linear-gradient(45deg, transparent 50%, #263946 50%), linear-gradient(135deg, #263946 50%, transparent 50%);
+    background-position: calc(100% - 19px) 50%, calc(100% - 14px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+.ocular-city-dropdown {
+    max-height: 220px;
+    margin-top: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid #d6e1e7;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(23, 35, 45, .12);
+}
+.ocular-city-dropdown[hidden] { display: none; }
+.ocular-city-dropdown-option {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 1px solid #edf1f3;
+    background: #fff;
+    color: #263946;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.ocular-city-dropdown-option:hover,
+.ocular-city-dropdown-option:focus-visible { background: #edf8fd; outline: none; }
+.ocular-city-dropdown-empty { padding: 12px 14px; color: var(--ink-soft); }
+
+/* Round time selector shared visually with the main booking flow. */
+.ocular-time-picker-wrap { position: relative; width: 100%; }
+.ocular-time-picker-wrap .clock-time-display {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 15px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.ocular-time-picker-wrap .clock-time-display:hover { border-color: var(--sky-dark); }
+.ocular-time-picker-wrap .clock-icon { color: var(--sky-dark); font-size: 22px; }
+.ocular-time-picker-wrap .clock-picker[hidden] { display: none !important; }
+.ocular-time-picker-wrap .clock-picker {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 8px);
+    left: 0;
+    width: min(360px, calc(100vw - 36px));
+    padding: 16px;
+    border: 1px solid #d9e5ed;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 20px 45px rgba(20, 43, 58, .18);
+}
+.ocular-time-picker-wrap .clock-picker-header {
+    margin-bottom: 14px;
+    padding: 14px 12px;
+    border: 1px solid #e3f1f8;
+    border-radius: 13px;
+    background: #eff8fd;
+    text-align: center;
+}
+.ocular-time-picker-wrap .clock-current-time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    color: #126f9c;
+    font-size: 27px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.ocular-time-picker-wrap .clock-current-time button {
+    min-width: 42px;
+    padding: 3px 5px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.ocular-time-picker-wrap .clock-current-time button:hover { background: #d9effa; }
+.ocular-time-picker-wrap .clock-tabs,
+.ocular-time-picker-wrap .clock-periods {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.ocular-time-picker-wrap .clock-tabs {
+    width: fit-content;
+    margin: 10px auto 0;
+    padding: 3px;
+    border: 1px solid #dce8ef;
+    border-radius: 9px;
+    background: #fff;
+}
+.ocular-time-picker-wrap .clock-tabs button,
+.ocular-time-picker-wrap .clock-periods button,
+.ocular-time-picker-wrap .clock-footer > button {
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: .86rem;
+    cursor: pointer;
+}
+.ocular-time-picker-wrap .clock-tabs button.active,
+.ocular-time-picker-wrap .clock-periods button.active {
+    border-color: #1688bb;
+    background: #1688bb;
+    color: #fff;
+}
+.ocular-time-picker-wrap .clock-face {
+    position: relative;
+    width: min(250px, 100%);
+    aspect-ratio: 1;
+    margin: 0 auto 12px;
+    border: 1px solid #dcebf3;
+    border-radius: 50%;
+    background: #f5fafe;
+    box-shadow: inset 0 0 0 5px #fff;
+}
+.ocular-time-picker-wrap .clock-number {
+    position: absolute;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: #18323f;
+    font-size: 14px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+}
+.ocular-time-picker-wrap .clock-number.selected,
+.ocular-time-picker-wrap .clock-number:hover {
+    border-color: #1688bb;
+    background: #1688bb;
+    color: #fff;
+}
+.ocular-time-picker-wrap .clock-hand {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1;
+    width: 36%;
+    height: 2px;
+    background: #1688bb;
+    transform-origin: left center;
+}
+.ocular-time-picker-wrap .clock-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 3;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #1688bb;
+    transform: translate(-50%, -50%);
+}
+.ocular-time-picker-wrap .clock-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    padding-top: 10px;
+    border-top: 1px solid #e5edf2;
+}
+.ocular-time-picker-wrap .clock-footer .clock-periods { margin-right: auto; }
+.ocular-time-picker-wrap #inspectionClockDone { background: #1688bb; color: #fff; }
+.ocular-time-picker-wrap #inspectionClockCancel { border-color: #dce6ec; }
+
 
 .form-group,
 .style-section {

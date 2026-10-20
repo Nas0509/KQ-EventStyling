@@ -2031,6 +2031,7 @@ tbody tr:hover {
 .booking-record-section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
 .booking-record-section-title > span { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; border-radius: 50%; background: #eff5f7; color: #43809a; font-size: .63rem; font-weight: 800; }
 .booking-record-section-title h4 { margin: 0; color: #2d414d; font-size: .95rem; font-weight: 750; }
+.booking-record-section-title .booking-record-readonly-label { display: inline-flex; width: auto; height: auto; flex: 0 0 auto; margin-left: auto; padding: 4px 9px; border-radius: 999px; color: #527180; background: #edf4f6; font-size: .65rem; font-weight: 700; letter-spacing: .03em; }
 .booking-record-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 0; }
 .booking-record-field { min-width: 0; padding: 10px 0 11px; border-bottom: 1px solid #edf1f3; }
 .booking-record-field dt { margin-bottom: 4px; color: #7b8991; font-size: .69rem; font-weight: 700; letter-spacing: .035em; }
