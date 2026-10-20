@@ -13,7 +13,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=20261017-compact-signout-confirmation">
+          href="css/admin.css?v=20261020-booking-change-requests">
 
 </head>
 
@@ -160,7 +160,7 @@
                         <span id="adminNotificationCount" class="admin-notification-count" hidden>0</span>
                     </button>
                     <div id="adminNotificationPanel" class="admin-notification-panel" hidden>
-                        <div class="admin-notification-heading"><strong>Notifications</strong><button type="button" id="closeAdminNotifications" aria-label="Close notifications">×</button></div>
+                        <div class="admin-notification-heading"><div><strong>Notifications</strong><small id="adminNotificationSummary">New bookings and requests</small></div><button type="button" id="closeAdminNotifications" aria-label="Close notifications">×</button></div>
                         <div id="adminNotificationsList"></div>
                     </div>
                 </div>
@@ -350,6 +350,8 @@
 
                 <article class="panel dashboard-analytics-panel">
                     <div class="panel-head"><div><h3>Demand & Peak Season</h3><small>Event dates in saved bookings</small></div><span id="analyticsBookingCount" class="analytics-count"></span></div>
+                    <div id="dashboardAnalyticsSummary" class="analytics-summary"></div>
+                    <div class="analytics-status-block"><div class="analytics-subheading"><strong>Booking status</strong><small>Current requests</small></div><div id="dashboardStatusAnalytics" class="analytics-status-list"></div></div>
                     <div id="dashboardAnalytics" class="monthly-bars" role="img" aria-label="Monthly event demand chart"></div>
                     <p id="peakSeasonInsight" class="peak-season-insight"></p>
                 </article>
@@ -411,6 +413,15 @@
                     📅 Booking Calendar
                 </button>
 
+            </div>
+
+
+            <div class="panel booking-change-requests-panel">
+                <div class="panel-head">
+                    <div><h3>Customer cancellation & reschedule requests</h3><small id="bookingChangeRequestCount">Requests awaiting your review</small></div>
+                    <button type="button" class="text-btn" id="refreshBookingChangeRequests">Refresh</button>
+                </div>
+                <div id="bookingChangeRequestList" class="booking-change-request-list"><div class="empty-state">Loading customer requests…</div></div>
             </div>
 
 
@@ -1062,6 +1073,8 @@
     </main>
 
 
+    <div id="bookingActionsPopover" class="booking-actions-popover" popover="auto" role="menu" aria-label="Booking actions"></div>
+
     <!-- =====================================================
          MODAL
          ===================================================== -->
@@ -1095,7 +1108,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="admin.js?v=20261017-account-menu-clipping-fix"></script>
+    <script src="admin.js?v=20261020-admin-unread-notifications"></script>
 
 
 </body>

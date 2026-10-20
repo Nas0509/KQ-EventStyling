@@ -14,7 +14,7 @@
           content="KQ Event Styling provides elegant and personalized event styling and decoration services in Caloocan">
 
     <link rel="stylesheet"
-          href="css/kqstyling.css?v=20261018-crossfade-fix">
+          href="css/kqstyling.css?v=20261020-clock-picker-anchor-scroll">
 
     <style>
 
@@ -96,19 +96,50 @@
                     For Ocular Inspection
                 </a>
 
-                <button type="button"
-                        id="authNavBtn"
-                        class="logout-btn">
-
-                    Sign In
-
-                </button>
+                <div class="account-menu-wrap" id="accountMenuWrap">
+                    <button type="button" id="authNavBtn" class="logout-btn" aria-label="Sign in" aria-expanded="false" aria-controls="accountMenu">
+                        Sign In
+                    </button>
+                    <div class="account-menu" id="accountMenu" hidden>
+                        <div class="account-menu-heading">Your account</div>
+                        <div class="account-menu-identity">
+                            <span class="account-menu-avatar" id="accountMenuAvatar" aria-hidden="true">K</span>
+                            <div><strong id="accountMenuName">Customer</strong><span id="accountMenuEmail"></span></div>
+                        </div>
+                        <div class="account-menu-details" id="accountMenuDetails"></div>
+                        <button type="button" class="account-menu-logout" id="accountMenuLogout">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
+                            Log out
+                        </button>
+                    </div>
+                </div>
 
             </div>
 
         </div>
 
     </header>
+
+    <div id="userNotificationWrap" class="user-notification-wrap" hidden>
+        <button type="button" id="userNotificationBtn" class="user-notification-bell" aria-label="Notifications" aria-expanded="false" aria-controls="userNotificationPanel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            <span id="userNotificationCount" class="user-notification-count" hidden>0</span>
+        </button>
+        <div id="userNotificationPanel" class="user-notification-panel" role="dialog" aria-label="Notifications" hidden>
+            <div class="user-notification-heading"><strong>Notifications</strong><button type="button" id="closeUserNotifications" aria-label="Close notifications">×</button></div>
+            <div id="userNotificationList" class="user-notification-list" aria-live="polite"><p class="user-notification-empty">No notifications yet.</p></div>
+        </div>
+    </div>
+
+    <div id="customerBookingHistory" class="customer-history-overlay" hidden>
+        <section class="customer-history-dialog" role="dialog" aria-modal="true" aria-labelledby="customerHistoryTitle">
+            <header class="customer-history-header">
+                <div><span class="customer-history-eyebrow">YOUR ACCOUNT</span><h2 id="customerHistoryTitle">Booking history</h2></div>
+                <button type="button" id="closeCustomerHistory" class="customer-history-close" aria-label="Close booking history">×</button>
+            </header>
+            <div id="customerHistoryContent" class="customer-history-content" aria-live="polite"><p class="user-notification-empty">Loading your bookings…</p></div>
+        </section>
+    </div>
 
 
 
@@ -828,11 +859,6 @@
                                     <div id="clockFace" class="clock-face"></div>
 
                                     <div class="clock-footer">
-                                        <div class="clock-periods">
-                                            <button type="button" id="clockAM">AM</button>
-                                            <button type="button" id="clockPM" class="active">PM</button>
-                                        </div>
-
                                         <button type="button" id="clockCancel">Cancel</button>
                                         <button type="button" id="clockDone">Done</button>
                                     </div>
@@ -843,16 +869,15 @@
                     </div>
 
 
-                    <div class="field">
+                    <div class="field venue-city-field">
                         <label for="bookingVenueCity">Venue City / Municipality <span class="required-mark">*</span></label>
-                        <input type="text" id="bookingVenueCity" name="venueCity" list="bookingVenueCityOptions" placeholder="Choose a Luzon city or municipality" autocomplete="address-level2" required>
-                        <datalist id="bookingVenueCityOptions"></datalist>
+                        <input type="text" id="bookingVenueCity" name="venueCity" placeholder="Type or choose a Luzon city or municipality" autocomplete="off" aria-haspopup="listbox" aria-expanded="false" aria-controls="bookingVenueCityList" required>
                         <div class="booking-travel-fee" id="bookingTravelFeeHelp" aria-live="polite">Choose your venue city to calculate the travel expense from North Caloocan at ₱20/km.</div>
                     </div>
 
                     <div class="field">
                         <label for="location">Event Venue / Complete Address <span class="required-mark">*</span></label>
-                        <input type="text" id="location" name="location" placeholder="House number, street, barangay, city" autocomplete="street-address" required>
+                        <input type="text" id="location" name="location" placeholder="House number, street, barangay, city" autocomplete="off" autocorrect="off" spellcheck="false" required>
                         <small class="field-help">Enter the venue where the event styling and setup will take place.</small>
                     </div>
 
@@ -878,11 +903,11 @@
                     <div class="form-row">
                         <div class="field">
                             <label for="eventTheme">Preferred Theme</label>
-                            <input type="text" id="eventTheme" name="eventTheme" maxlength="120" placeholder="e.g. princess, safari, minimalist">
+                            <input type="text" id="eventTheme" name="eventTheme" maxlength="120" placeholder="e.g. princess, safari, minimalist" autocomplete="off" autocorrect="off" spellcheck="false">
                         </div>
                         <div class="field">
                             <label for="eventColors">Preferred Colors</label>
-                            <input type="text" id="eventColors" name="eventColors" maxlength="120" placeholder="e.g. blush pink and gold">
+                            <input type="text" id="eventColors" name="eventColors" maxlength="120" placeholder="e.g. blush pink and gold" autocomplete="off" autocorrect="off" spellcheck="false">
                         </div>
                     </div>
 
@@ -1191,6 +1216,36 @@
     </div>
 
 
+    <div class="kq-ai-chat" id="kqAiChat">
+        <section class="kq-ai-panel" id="kqAiPanel" aria-label="KQ AI Chat" aria-hidden="true" hidden>
+            <header class="kq-ai-header">
+                <div class="kq-ai-heading">
+                    <span class="kq-ai-mark" aria-hidden="true">KQ</span>
+                    <div><strong>KQ AI</strong><small>Event ideas and styling help</small></div>
+                </div>
+                <div class="kq-ai-header-actions">
+                    <button class="kq-ai-icon-button" id="kqAiNewChat" type="button" aria-label="Start a new chat" title="New chat">↻</button>
+                    <button class="kq-ai-icon-button" id="kqAiClose" type="button" aria-label="Close chat" title="Close">×</button>
+                </div>
+            </header>
+            <div class="kq-ai-messages" id="kqAiMessages" role="log" aria-live="polite" aria-relevant="additions text">
+                <div class="kq-ai-message kq-ai-message-assistant">Hi! I’m KQ AI. Ask me for event themes, color combinations, package suggestions, or styling ideas. What are you planning?</div>
+            </div>
+            <form class="kq-ai-form" id="kqAiForm">
+                <label class="sr-only" for="kqAiInput">Message KQ AI</label>
+                <textarea id="kqAiInput" rows="1" maxlength="1200" placeholder="Ask about your event..."></textarea>
+                <button id="kqAiSend" type="submit" aria-label="Send message" title="Send message">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7" /></svg>
+                </button>
+                <p>Temporary chat. Messages disappear when you refresh or leave this page.</p>
+            </form>
+        </section>
+        <button class="kq-ai-launcher" id="kqAiLauncher" type="button" aria-expanded="false" aria-controls="kqAiPanel">
+            <span class="kq-ai-launcher-label"><span class="kq-ai-mark" aria-hidden="true">KQ</span><span>KQ AI</span></span>
+            <svg class="kq-ai-launcher-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7" /></svg>
+        </button>
+    </div>
+
     <!-- =========================
          JAVASCRIPT
     ========================== -->
@@ -1200,9 +1255,12 @@
     <script src="supabase-config.js"></script>
 
     <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
-    <script src="user-booking.js?v=20261017-professor-recommendations"></script>
-            <script src="user-auth.js?v=20261017-remove-admin-return-control"></script>
-    <script src="package-gallery.js?v=20261018-simple-styling-photos"></script>
+    <script src="user-booking.js?v=20261020-clock-picker-anchor-scroll"></script>
+            <script src="user-auth.js?v=20261020-account-profile-menu"></script>
+    <script src="user-notifications.js?v=20261020-clock-picker-anchor-scroll"></script>
+    <script src="site-navigation.js?v=20261020-active-nav"></script>
+    <script src="package-gallery.js?v=20261019-mobile-in-view"></script>
+    <script src="kq-ai-chat.js?v=20261020-kq-ai-chat-error-details"></script>
 
 </body>
 </html>

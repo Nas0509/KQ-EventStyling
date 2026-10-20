@@ -13,6 +13,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     const authNavBtn =
         document.getElementById("authNavBtn");
 
+    const accountMenu = document.getElementById("accountMenu");
+    const accountMenuWrap = document.getElementById("accountMenuWrap");
+    const accountMenuLogout = document.getElementById("accountMenuLogout");
+    const accountMenuName = document.getElementById("accountMenuName");
+    const accountMenuEmail = document.getElementById("accountMenuEmail");
+    const accountMenuAvatar = document.getElementById("accountMenuAvatar");
+    const accountMenuDetails = document.getElementById("accountMenuDetails");
+    let accountDetailsUserId = "";
+    const escapeAccountText = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+
     const createAccountNavBtn =
         document.getElementById("createAccountNavBtn");
 
@@ -64,6 +74,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         if (!session) {
 
+            if (accountMenu) accountMenu.hidden = true;
+            if (authNavBtn) authNavBtn.setAttribute("aria-expanded", "false");
+
             authNavBtn.textContent =
                 "Sign In";
 
@@ -93,26 +106,76 @@ document.addEventListener("DOMContentLoaded", async function () {
         // LOGGED-IN USER
         // ========================================
 
-        authNavBtn.textContent =
-            "Logout";
+        authNavBtn.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c.5-4 3.1-6 7.5-6s7 2 7.5 6"></path></svg><span class="sr-only">Account</span>';
+        authNavBtn.setAttribute("aria-label", "Open account menu");
+        authNavBtn.setAttribute("aria-expanded", "false");
 
         authNavBtn.classList.add(
             "logged-in"
         );
 
 
-        authNavBtn.onclick =
-            function () {
+        authNavBtn.onclick = function () {
+            if (!accountMenu) return;
+            accountMenu.hidden = !accountMenu.hidden;
+            authNavBtn.setAttribute("aria-expanded", String(!accountMenu.hidden));
+        };
 
-                openLogoutModal();
-
-            };
+        loadAccountDetails(session);
 
         console.log(
             "👤 Logged-in user: Logout button displayed."
         );
 
     }
+
+    async function loadAccountDetails(session) {
+        if (!session?.user || accountDetailsUserId === session.user.id) return;
+        accountDetailsUserId = session.user.id;
+        const user = session.user;
+        let profile = null;
+        try {
+            const { data } = await window.supabaseClient
+                .from("profiles")
+                .select("full_name, contact_number, email")
+                .eq("id", user.id)
+                .maybeSingle();
+            profile = data;
+        } catch (error) {
+            console.warn("Unable to load account profile details:", error);
+        }
+        if (accountDetailsUserId !== user.id) return;
+        const name = profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "Customer";
+        const email = profile?.email || user.email || "";
+        const phone = profile?.contact_number || user.user_metadata?.contact_number || "";
+        if (accountMenuName) accountMenuName.textContent = name;
+        if (accountMenuEmail) accountMenuEmail.textContent = email;
+        if (accountMenuAvatar) accountMenuAvatar.textContent = String(name).trim().charAt(0).toUpperCase() || "K";
+        if (accountMenuDetails) {
+            accountMenuDetails.innerHTML = phone
+                ? `<div><span>Phone</span><strong>${escapeAccountText(phone)}</strong></div>`
+                : "";
+        }
+    }
+
+    function closeAccountMenu() {
+        if (accountMenu) accountMenu.hidden = true;
+        if (authNavBtn) authNavBtn.setAttribute("aria-expanded", "false");
+    }
+
+    accountMenuLogout?.addEventListener("click", function () {
+        closeAccountMenu();
+        openLogoutModal();
+    });
+
+    document.addEventListener("click", function (event) {
+        if (accountMenu && accountMenuWrap && !accountMenuWrap.contains(event.target)) closeAccountMenu();
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closeAccountMenu();
+    });
 
 
     // ========================================

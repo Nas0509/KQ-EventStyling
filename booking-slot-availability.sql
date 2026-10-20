@@ -1,9 +1,34 @@
 -- Run once in Supabase SQL Editor before deploying the matching site files.
--- Each date has at most one accepted event/ocular appointment per time slot.
+-- Approved Package C/D/E events and trips over 30 km reserve the full day. Exactly 30 km also reserves the following slot as a travel buffer.
 -- Pending ocular requests do not hold a slot until an admin accepts them.
 
 alter table public.bookings
     add column if not exists time_slot text;
+
+alter table public.bookings
+    add column if not exists travel_distance_km numeric;
+update public.bookings
+set travel_distance_km = substring(message from 'Estimated travel expense: ([0-9.]+) km')::numeric
+where travel_distance_km is null
+  and message ~ 'Estimated travel expense: [0-9.]+ km';
+
+-- Keep the stored package size in sync with the package selected on the booking form.
+update public.bookings
+set package_type = case
+    when message ~* 'Selected package: Package [CDE]([[:space:]-]|$)' then 'BIG'
+    when message ~* 'Selected package: (Simple Styling|Package [AB])([[:space:]-]|$)' then 'SMALL'
+    else package_type
+end
+where message ~* 'Selected package: (Simple Styling|Package [A-E])([[:space:]-]|$)';
+
+create or replace function public.kq_booking_is_large_package(p_message text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $function$
+    select coalesce(p_message ~* 'Selected package: Package [CDE]( |-|$)', false);
+$function$;
 
 alter table public.ocular_inspection_requests
     add column if not exists inspection_distance_km numeric;
@@ -23,15 +48,31 @@ as $function$
         from public.bookings b
         where b.event_date = p_event_date
           and upper(coalesce(b.status, '')) = 'APPROVED'
-          and coalesce(
-                nullif(upper(trim(b.time_slot)), ''),
-                case
-                    when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
-                    when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
-                    when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
-                    else null
-                end
-              ) = upper(p_slot)
+          and (
+                public.kq_booking_is_large_package(b.message)
+                or coalesce(b.travel_distance_km, 0) > 30
+                or coalesce(
+                    nullif(upper(trim(b.time_slot)), ''),
+                    case
+                        when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                        when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                        when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                        else null
+                    end
+                ) = upper(p_slot)
+                or (coalesce(b.travel_distance_km, 0) = 30 and (
+                    (coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                        when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                        when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                        when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                        else null end) = 'MORNING' and upper(p_slot) = 'AFTERNOON')
+                    or (coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                        when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                        when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                        when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                        else null end) = 'AFTERNOON' and upper(p_slot) = 'NIGHT')
+                ))
+          )
     ) or exists (
         select 1
         from public.ocular_inspection_requests r
@@ -83,20 +124,21 @@ set search_path = public
 as $function$
 declare
     slot_start_time time;
-    slot_booking_count integer;
+    effective_slot text;
 begin
     if tg_op = 'UPDATE'
        and old.event_date is not distinct from new.event_date
        and old.start_time is not distinct from new.start_time
        and old.time_slot is not distinct from new.time_slot
-       and old.status is not distinct from new.status then
+       and old.status is not distinct from new.status
+       and old.package_type is not distinct from new.package_type
+       and old.travel_distance_km is not distinct from new.travel_distance_km then
         return new;
     end if;
 
     if new.start_time is not null then
         slot_start_time := new.start_time::time;
     end if;
-
     new.time_slot := coalesce(
         nullif(upper(trim(new.time_slot)), ''),
         case
@@ -110,7 +152,6 @@ begin
     if new.event_date is null or new.time_slot is null or new.time_slot not in ('MORNING', 'AFTERNOON', 'NIGHT') then
         raise exception 'Choose a valid event date and available time slot.' using errcode = '23514';
     end if;
-
     if slot_start_time is null
        or (new.time_slot = 'MORNING' and not (slot_start_time >= time '06:00' and slot_start_time < time '12:00'))
        or (new.time_slot = 'AFTERNOON' and not (slot_start_time >= time '12:00' and slot_start_time < time '18:00'))
@@ -118,45 +159,93 @@ begin
         raise exception 'Start time must fall within the selected time slot.' using errcode = '23514';
     end if;
 
-    -- Pending requests do not reserve their slot until approved.
     if upper(coalesce(new.status, '')) <> 'APPROVED' then
         return new;
     end if;
 
-    -- Serialize approved event and ocular appointments across the whole date.
     perform pg_advisory_xact_lock(hashtext(new.event_date::text), 1901);
 
-    select count(*)
-      into slot_booking_count
-      from public.bookings b
-     where b.event_date = new.event_date
-       and upper(coalesce(b.status, '')) = 'APPROVED'
-       and coalesce(nullif(upper(trim(b.time_slot)), ''),
-           case
-               when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
-               when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
-               when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
-               else null
-           end) = new.time_slot
-       and (tg_op = 'INSERT' or b.id is distinct from new.id);
-
-    if slot_booking_count > 0 then
-        raise exception 'That time slot has already been reserved. Please choose another date or time.' using errcode = '23505';
+    -- Packages C, D, and E and events over 30 km occupy the whole day once approved.
+    if public.kq_booking_is_large_package(new.message) or coalesce(new.travel_distance_km, 0) > 30 then
+        if exists (
+            select 1 from public.bookings b
+            where b.event_date = new.event_date
+              and upper(coalesce(b.status, '')) = 'APPROVED'
+              and (tg_op = 'INSERT' or b.id is distinct from new.id)
+        ) or exists (
+            select 1 from public.ocular_inspection_requests r
+            where r.inspection_date = new.event_date
+              and upper(coalesce(r.status, '')) = 'APPROVED'
+        ) then
+            raise exception 'This event requires the full day, but another approved booking or ocular inspection already uses this date.' using errcode = '23505';
+        end if;
+        return new;
     end if;
 
+    -- Include the 30 km turnaround buffer: morning uses afternoon too;
+    -- afternoon uses the night slot too.
     if exists (
         select 1
-          from public.ocular_inspection_requests r
-         where r.inspection_date = new.event_date
-           and upper(coalesce(r.status, '')) = 'APPROVED'
-           and case
-                 when r.inspection_time >= time '06:00' and r.inspection_time < time '12:00' then 'MORNING'
-                 when r.inspection_time >= time '12:00' and r.inspection_time < time '18:00' then 'AFTERNOON'
-                 when r.inspection_time >= time '18:00' and r.inspection_time < time '24:00' then 'NIGHT'
-                 else null
-               end = new.time_slot
+        from public.bookings b
+        where b.event_date = new.event_date
+          and upper(coalesce(b.status, '')) = 'APPROVED'
+          and (tg_op = 'INSERT' or b.id is distinct from new.id)
+          and (
+              public.kq_booking_is_large_package(b.message)
+              or coalesce(b.travel_distance_km, 0) > 30
+              or coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                    when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                    when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                    when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                    else null end) = new.time_slot
+              or (coalesce(b.travel_distance_km, 0) = 30 and (
+                    (coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                        when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                        when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                        when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                        else null end) = 'MORNING' and new.time_slot = 'AFTERNOON')
+                    or (coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                        when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                        when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                        when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                        else null end) = 'AFTERNOON' and new.time_slot = 'NIGHT')
+                    or (coalesce(new.travel_distance_km, 0) = 30 and new.time_slot = 'MORNING'
+                        and coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                            when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                            when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                            when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                            else null end) = 'AFTERNOON')
+                    or (coalesce(new.travel_distance_km, 0) = 30 and new.time_slot = 'AFTERNOON'
+                        and coalesce(nullif(upper(trim(b.time_slot)), ''), case
+                            when b.start_time::time >= time '06:00' and b.start_time::time < time '12:00' then 'MORNING'
+                            when b.start_time::time >= time '12:00' and b.start_time::time < time '18:00' then 'AFTERNOON'
+                            when b.start_time::time >= time '18:00' and b.start_time::time < time '24:00' then 'NIGHT'
+                            else null end) = 'NIGHT')
+              ))
+          )
     ) then
-        raise exception 'That time slot is reserved for an accepted ocular inspection.' using errcode = '23505';
+        raise exception 'That time slot is already reserved, including the travel buffer for a 30 km event.' using errcode = '23505';
+    end if;
+
+    effective_slot := new.time_slot;
+    if exists (
+        select 1 from public.ocular_inspection_requests r
+        where r.inspection_date = new.event_date
+          and upper(coalesce(r.status, '')) = 'APPROVED'
+          and (
+              case
+                  when r.inspection_time >= time '06:00' and r.inspection_time < time '12:00' then 'MORNING'
+                  when r.inspection_time >= time '12:00' and r.inspection_time < time '18:00' then 'AFTERNOON'
+                  when r.inspection_time >= time '18:00' and r.inspection_time < time '24:00' then 'NIGHT'
+                  else null
+              end = effective_slot
+              or (coalesce(new.travel_distance_km, 0) = 30 and new.time_slot = 'MORNING'
+                  and r.inspection_time >= time '12:00' and r.inspection_time < time '18:00')
+              or (coalesce(new.travel_distance_km, 0) = 30 and new.time_slot = 'AFTERNOON'
+                  and r.inspection_time >= time '18:00' and r.inspection_time < time '24:00')
+          )
+    ) then
+        raise exception 'That time slot is reserved for an accepted ocular inspection or travel buffer.' using errcode = '23505';
     end if;
 
     return new;

@@ -10,6 +10,7 @@ const defaultInventory = [
 ];
 
 let bookings = [];
+let bookingChangeRequests = [];
 let payments = JSON.parse(localStorage.getItem(PAYMENT_KEY) || "[]");
 let expenses = JSON.parse(localStorage.getItem(EXPENSE_KEY) || "[]");
 let inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null") || defaultInventory;
@@ -63,6 +64,10 @@ function syncPayments() {
 }
 // Bookings come from Supabase so submissions are shared across devices.
 function normalizeBooking(row) {
+    const selectedPackage = String(row.message || "").match(/Selected package:\s*(Simple Styling|Package [A-E])\b/i)?.[1] || "";
+    const packageLabel = selectedPackage
+        ? (/^Package [CDE]$/i.test(selectedPackage) ? "BIG" : "SIMPLE")
+        : (String(row.package_type || row.package || "").toUpperCase() === "BIG" ? "BIG" : "SIMPLE");
     return {
         ...row,
         fullName: row.full_name || "",
@@ -70,7 +75,7 @@ function normalizeBooking(row) {
         eventDate: row.event_date || "",
         startTime: row.start_time || "",
         timeSlot: row.time_slot || "",
-        package: row.package || row.package_type || "",
+        package: packageLabel,
         adminNotes: row.admin_notes || "",
         createdAt: row.created_at || ""
     };
@@ -99,6 +104,75 @@ async function loadBookings() {
     bookings = (data || []).map(normalizeBooking);
     syncPayments();
     renderAll();
+}
+
+async function loadBookingChangeRequests() {
+    const container = document.getElementById("bookingChangeRequestList");
+    const count = document.getElementById("bookingChangeRequestCount");
+    if (!container || !window.supabaseClient) return;
+    const { data, error } = await window.supabaseClient
+        .from("booking_change_requests")
+        .select("id,booking_id,user_id,request_type,reason,requested_event_date,requested_start_time,requested_time_slot,status,reservation_fee_nonrefundable,created_at")
+        .eq("status", "PENDING")
+        .order("created_at", { ascending: true });
+    if (error) {
+        bookingChangeRequests = [];
+        container.innerHTML = '<div class="empty-state">Unable to load these requests. Apply booking-change-requests.sql in Supabase, then refresh.</div>';
+        if (count) count.textContent = "Admin review setup needed";
+        updateAdminNotifications();
+        return;
+    }
+    bookingChangeRequests = data || [];
+    if (count) count.textContent = `${bookingChangeRequests.length} request${bookingChangeRequests.length === 1 ? "" : "s"} awaiting your review`;
+    updateAdminNotifications();
+    if (!bookingChangeRequests.length) {
+        container.innerHTML = '<div class="empty-state">No cancellation or reschedule requests need review.</div>';
+        return;
+    }
+    container.innerHTML = bookingChangeRequests.map(request => {
+        const booking = bookings.find(item => String(item.id) === String(request.booking_id));
+        const isCancellation = request.request_type === "CANCELLATION";
+        const requestedDate = request.requested_event_date
+            ? new Intl.DateTimeFormat("en-PH", { dateStyle: "long" }).format(new Date(`${String(request.requested_event_date).slice(0, 10)}T12:00:00`))
+            : "";
+        const requestedTime = request.requested_start_time
+            ? new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(`2000-01-01T${String(request.requested_start_time).slice(0, 5)}:00`))
+            : "";
+        return `<article class="booking-change-request-card"><div class="booking-change-request-top"><div><span class="badge">${isCancellation ? "CANCELLATION" : "RESCHEDULE"}</span><h4>${escapeHtml(booking?.fullName || "Customer")} <small>· ${escapeHtml(request.booking_id)}</small></h4><p>${escapeHtml(booking?.eventType || "Event")} · current date ${escapeHtml(booking?.eventDate || "not set")}${!isCancellation ? ` · requested ${escapeHtml(requestedDate)} at ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(requestedTime)}` : ""}</p></div><span class="booking-change-fee ${request.reservation_fee_nonrefundable ? "is-nonrefundable" : ""}">${request.reservation_fee_nonrefundable ? "Reservation fee non-refundable" : "No fee penalty"}</span></div><div class="booking-change-reason"><strong>Customer reason</strong><p>${escapeHtml(request.reason)}</p></div><div class="booking-change-actions"><button type="button" class="small-btn edit" data-change-review="accept" data-request-id="${escapeAttr(request.id)}">Accept request</button><button type="button" class="small-btn delete" data-change-review="reject" data-request-id="${escapeAttr(request.id)}">Decline request</button></div></article>`;
+    }).join("");
+}
+
+function openBookingChangeReview(requestId, accepted) {
+    const request = bookingChangeRequests.find(item => String(item.id) === String(requestId));
+    if (!request) return;
+    const actionLabel = accepted ? "Accept request" : "Decline request";
+    const isCancellation = request.request_type === "CANCELLATION";
+    const effect = accepted
+        ? (isCancellation ? "The booking will be cancelled and moved to the archive." : "The approved booking date and time will be changed.")
+        : "The customer's original booking will stay unchanged.";
+    openModal(`<h3>${actionLabel}</h3><p class="field-help">${effect}${request.reservation_fee_nonrefundable ? " The reservation fee remains non-refundable even if this request is declined." : ""}</p><div class="modal-field full"><label for="bookingChangeAdminNote">Admin response / note (optional)</label><textarea id="bookingChangeAdminNote" rows="3" maxlength="1000" placeholder="Add a note for the customer"></textarea></div><div class="modal-actions"><button type="button" class="btn primary" id="confirmBookingChangeReview" data-request-id="${escapeAttr(request.id)}" data-accept="${accepted ? "true" : "false"}">${actionLabel}</button></div>`);
+}
+
+async function submitBookingChangeReview(requestId, accepted) {
+    const button = document.getElementById("confirmBookingChangeReview");
+    const note = document.getElementById("bookingChangeAdminNote")?.value.trim() || null;
+    if (button) { button.disabled = true; button.textContent = "Saving…"; }
+    const { error } = await window.supabaseClient.rpc("kq_admin_review_booking_change", {
+        p_request_id: requestId,
+        p_accept: accepted,
+        p_admin_note: note
+    });
+    if (error) {
+        if (button) { button.disabled = false; button.textContent = accepted ? "Accept request" : "Decline request"; }
+        showAdminToast(error.message || "Unable to review this request.", "error");
+        return;
+    }
+    closeModal();
+    await loadBookings();
+    await loadBookingChangeRequests();
+    showAdminToast(accepted
+        ? "Customer request accepted. A notification was sent to the customer."
+        : "Customer request declined. A notification was sent to the customer.");
 }
 
 async function requireAdmin() {
@@ -427,6 +501,42 @@ function renderDashboard() {
         const countLabel = document.getElementById("analyticsBookingCount");
         const insight = document.getElementById("peakSeasonInsight");
         if (countLabel) countLabel.textContent = `${datedBookings.length} event dates`;
+
+        const approvedBookings = bookings.filter(booking => String(booking.status || "").toUpperCase() === "APPROVED");
+        const decidedBookings = bookings.filter(booking => ["APPROVED", "DECLINED"].includes(String(booking.status || "").toUpperCase()));
+        const approvalRate = decidedBookings.length ? Math.round((approvedBookings.length / decidedBookings.length) * 100) : null;
+        const collected = payments.reduce((sum, payment) => sum + (Number(payment.paid) || 0), 0);
+        const outstanding = approvedBookings.reduce((sum, booking) => {
+            const payment = payments.find(item => item.bookingId === booking.id);
+            return sum + Math.max(0, (Number(payment?.total ?? booking.amount) || 0) - (Number(payment?.paid ?? booking.down_payment_amount) || 0));
+        }, 0);
+        const now = new Date();
+        const nextMonth = new Date(now);
+        nextMonth.setDate(nextMonth.getDate() + 30);
+        const next30Days = approvedBookings.filter(booking => {
+            const eventDate = booking.eventDate ? new Date(`${booking.eventDate}T00:00:00`) : null;
+            return eventDate && !Number.isNaN(eventDate.getTime()) && eventDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && eventDate <= nextMonth;
+        }).length;
+        const summary = document.getElementById("dashboardAnalyticsSummary");
+        if (summary) summary.innerHTML = `
+            <div class="analytics-metric"><span>Approval rate</span><strong>${approvalRate === null ? "—" : `${approvalRate}%`}</strong><small>${decidedBookings.length} decided requests</small></div>
+            <div class="analytics-metric"><span>Payments received</span><strong>${money(collected)}</strong><small>Recorded to date</small></div>
+            <div class="analytics-metric"><span>Approved balance</span><strong>${money(outstanding)}</strong><small>Remaining on approved bookings</small></div>
+            <div class="analytics-metric"><span>Events in 30 days</span><strong>${next30Days}</strong><small>Approved events coming up</small></div>`;
+
+        const statusList = document.getElementById("dashboardStatusAnalytics");
+        if (statusList) {
+            const statusCounts = ["PENDING", "APPROVED", "DECLINED"].map(status => ({
+                status,
+                count: bookings.filter(booking => String(booking.status || "").toUpperCase() === status).length
+            }));
+            const totalStatus = statusCounts.reduce((sum, item) => sum + item.count, 0);
+            statusList.innerHTML = statusCounts.map(item => {
+                const percent = totalStatus ? Math.round(item.count / totalStatus * 100) : 0;
+                return `<div class="analytics-status-row"><span>${item.status}</span><div class="analytics-status-track"><i class="analytics-status-${item.status.toLowerCase()}" style="width:${percent}%"></i></div><strong>${item.count}</strong></div>`;
+            }).join("");
+        }
+
         if (insight) {
             const peakCount = Math.max(...monthly);
             const peakIndex = monthly.indexOf(peakCount);
@@ -440,6 +550,81 @@ function renderDashboard() {
 function bookingMessageField(message, fieldName) {
     const match = String(message || "").match(new RegExp(`^${fieldName}:\\s*(.*)$`, "im"));
     return match?.[1]?.trim() || "";
+}
+
+let activeBookingMenuId = null;
+let activeBookingMenuTrigger = null;
+document.getElementById("bookingActionsPopover")?.addEventListener("toggle", event => {
+    if (event.newState === "closed") {
+        activeBookingMenuTrigger?.setAttribute("aria-expanded", "false");
+        activeBookingMenuTrigger = null;
+        activeBookingMenuId = null;
+    }
+});
+
+function closeBookingActions() {
+    const popover = document.getElementById("bookingActionsPopover");
+    if (popover?.matches(":popover-open")) popover.hidePopover();
+    activeBookingMenuTrigger?.setAttribute("aria-expanded", "false");
+    activeBookingMenuTrigger = null;
+    activeBookingMenuId = null;
+}
+
+function toggleBookingActions(event, bookingId, trigger) {
+    event.preventDefault();
+    event.stopPropagation();
+    const popover = document.getElementById("bookingActionsPopover");
+    if (!popover) return;
+    if (popover.matches(":popover-open") && activeBookingMenuId === bookingId) {
+        closeBookingActions();
+        return;
+    }
+
+    closeBookingActions();
+    const booking = bookings.find(item => String(item.id) === String(bookingId));
+    if (!booking) return;
+
+    const actions = [{ label: "View details", className: "edit", run: () => viewBooking(booking.id) }];
+    if (booking.status === "PENDING") {
+        actions.push(
+            { label: "Approve", className: "approve", run: () => changeStatus(booking.id, "APPROVED") },
+            { label: "Decline", className: "decline", run: () => changeStatus(booking.id, "DECLINED") }
+        );
+    } else if (booking.status === "APPROVED") {
+        actions.push(
+            { label: "Resend approval email", className: "edit", run: () => resendBookingApprovalEmail(booking.id) },
+            { label: "Cancel booking", className: "decline", run: () => requestCancelBooking(booking.id) }
+        );
+    }
+
+    popover.replaceChildren();
+    actions.forEach(action => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `booking-actions-item ${action.className}`;
+        button.setAttribute("role", "menuitem");
+        button.textContent = action.label;
+        button.addEventListener("click", () => {
+            closeBookingActions();
+            action.run();
+        });
+        popover.appendChild(button);
+    });
+
+    activeBookingMenuId = bookingId;
+    activeBookingMenuTrigger = trigger;
+    trigger.setAttribute("aria-expanded", "true");
+    popover.showPopover();
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = popover.getBoundingClientRect();
+    const edge = 8;
+    const left = Math.max(edge, Math.min(triggerRect.right - menuRect.width, window.innerWidth - menuRect.width - edge));
+    const belowTop = triggerRect.bottom + 6;
+    const top = belowTop + menuRect.height <= window.innerHeight - edge
+        ? belowTop
+        : Math.max(edge, triggerRect.top - menuRect.height - 6);
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
 }
 
 function renderBookings() {
@@ -466,11 +651,7 @@ function renderBookings() {
             <td class="booking-style-cell"><span><strong>Theme</strong> ${escapeHtml(bookingMessageField(b.message, "Theme") || "Not specified")}</span><span><strong>Colors</strong> ${escapeHtml(bookingMessageField(b.message, "Preferred colors") || "Not specified")}</span></td>
             <td>${escapeHtml(b.timeSlot || "")} ${escapeHtml(b.startTime || "")}</td>
             <td><span class="status ${statusClass(b.status)}">${escapeHtml(b.status)}</span></td>
-            <td><div class="action-group">
-                <button class="small-btn edit" onclick="viewBooking('${b.id}')">View</button>
-                ${b.status === "PENDING" ? `<button class="small-btn approve" onclick="changeStatus('${b.id}','APPROVED')">Approve</button><button class="small-btn decline" onclick="changeStatus('${b.id}','DECLINED')">Decline</button>` : ""}
-                ${b.status === "APPROVED" ? `<button class="small-btn decline" onclick="requestCancelBooking('${b.id}')">Cancel</button>` : ""}
-            </div></td>
+            <td class="booking-actions-cell"><button type="button" class="booking-actions-trigger" onclick="toggleBookingActions(event, '${escapeAttr(b.id)}', this)" aria-haspopup="menu" aria-controls="bookingActionsPopover" aria-expanded="false" aria-label="Actions for ${escapeAttr(b.fullName)}" title="More actions"><span aria-hidden="true">⋮</span></button></td>
         </tr>`).join("");
 }
 
@@ -543,35 +724,68 @@ function renderAll() { renderDashboard(); renderBookings(); renderArchive(); ren
 
 async function changeStatus(id, newStatus) {
     const b = bookings.find(x => x.id === id); if (!b) return;
+    const reservationFee = Number(b.required_down_payment) || 0;
+    const existingPayment = payments.find(p => p.bookingId === id);
+    const verifiedPayment = newStatus === "APPROVED"
+        ? Math.max(Number(b.down_payment_amount) || 0, reservationFee, Number(existingPayment?.paid) || 0)
+        : Number(b.down_payment_amount) || 0;
+    const bookingUpdate = { status: newStatus };
+    if (newStatus === "APPROVED" && reservationFee > 0) bookingUpdate.down_payment_amount = verifiedPayment;
+
     const { error } = await window.supabaseClient
         .from("bookings")
-        .update({ status: newStatus })
+        .update(bookingUpdate)
         .eq("id", id);
-    if (error) { alert(`Unable to update booking status: ${error.message}`); return; }
+    if (error) { showAdminToast(`Unable to update booking status: ${error.message}`, "error"); return; }
     b.status = newStatus;
-    if (newStatus === "APPROVED" && !payments.find(p => p.bookingId === id)) payments.push({ bookingId: id, total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" });
+    if (newStatus === "APPROVED") {
+        b.down_payment_amount = verifiedPayment;
+        let payment = payments.find(p => p.bookingId === id);
+        if (!payment) {
+            payment = { bookingId: id, total: Number(b.amount) || 0, paid: verifiedPayment, status: "NO DOWN PAYMENT" };
+            payments.push(payment);
+        }
+        payment.total = Number(b.amount) || Number(payment.total) || 0;
+        payment.paid = verifiedPayment;
+        payment.status = verifiedPayment <= 0
+            ? "NO DOWN PAYMENT"
+            : verifiedPayment >= payment.total
+                ? "FULLY PAID"
+                : "DOWN PAYMENT MADE";
+    }
     save(); renderAll();
-    alert(`Booking ${id} is now ${newStatus}.`);
+    let emailNotice = "";
+    if (newStatus === "APPROVED") {
+        const { data: emailResult, error: emailError } = await window.supabaseClient.functions.invoke("send-booking-approval-email", {
+            body: { bookingId: id }
+        });
+        if (emailError) {
+            console.warn("Booking approved, but the customer email was not sent.", emailError);
+            let providerMessage = emailResult?.error;
+            if (!providerMessage && typeof emailError.context?.clone === "function") {
+                try { providerMessage = (await emailError.context.clone().json())?.error; } catch { /* Keep the fallback notice. */ }
+            }
+            emailNotice = " The account notification was saved, but the customer email was not sent" + (providerMessage ? ": " + providerMessage : ".");
+        }
+    }
+    showAdminToast(`Booking ${id} is now ${newStatus}.${emailNotice}`, emailNotice ? "error" : "success");
 }
-
-async function verifyReservationFee(id) {
-    const booking = bookings.find(item => item.id === id);
+async function resendBookingApprovalEmail(id) {
+    const booking = bookings.find(item => String(item.id) === String(id));
     if (!booking) return;
-    const fee = Number(booking.required_down_payment) || 0;
-    if (!fee) { alert("This booking has no reservation fee recorded."); return; }
-    if (!confirm(`Have you verified the client's payment? This will record ${money(fee)} as received.`)) return;
 
-    const { error } = await window.supabaseClient
-        .from("bookings")
-        .update({ down_payment_amount: fee, payment_status: "DOWN PAYMENT MADE" })
-        .eq("id", id);
-    if (error) { alert(`Unable to record the verified payment: ${error.message}`); return; }
-
-    booking.down_payment_amount = fee;
-    booking.payment_status = "DOWN PAYMENT MADE";
-    save();
-    renderAll();
-    viewBooking(id);
+    const { data, error } = await window.supabaseClient.functions.invoke("send-booking-approval-email", {
+        body: { bookingId: id }
+    });
+    if (error) {
+        let message = data?.error;
+        if (!message && typeof error.context?.clone === "function") {
+            try { message = (await error.context.clone().json())?.error; } catch { /* Use the fallback below. */ }
+        }
+        showAdminToast(message || "The approval email could not be sent.", "error");
+        return;
+    }
+    showAdminToast(`Approval email sent to ${booking.email || "the customer"}.`);
 }
 
 function requestCancelBooking(id) {
@@ -617,36 +831,31 @@ async function deleteBooking(id) {
 
 async function viewBooking(id) {
     const b = bookings.find(x => x.id === id); if (!b) return;
-    openModal(`<h3>Booking Details</h3>
-        <div class="modal-grid">
-            <div class="modal-field"><label>Booking ID</label><input value="${escapeAttr(b.id)}" readonly></div>
-            <div class="modal-field"><label>Status</label><input value="${escapeAttr(b.status)}" readonly></div>
-            <div class="modal-field"><label>Client</label><input value="${escapeAttr(b.fullName)}" readonly></div>
-            <div class="modal-field"><label>Email</label><input value="${escapeAttr(b.email)}" readonly></div>
-            <div class="modal-field"><label>Contact</label><input value="${escapeAttr(b.phone)}" readonly></div>
-            <div class="modal-field"><label>Event Type</label><input value="${escapeAttr(b.eventType)}" readonly></div>
-            <div class="modal-field"><label>Event Date</label><input value="${escapeAttr(b.eventDate)}" readonly></div>
-            <div class="modal-field"><label>Guests</label><input value="${escapeAttr(b.guests)}" readonly></div>
-            <div class="modal-field"><label>Time Preference</label><input value="${escapeAttr(b.timeSlot || "")}" readonly></div>
-            <div class="modal-field"><label>Start Time</label><input value="${escapeAttr(b.startTime || "")}" readonly></div>
-            <div class="modal-field"><label>Package</label><input value="${escapeAttr(b.package || "")}" readonly></div>
-            <div class="modal-field"><label>Theme</label><input value="${escapeAttr(bookingMessageField(b.message, "Theme") || "Not specified")}" readonly></div>
-            <div class="modal-field"><label>Preferred Colors</label><input value="${escapeAttr(bookingMessageField(b.message, "Preferred colors") || "Not specified")}" readonly></div>
-            <div class="modal-field"><label>Total Amount</label><input value="${money(b.amount)}" readonly></div>
-            <div class="modal-field"><label>30% Reservation Fee</label><input value="${money(b.required_down_payment)}" readonly></div>
-            <div class="modal-field"><label>Reservation Payment Received</label><input value="${money(b.down_payment_amount)}" readonly></div>
-            ${b.ai_estimated_package ? `<div class="modal-field"><label>AI Suggested Package</label><input value="${escapeAttr(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}" readonly></div>` : ""}
-            ${b.design_image_path ? `<div class="modal-field full"><label>Customer Design Reference</label><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></div>` : ""}
-            ${Array.isArray(b.ai_detected_features) && b.ai_detected_features.length ? `<div class="modal-field full"><label>AI Estimate Notes</label><p>${escapeHtml(b.ai_estimate_explanation || "Estimated from the visible design features.")}</p><ul class="admin-design-features">${b.ai_detected_features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}</ul><small class="field-help">AI estimate only; confirm final package and price with the customer.</small></div>` : ""}
-            <div class="modal-field full"><label>Additional Requests & Booking Information</label><textarea readonly>${escapeHtml(b.message || "")}</textarea></div>
-            <div class="modal-field full"><label>Admin Notes / Reminders</label><textarea id="adminNotes">${escapeHtml(b.adminNotes || "")}</textarea></div>
-        </div>
-        <div class="modal-actions">
-            ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? `<button class="btn primary" onclick="verifyReservationFee('${escapeAttr(b.id)}')">Mark 30% Fee Verified</button>` : ""}
-            <button class="btn primary" onclick="saveNotes('${escapeAttr(b.id)}')">Save Notes</button>
-        </div>
-        ${Number(b.required_down_payment) > 0 && Number(b.down_payment_amount) < Number(b.required_down_payment) ? '<small class="field-help">Only mark this after checking the transaction reference in your payment account.</small>' : ""}`);
-
+    const recordField = (label, value) => `<div class="booking-record-field"><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value || "—")}</dd></div>`;
+    const status = String(b.status || "PENDING").toLowerCase().replace(/\s+/g, "-");
+    const requests = String(b.message || "").trim();
+    openModal(`<div class="booking-record">
+        <header class="booking-record-header">
+            <div class="booking-record-brand"><img src="kqlogo.png" alt="KQ Event Styling official logo"><span>OFFICIAL BOOKING RECORD</span></div>
+            <div class="booking-record-heading"><div><span class="booking-record-kicker">CLIENT SERVICE RECORD</span><h3>Booking Details</h3></div><span class="booking-status-chip status-${escapeAttr(status)}">${escapeHtml(b.status || "PENDING")}</span></div>
+            <div class="booking-record-reference"><span>REFERENCE NO.</span><strong>${escapeHtml(b.id || "—")}</strong></div>
+        </header>
+        <section class="booking-record-section"><div class="booking-record-section-title"><span>01</span><h4>Client Information</h4></div><dl class="booking-record-grid">
+            ${recordField("Client name", b.fullName)}${recordField("Email address", b.email)}${recordField("Contact number", b.phone)}
+        </dl></section>
+        <section class="booking-record-section"><div class="booking-record-section-title"><span>02</span><h4>Event Details</h4></div><dl class="booking-record-grid">
+            ${recordField("Event type", b.eventType)}${recordField("Event date", b.eventDate)}${recordField("Guest count", b.guests)}${recordField("Time preference", b.timeSlot)}${recordField("Start time", b.startTime)}${recordField("Package", b.package)}${recordField("Theme", bookingMessageField(b.message, "Theme") || "Not provided")}${recordField("Preferred colors", bookingMessageField(b.message, "Preferred colors") || "Not provided")}
+        </dl></section>
+        <section class="booking-record-section"><div class="booking-record-section-title"><span>03</span><h4>Package & Payment</h4></div><div class="booking-payment-summary">
+            <div><span>Agreed total</span><strong>${money(b.amount)}</strong></div><div><span>Reservation fee (30%)</span><strong>${money(b.required_down_payment)}</strong></div><div><span>Payment received</span><strong>${money(b.down_payment_amount)}</strong></div>
+        </div>${b.ai_estimated_package ? `<p class="booking-record-footnote">AI package suggestion: ${escapeHtml(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}</p>` : ""}</section>
+        ${requests ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>04</span><h4>Requests & Additional Information</h4></div><div class="booking-record-message">${escapeHtml(requests).replace(/\n/g, "<br>")}</div></section>` : ""}
+        ${b.design_image_path ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>05</span><h4>Customer Design Reference</h4></div><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></section>` : ""}
+        ${Array.isArray(b.ai_detected_features) && b.ai_detected_features.length ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>06</span><h4>Design Estimate Notes</h4></div><p>${escapeHtml(b.ai_estimate_explanation || "Estimated from the visible design features.")}</p><ul class="admin-design-features">${b.ai_detected_features.map(feature => `<li>${escapeHtml(feature)}</li>`).join("")}</ul><small class="field-help">AI estimate only; confirm final package and price with the customer.</small></section>` : ""}
+        <section class="booking-record-section booking-record-notes"><div class="booking-record-section-title"><span>✎</span><h4>Internal Notes</h4></div><p class="booking-record-note-help">Private reminders for your team. These notes are not shown to the client.</p><textarea id="adminNotes" placeholder="Add an internal reminder or follow-up note…">${escapeHtml(b.adminNotes || "")}</textarea></section>
+        <footer class="booking-record-footer"><span>Keep this reference number for booking inquiries.</span><button class="btn primary" onclick="saveNotes('${escapeAttr(b.id)}')">Save Notes</button></footer>
+    </div>`);
+    document.querySelector("#modal .modal-card")?.classList.add("booking-record-modal-card");
     if (b.design_image_path) {
         const { data, error } = await window.supabaseClient.storage
             .from("booking-designs")
@@ -695,7 +904,7 @@ async function savePayment(id) {
     const paid = Math.max(0, Math.min(Number(p.total), Number(document.getElementById("paymentPaid").value) || 0));
     const selected = document.getElementById("paymentStatus").value;
     const status = paid <= 0 ? "NO DOWN PAYMENT" : paid >= Number(p.total) ? "FULLY PAID" : selected === "DOWN PAYMENT MADE" && paid > 0 ? "DOWN PAYMENT MADE" : "PARTIAL PAYMENT";
-    const { error } = await window.supabaseClient.from("bookings").update({ down_payment_amount: paid, payment_status: status }).eq("id", id);
+    const { error } = await window.supabaseClient.from("bookings").update({ down_payment_amount: paid }).eq("id", id);
     if (error) { showAdminToast(error.message || "Unable to save payment update.", "error"); return; }
     p.paid = paid;
     p.status = status;
@@ -738,8 +947,8 @@ function saveInventory(id) {
 }
 function editInventory(id) { openInventoryForm(inventory.find(x => x.id === id)) }
 
-function openModal(html) { document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card"); document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
-function closeModal() { document.getElementById("modal").classList.add("hidden"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card") }
+function openModal(html) { document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card"); document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
+function closeModal() { document.getElementById("modal").classList.add("hidden"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card") }
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal() });
 
@@ -793,50 +1002,129 @@ renderAll();
 
 let quotationRequests = [];
 
+const ADMIN_NOTIFICATION_READ_KEY = "kqAdminReadNotifications:v2";
+let adminNotificationItems = [];
+function getReadAdminNotificationKeys() {
+    try { return new Set(JSON.parse(localStorage.getItem(ADMIN_NOTIFICATION_READ_KEY) || "[]")); }
+    catch { return new Set(); }
+}
+function saveReadAdminNotificationKeys(keys) {
+    try { localStorage.setItem(ADMIN_NOTIFICATION_READ_KEY, JSON.stringify([...keys])); }
+    catch { /* Keep notification interactions usable if storage is unavailable. */ }
+}
+function markAdminNotificationRead(key) {
+    if (!key) return;
+    const readKeys = getReadAdminNotificationKeys();
+    readKeys.add(key);
+    saveReadAdminNotificationKeys(readKeys);
+    updateAdminNotifications();
+}
+function formatAdminNotificationTime(value) {
+    const date = value ? new Date(value) : null;
+    return date && !Number.isNaN(date.getTime())
+        ? new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(date)
+        : "New";
+}
 function updateAdminNotifications() {
     const button = document.getElementById("adminNotificationBtn");
     const countBadge = document.getElementById("adminNotificationCount");
+    const summary = document.getElementById("adminNotificationSummary");
     const list = document.getElementById("adminNotificationsList");
     if (!button || !countBadge || !list) return;
-    const items = [
+    adminNotificationItems = [
         ...bookings.filter(item => item.status === "PENDING").map(item => ({
+            key: `booking:${item.id || `${item.fullName || "Client"}:${item.eventDate || ""}:${item.eventType || ""}`}`,
+            bookingId: item.id,
+            kind: "booking",
             section: "bookings",
+            notificationType: "New booking",
             title: `Booking request from ${item.fullName || "Client"}`,
-            detail: `${item.eventType || "Event"} · ${item.eventDate || "Date not set"}`
+            detail: `${item.eventType || "Event"} · ${item.eventDate || "Date not set"}`,
+            createdAt: item.createdAt
         })),
+        ...bookingChangeRequests.filter(item => String(item.status || "").toUpperCase() === "PENDING").map(item => {
+            const booking = bookings.find(bookingItem => String(bookingItem.id) === String(item.booking_id));
+            const isCancellation = String(item.request_type || "").toUpperCase() === "CANCELLATION";
+            return {
+                key: `change-request:${item.id}`,
+                bookingId: item.booking_id,
+                kind: "change-request",
+                section: "bookings",
+                notificationType: `${isCancellation ? "Cancellation" : "Reschedule"} request`,
+                title: `${isCancellation ? "Cancellation" : "Reschedule"} request from ${booking?.fullName || "Client"}`,
+                detail: `${booking?.eventType || "Event"} · ${isCancellation ? "Needs review" : `Requested ${item.requested_event_date || "new date"}`}`,
+                createdAt: item.created_at
+            };
+        }),
         ...quotationRequests.filter(item => String(item.status || "").toUpperCase() === "REQUESTED").map(item => ({
+            key: `ocular:${item.id || `${item.customer_name || "Client"}:${item.inspection_date || ""}:${item.venue_name || ""}`}`,
+            kind: "ocular",
             section: "quotations",
+            notificationType: "Ocular inspection",
             title: `Ocular inspection from ${item.customer_name || "Client"}`,
-            detail: `${item.venue_name || "Venue not set"} · ${item.inspection_date || "Date not set"}`
+            detail: `${item.venue_name || "Venue not set"} · ${item.inspection_date || "Date not set"}`,
+            createdAt: item.created_at
         }))
-    ];
-    countBadge.textContent = items.length > 99 ? "99+" : String(items.length);
-    countBadge.hidden = items.length === 0;
-    button.setAttribute("aria-label", items.length ? `${items.length} pending admin notifications` : "No pending admin notifications");
-    list.innerHTML = items.length
-        ? items.slice(0, 8).map(item => `<button type="button" class="admin-notification-item" data-admin-notification-section="${item.section}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></button>`).join("")
+    ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const activeKeys = new Set(adminNotificationItems.map(item => item.key));
+    const readKeys = getReadAdminNotificationKeys();
+    const prunedReadKeys = new Set([...readKeys].filter(key => activeKeys.has(key)));
+    if (prunedReadKeys.size !== readKeys.size) saveReadAdminNotificationKeys(prunedReadKeys);
+    const unreadCount = adminNotificationItems.filter(item => !prunedReadKeys.has(item.key)).length;
+    countBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+    countBadge.hidden = unreadCount === 0;
+    button.setAttribute("aria-label", unreadCount ? `${unreadCount} unread admin notifications` : "No unread admin notifications");
+    if (summary) summary.textContent = unreadCount
+        ? `${unreadCount} unread · ${adminNotificationItems.length} awaiting review`
+        : `${adminNotificationItems.length ? "All caught up · " : ""}${adminNotificationItems.length} awaiting review`;
+    list.innerHTML = adminNotificationItems.length
+        ? adminNotificationItems.map(item => {
+            const isUnread = !prunedReadKeys.has(item.key);
+            return `<button type="button" class="admin-notification-item${isUnread ? " is-unread" : " is-read"}" data-admin-notification-key="${escapeAttr(item.key)}" data-admin-notification-section="${item.section}" data-admin-notification-kind="${item.kind}" data-admin-notification-id="${escapeAttr(item.bookingId || "")}" aria-label="${isUnread ? "Unread: " : "Read: "}${escapeAttr(item.title)}. ${escapeAttr(item.detail)}"><span class="admin-notification-copy"><span class="admin-notification-meta"><span class="admin-notification-type">${escapeHtml(item.notificationType)}</span><time>${escapeHtml(formatAdminNotificationTime(item.createdAt))}</time></span><strong>${escapeHtml(item.title)}</strong><span class="admin-notification-detail">${escapeHtml(item.detail)}</span></span><span class="admin-notification-unread-dot" aria-hidden="true"></span></button>`;
+        }).join("")
         : '<p class="admin-notification-empty">You are all caught up.</p>';
 }
 
 const adminNotificationBtn = document.getElementById("adminNotificationBtn");
 const adminNotificationPanel = document.getElementById("adminNotificationPanel");
+const adminNotificationWrap = document.querySelector(".admin-notification-wrap");
+function closeAdminNotificationPanel() {
+    if (!adminNotificationPanel || !adminNotificationBtn) return;
+    adminNotificationPanel.hidden = true;
+    adminNotificationBtn.setAttribute("aria-expanded", "false");
+}
 adminNotificationBtn?.addEventListener("click", () => {
     const isOpen = adminNotificationPanel.hidden;
     adminNotificationPanel.hidden = !isOpen;
     adminNotificationBtn.setAttribute("aria-expanded", String(isOpen));
 });
-document.getElementById("closeAdminNotifications")?.addEventListener("click", () => {
-    adminNotificationPanel.hidden = true;
-    adminNotificationBtn.setAttribute("aria-expanded", "false");
-});
+document.getElementById("closeAdminNotifications")?.addEventListener("click", closeAdminNotificationPanel);
 adminNotificationPanel?.addEventListener("click", event => {
     const target = event.target.closest("[data-admin-notification-section]");
     if (!target) return;
-    showSection(target.dataset.adminNotificationSection);
-    adminNotificationPanel.hidden = true;
-    adminNotificationBtn.setAttribute("aria-expanded", "false");
+    const itemKey = target.dataset.adminNotificationKey;
+    const section = target.dataset.adminNotificationSection;
+    const kind = target.dataset.adminNotificationKind;
+    const notificationId = target.dataset.adminNotificationId;
+    markAdminNotificationRead(itemKey);
+    showSection(section);
+    closeAdminNotificationPanel();
+    if (kind === "change-request") {
+        document.getElementById("bookingChangeRequestList")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (section === "bookings" && notificationId) {
+        viewBooking(notificationId);
+    }
 });
-
+document.addEventListener("click", event => {
+    if (adminNotificationPanel && !adminNotificationPanel.hidden && !adminNotificationWrap?.contains(event.target)) {
+        closeAdminNotificationPanel();
+    }
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && adminNotificationPanel && !adminNotificationPanel.hidden) {
+        closeAdminNotificationPanel();
+    }
+});
 let adminToastTimer;
 function showAdminToast(message, type = "success") {
     let toast = document.getElementById("adminToast");
@@ -1506,14 +1794,28 @@ renderAll = function () {
 // INITIAL QUOTATION LOAD
 // ========================================
 
+let adminNotificationChannel = null;
+function subscribeToAdminRequestUpdates() {
+    if (!window.supabaseClient || adminNotificationChannel) return;
+    adminNotificationChannel = window.supabaseClient
+        .channel("admin-request-notifications")
+        .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => void loadBookings())
+        .on("postgres_changes", { event: "*", schema: "public", table: "booking_change_requests" }, () => void loadBookingChangeRequests())
+        .on("postgres_changes", { event: "*", schema: "public", table: "ocular_inspection_requests" }, () => void loadQuotationRequests())
+        .subscribe();
+}
+
 async function initializeAdmin() {
     try {
         if (!(await requireAdmin())) return;
         await loadBookings();
+        await loadBookingChangeRequests();
         await loadQuotationRequests();
+        subscribeToAdminRequestUpdates();
         // Refresh periodically so new customer submissions appear without a manual reload.
         window.setInterval(async () => {
             await loadBookings();
+            await loadBookingChangeRequests();
             await loadQuotationRequests();
         }, 30000);
     } catch (error) {
@@ -1525,5 +1827,17 @@ async function initializeAdmin() {
         }
     }
 }
+
+document.getElementById("refreshBookingChangeRequests")?.addEventListener("click", () => void loadBookingChangeRequests());
+document.getElementById("bookingChangeRequestList")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-change-review]");
+    if (!button) return;
+    openBookingChangeReview(button.dataset.requestId, button.dataset.changeReview === "accept");
+});
+document.getElementById("modalContent")?.addEventListener("click", event => {
+    const button = event.target.closest("#confirmBookingChangeReview");
+    if (!button) return;
+    void submitBookingChangeReview(button.dataset.requestId, button.dataset.accept === "true");
+});
 
 initializeAdmin();

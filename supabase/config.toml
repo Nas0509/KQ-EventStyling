@@ -3,3 +3,9 @@ project_id = "byllwuyybldobxiixzvx"
 [functions.estimate-event-design]
 verify_jwt = true
 
+[functions.kq-ai-chat]
+verify_jwt = true
+
+[functions.send-booking-approval-email]
+verify_jwt = true
+

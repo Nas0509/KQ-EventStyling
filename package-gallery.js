@@ -1,6 +1,6 @@
 (() => {
     const galleries = document.querySelectorAll('.package-gallery');
-    const intervalMs = 4000;
+    const intervalMs = 2000;
 
     galleries.forEach((gallery) => {
         const cover = gallery.querySelector('.package-gallery-cover');
@@ -76,6 +76,32 @@
             stopAuto();
             showPhoto(0);
         });
+
+        // Phones have no hover state. Start cycling once this package is
+        // mostly visible, and stop/reset it after the client scrolls away.
+        if ('IntersectionObserver' in window) {
+            const mobileView = window.matchMedia('(hover: none), (pointer: coarse)');
+            let isInView = false;
+            const observer = new IntersectionObserver(([entry]) => {
+                const shouldPlay = mobileView.matches && entry.isIntersecting && entry.intersectionRatio >= 0.5;
+                if (shouldPlay && !isInView) {
+                    isInView = true;
+                    startAuto();
+                } else if (!shouldPlay && isInView) {
+                    isInView = false;
+                    stopAuto();
+                    showPhoto(0);
+                }
+            }, { threshold: [0, 0.5, 1] });
+            observer.observe(packageCard);
+            mobileView.addEventListener?.('change', () => {
+                if (!mobileView.matches && isInView) {
+                    isInView = false;
+                    stopAuto();
+                    showPhoto(0);
+                }
+            });
+        }
         if (counter) counter.textContent = `Photo 1 of ${photos.length}`;
     });
 })();

@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     const bookingTravelFeeAmount = document.getElementById("bookingTravelFeeAmount");
     const bookingTotalAmount = document.getElementById("bookingTotalAmount");
     const bookingVenueCityInput = document.getElementById("bookingVenueCity");
-    const bookingVenueCityOptions = document.getElementById("bookingVenueCityOptions");
     const bookingTravelFeeHelp = document.getElementById("bookingTravelFeeHelp");
     const reservationFeeText = document.getElementById("reservationFeeAmount");
     const remainingBalanceText = document.getElementById("remainingBalanceAmount");
@@ -84,17 +83,74 @@ document.addEventListener("DOMContentLoaded", async function () {
         return { distance, fee };
     }
 
-    if (bookingVenueCityOptions && window.KQ_LUZON_CITY_COORDINATES) {
-        const fragment = document.createDocumentFragment();
-        window.KQ_LUZON_CITY_COORDINATES
-            .slice()
-            .sort((a, b) => bookingCityLabel(a).localeCompare(bookingCityLabel(b), "en"))
-            .forEach(city => {
-                const option = document.createElement("option");
-                option.value = bookingCityLabel(city);
-                fragment.appendChild(option);
+    const bookingCities = (window.KQ_LUZON_CITY_COORDINATES || [])
+        .slice()
+        .sort((a, b) => bookingCityLabel(a).localeCompare(bookingCityLabel(b), "en"));
+    if (bookingVenueCityInput && bookingCities.length) {
+        const cityList = document.createElement("div");
+        cityList.id = "bookingVenueCityList";
+        cityList.className = "booking-city-dropdown";
+        cityList.setAttribute("role", "listbox");
+        cityList.hidden = true;
+        const renderCityOptions = () => {
+            const query = normalizeBookingCity(bookingVenueCityInput.value);
+            const matches = bookingCities.filter(city =>
+                normalizeBookingCity(`${city.name} ${city.province || ""} ${city.region || ""}`).includes(query)
+            );
+            cityList.replaceChildren();
+            matches.forEach(city => {
+                const option = document.createElement("button");
+                option.type = "button";
+                option.className = "booking-city-dropdown-option";
+                option.setAttribute("role", "option");
+                option.textContent = city.province && city.province !== city.region
+                    ? `${city.name}, ${city.province}`
+                    : `${city.name}, ${city.region || "Luzon"}`;
+                option.addEventListener("click", () => {
+                    bookingVenueCityInput.value = bookingCityLabel(city);
+                    bookingVenueCityInput.dispatchEvent(new Event("change", { bubbles: true }));
+                    cityList.hidden = true;
+                    bookingVenueCityInput.setAttribute("aria-expanded", "false");
+                });
+                cityList.appendChild(option);
             });
-        bookingVenueCityOptions.appendChild(fragment);
+            if (!matches.length) {
+                const empty = document.createElement("div");
+                empty.className = "booking-city-dropdown-empty";
+                empty.textContent = "No matching locations found.";
+                cityList.appendChild(empty);
+            }
+        };
+        bookingVenueCityInput.insertAdjacentElement("afterend", cityList);
+
+        const toggleCityList = open => {
+            if (open) renderCityOptions();
+            cityList.hidden = !open;
+            bookingVenueCityInput.setAttribute("aria-expanded", String(open));
+        };
+        bookingVenueCityInput.addEventListener("click", () => toggleCityList(cityList.hidden));
+        bookingVenueCityInput.addEventListener("input", () => toggleCityList(true));
+        bookingVenueCityInput.addEventListener("keydown", event => {
+            if (event.key === "ArrowDown") {
+                event.preventDefault();
+                toggleCityList(true);
+                cityList.querySelector("button")?.focus();
+            } else if (event.key === "Enter" && !cityList.hidden) {
+                event.preventDefault();
+                cityList.querySelector("button")?.click();
+            } else if (event.key === "Escape") {
+                toggleCityList(false);
+            }
+        });
+        document.addEventListener("click", event => {
+            if (!event.target.closest(".venue-city-field")) toggleCityList(false);
+        });
+        cityList.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                toggleCityList(false);
+                bookingVenueCityInput.focus();
+            }
+        });
     }
 
     function updateBookingTravelFee() {
@@ -107,7 +163,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (estimate) {
                 bookingTravelFeeHelp.textContent = `Estimated travel expense from North Caloocan: ${estimate.distance} km × ₱20/km = ${pesoFormat.format(estimate.fee)} (rounded up to the next ₱100).`;
             } else if (bookingVenueCityInput?.value.trim()) {
-                bookingTravelFeeHelp.textContent = "Choose a Luzon city or municipality from the suggestions to calculate the travel expense.";
+                bookingTravelFeeHelp.textContent = "Choose a Luzon city or municipality from the list to calculate the travel expense.";
             } else {
                 bookingTravelFeeHelp.textContent = "Choose your venue city to calculate the travel expense from North Caloocan at ₱20/km.";
             }
@@ -115,20 +171,23 @@ document.addEventListener("DOMContentLoaded", async function () {
         updateReservationPayment();
     }
 
-    bookingVenueCityInput?.addEventListener("input", updateBookingTravelFee);
+    bookingVenueCityInput?.addEventListener("change", updateBookingTravelFee);
 
     function getPackageAmount(packageName) {
         const priceMatch = String(packageName || "").match(/₱\s*([\d,]+(?:\.\d+)?)/);
         return priceMatch ? Number(priceMatch[1].replace(/,/g, "")) || 0 : 0;
     }
 
-    // The existing booking table stores package_type as SMALL or BIG.
+    // Store Simple Styling and Packages A/B as SMALL; Packages C/D/E as BIG.
     function getDatabasePackageType(packageName) {
+        const packageLabel = String(packageName || "").trim();
+        if (/^(Simple Styling|Package A|Package B)\b/i.test(packageLabel)) return "SMALL";
+        if (/^Package [CDE]\b/i.test(packageLabel)) return "BIG";
+
         const amount = getPackageAmount(packageName);
         const selectedButton = Array.from(packageButtons).find(button => button.dataset.package === packageName);
-        const category = selectedButton?.dataset.packageCategory || (amount === 6500 ? "simple" : amount >= 7900 ? "venue" : "");
+        const category = selectedButton?.dataset.packageCategory || (amount === 6500 ? "simple" : "");
         if (category === "simple") return "SMALL";
-        if (["venue", "full"].includes(category)) return "BIG";
         return "";
     }
 
@@ -316,7 +375,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             const status = button.querySelector("small");
             button.disabled = taken;
             button.classList.toggle("selected", selectedTimeSlot === slot);
-            if (status) status.textContent = taken ? "Already booked" : "Available";
+            if (status) status.textContent = taken ? "Unavailable" : "Available";
         });
     }
 
@@ -415,7 +474,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         availabilityLoaded = true;
         renderBookingCalendar();
         updateSelectedDateSlots();
-        if (calendarHelp && !eventDate?.value) calendarHelp.textContent = "Approved event bookings and accepted ocular inspections reserve one morning, afternoon, or night slot. Pending requests do not hold it.";
+        if (calendarHelp && !eventDate?.value) calendarHelp.textContent = "Approved Packages C, D, and E and trips over 30 km reserve the whole day. At 30 km, the next time slot is reserved for travel. Pending requests do not hold a slot.";
         if (eventDate?.value && calendarHelp) {
             calendarHelp.textContent = `${eventDate.value} selected. Choose one available time slot.`;
         }
@@ -618,8 +677,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     const periodText = document.getElementById("clockPeriodText");
     const hoursTab = document.getElementById("clockHoursTab");
     const minutesTab = document.getElementById("clockMinutesTab");
-    const amButton = document.getElementById("clockAM");
-    const pmButton = document.getElementById("clockPM");
     const doneButton = document.getElementById("clockDone");
     const cancelButton = document.getElementById("clockCancel");
 
@@ -631,19 +688,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     function updateClockDisplay() {
         if (
             !hourText || !minuteText || !periodText ||
-            !hoursTab || !minutesTab || !amButton || !pmButton
+            !hoursTab || !minutesTab
         ) return;
 
+        clockPeriod = selectedTimeSlot === "MORNING" ? "AM" : "PM";
         hourText.textContent = String(clockHour).padStart(2, "0");
         minuteText.textContent = String(clockMinute).padStart(2, "0");
         periodText.textContent = clockPeriod;
 
         hoursTab.classList.toggle("active", clockMode === "hour");
         minutesTab.classList.toggle("active", clockMode === "minute");
-        amButton.classList.toggle("active", clockPeriod === "AM");
-        pmButton.classList.toggle("active", clockPeriod === "PM");
-        amButton.disabled = selectedTimeSlot !== "MORNING";
-        pmButton.disabled = selectedTimeSlot === "MORNING";
 
         renderClockFace();
     }
@@ -652,14 +706,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!clockFace) return;
 
         clockFace.innerHTML = "";
-
-        if (clockMode === "period") {
-            const prompt = document.createElement("div");
-            prompt.className = "clock-period-prompt";
-            prompt.textContent = "Choose AM or PM";
-            clockFace.appendChild(prompt);
-            return;
-        }
 
         const hand = document.createElement("div");
         hand.className = "clock-hand";
@@ -712,7 +758,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                     clockMode = "minute";
                 } else {
                     clockMinute = value;
-                    clockMode = "period";
                 }
 
                 updateClockDisplay();
@@ -782,10 +827,26 @@ document.addEventListener("DOMContentLoaded", async function () {
         timeDisplay.setAttribute("aria-expanded", "false");
     }
 
+    function closeClockIfMostlyOutOfView() {
+        if (!clockPicker || clockPicker.hidden) return;
+        const rect = clockPicker.getBoundingClientRect();
+        const headerBottom = Math.max(0, document.querySelector(".site-header")?.getBoundingClientRect().bottom || 0);
+        const visibleTop = Math.max(rect.top, headerBottom);
+        const visibleWidth = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0));
+        const totalArea = rect.width * rect.height;
+        const headerAdjustedHeight = Math.max(0, Math.min(rect.bottom, window.innerHeight) - visibleTop);
+        if (totalArea > 0 && (headerAdjustedHeight * visibleWidth) / totalArea < 0.5) closeClock();
+    }
+
+    // Keep the clock open while it remains mostly visible; dismiss only once
+    // scrolling moves at least half of it outside the viewport.
+    document.addEventListener("scroll", closeClockIfMostlyOutOfView, { capture: true, passive: true });
+    window.addEventListener("resize", closeClockIfMostlyOutOfView, { passive: true });
+
     if (
         timeDisplay && selectedTimeText && clockPicker && clockFace &&
         hourText && minuteText && periodText && hoursTab && minutesTab &&
-        amButton && pmButton && doneButton && cancelButton && startTime
+        doneButton && cancelButton && startTime
     ) {
         timeDisplay.addEventListener("click", function () {
             if (clockPicker.hidden) {
@@ -810,16 +871,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         minuteText.addEventListener("click", function () {
             clockMode = "minute";
-            updateClockDisplay();
-        });
-
-        amButton.addEventListener("click", function () {
-            clockPeriod = "AM";
-            updateClockDisplay();
-        });
-
-        pmButton.addEventListener("click", function () {
-            clockPeriod = "PM";
             updateClockDisplay();
         });
 
@@ -1047,7 +1098,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             if (!bookingTravelLocation || !Number.isFinite(bookingTravelFee)) {
-                throw new Error("Choose your Luzon venue city from the suggestions to calculate the ₱20/km travel expense.");
+                throw new Error("Choose your Luzon venue city or municipality from the list to calculate the ₱20/km travel expense.");
             }
 
             if (!eventType) {
@@ -1218,6 +1269,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 ].filter(Boolean).join("\n\n"),
 
                 package_type: databasePackageType,
+                travel_distance_km: bookingTravelDistanceKm,
 
                 amount: amount,
                 required_down_payment: reservationFee,
