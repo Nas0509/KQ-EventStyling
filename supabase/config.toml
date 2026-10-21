@@ -9,3 +9,9 @@ verify_jwt = true
 [functions.send-booking-approval-email]
 verify_jwt = true
 
+[functions.send-ocular-approval-email]
+verify_jwt = true
+
+[functions.send-booking-change-review-email]
+verify_jwt = true
+

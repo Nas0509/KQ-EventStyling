@@ -1663,6 +1663,59 @@ body.quotation-modal-open {
 .ocular-calendar .booking-calendar-legend i.full { background: #e87878; }
 .ocular-calendar .calendar-help { margin: 10px 0 0; color: #607687; font-size: .82rem; line-height: 1.5; }
 
+.customizer-toast {
+    position: fixed;
+    z-index: 10000;
+    top: 18px;
+    right: 18px;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 30px;
+    align-items: start;
+    gap: 12px;
+    width: min(470px, calc(100vw - 36px));
+    padding: 16px 14px;
+    border: 1px solid #f2c8c8;
+    border-left: 4px solid #d94b4b;
+    border-radius: 14px;
+    background: #fff;
+    color: #263b49;
+    box-shadow: 0 14px 38px rgba(26, 47, 60, .18);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: opacity .2s ease, transform .2s ease;
+}
+.customizer-toast.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.customizer-toast.is-success { border-color: #bfe4ca; border-left-color: #25935d; }
+.customizer-toast-icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff0f0;
+    color: #bd3030;
+    font-weight: 800;
+}
+.customizer-toast.is-success .customizer-toast-icon { background: #e9f7ee; color: #217647; }
+.customizer-toast-content { display: grid; gap: 4px; padding-top: 1px; }
+.customizer-toast-title { color: #263b49; font-size: .94rem; line-height: 1.35; }
+.customizer-toast-message { color: #5a6f7d; font-size: .86rem; line-height: 1.5; overflow-wrap: anywhere; }
+.customizer-toast-close {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #70818b;
+    font: inherit;
+    font-size: 1.35rem;
+    cursor: pointer;
+}
+.customizer-toast-close:hover { background: #f2f6f8; color: #263b49; }
+
 @media (max-width: 520px) {
     .ocular-calendar { padding: 12px; }
     .ocular-calendar .booking-calendar-grid { gap: 3px; }

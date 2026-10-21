@@ -66,7 +66,11 @@
             row.addEventListener("click", () => void (async () => {
                 await markRead(item.id);
                 setPanelOpen(false);
-                await openBookingHistory(item.booking_id);
+                if (String(item.type || "").startsWith("OCULAR_INSPECTION_")) {
+                    await showRequestSentDialog(item.message, item.title);
+                    return;
+                }
+                if (item.booking_id) await openBookingHistory(item.booking_id);
             })());
             list.appendChild(row);
         });
@@ -75,20 +79,35 @@
     async function loadNotifications() {
         if (!currentUserId || loading) return;
         loading = true;
-        const { data, error } = await supabase
+        const queryNotifications = () => supabase
             .from("user_notifications")
-            .select("id,booking_id,title,message,created_at,read_at")
+            .select("id,booking_id,type,title,message,created_at,read_at")
             .eq("user_id", currentUserId)
             .order("created_at", { ascending: false })
             .limit(40);
-        loading = false;
-        if (error) {
-            console.warn("Unable to load account notifications.");
+        try {
+            let { data, error } = await queryNotifications();
+            // Recover once from an expired access token before treating notifications
+            // as unavailable. The app can retain a signed-in UI briefly while the
+            // REST API has already started rejecting that token.
+            if (error?.status === 401) {
+                const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+                if (!refreshError && refreshed?.session) ({ data, error } = await queryNotifications());
+                else if (refreshError) console.warn("Unable to refresh the customer session for notifications.", refreshError);
+            }
+            if (error) {
+                console.warn("Unable to load account notifications.", error);
+                if (!notifications.length) list.innerHTML = '<p class="user-notification-empty">Notifications could not be loaded. Please sign in again or refresh the page.</p>';
+                return;
+            }
+            notifications = data || [];
+            render();
+        } catch (error) {
+            console.warn("Unable to load account notifications.", error);
             if (!notifications.length) list.innerHTML = '<p class="user-notification-empty">Notifications could not be loaded. Please refresh and try again.</p>';
-            return;
+        } finally {
+            loading = false;
         }
-        notifications = data || [];
-        render();
     }
 
     async function markRead(id) {
@@ -308,6 +327,16 @@
 
     function showRequestForm(kind, booking) {
         if (!booking) return;
+        const openForm = historyContent.querySelector(".customer-change-form");
+        if (openForm) {
+            // Repeated clicks keep the current form in view. Choosing a
+            // different request replaces it so forms never stack.
+            if (openForm.dataset.bookingId === String(booking.id) && openForm.dataset.requestKind === kind) {
+                openForm.scrollIntoView({ block: "center", behavior: "smooth" });
+                return;
+            }
+            openForm.remove();
+        }
         const isReschedule = kind === "RESCHEDULE";
         const today = new Date();
         today.setDate(today.getDate() + 1);
@@ -495,7 +524,82 @@
         });
     }
 
+    function confirmChangeRequest(form) {
+        const isReschedule = form.dataset.requestKind === "RESCHEDULE";
+        const dialog = document.createElement("dialog");
+        dialog.className = "customer-change-confirm-dialog";
+        dialog.setAttribute("aria-labelledby", "customerChangeConfirmTitle");
+        dialog.style.cssText = "position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:0;border:1px solid #d8e5eb;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(18,38,49,.28);color:#263f4c";
+        const title = document.createElement("h3");
+        title.id = "customerChangeConfirmTitle";
+        title.textContent = "Are you sure?";
+        title.style.cssText = "margin:0;padding:22px 24px 10px;font-size:21px;line-height:1.3;color:#173b4b";
+        const message = document.createElement("p");
+        message.style.cssText = "margin:0;padding:0 24px 20px;line-height:1.6;color:#536872";
+        message.textContent = `Do you want to submit this ${isReschedule ? "reschedule" : "cancellation"} request?`;
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;padding:16px 24px 22px;border-top:1px solid #e3ebef";
+        const cancelButton = document.createElement("button");
+        cancelButton.type = "button";
+        cancelButton.textContent = "Go back";
+        cancelButton.style.cssText = "flex:0 0 auto;white-space:nowrap;padding:10px 16px;border:1px solid #cbdce5;border-radius:9px;background:#fff;color:#315364;font-weight:700;cursor:pointer";
+        const confirmButton = document.createElement("button");
+        confirmButton.type = "button";
+        confirmButton.textContent = "Yes";
+        confirmButton.style.cssText = "flex:0 0 auto;white-space:nowrap;min-width:82px;padding:10px 18px;border:0;border-radius:9px;background:#1688b4;color:#fff;font-weight:700;cursor:pointer";
+        actions.append(cancelButton, confirmButton);
+        dialog.append(title, message, actions);
+        document.body.appendChild(dialog);
+        return new Promise(resolve => {
+            const finish = confirmed => {
+                if (dialog.open) dialog.close();
+                dialog.remove();
+                resolve(confirmed);
+            };
+            cancelButton.addEventListener("click", () => finish(false), { once: true });
+            confirmButton.addEventListener("click", () => finish(true), { once: true });
+            dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); }, { once: true });
+            dialog.addEventListener("click", event => { if (event.target === dialog) finish(false); });
+            dialog.showModal();
+            cancelButton.focus();
+        });
+    }
+
+    function showRequestSentDialog(message, heading = "Request sent") {
+        const dialog = document.createElement("dialog");
+        dialog.setAttribute("aria-labelledby", "customerRequestSentTitle");
+        dialog.style.cssText = "position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:0;border:1px solid #d8e5eb;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(18,38,49,.28);color:#263f4c";
+        const title = document.createElement("h3");
+        title.id = "customerRequestSentTitle";
+        title.textContent = heading;
+        title.style.cssText = "margin:0;padding:22px 24px 10px;font-size:21px;line-height:1.3;color:#173b4b";
+        const detail = document.createElement("p");
+        detail.textContent = message;
+        detail.style.cssText = "margin:0;padding:0 24px 22px;line-height:1.6;color:#536872";
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;justify-content:flex-end;padding:16px 24px 22px;border-top:1px solid #e3ebef";
+        const okButton = document.createElement("button");
+        okButton.type = "button";
+        okButton.textContent = "Okay";
+        okButton.style.cssText = "min-width:82px;padding:10px 18px;border:0;border-radius:9px;background:#1688b4;color:#fff;font-weight:700;cursor:pointer";
+        actions.appendChild(okButton);
+        dialog.append(title, detail, actions);
+        document.body.appendChild(dialog);
+        return new Promise(resolve => {
+            const finish = () => {
+                if (dialog.open) dialog.close();
+                dialog.remove();
+                resolve();
+            };
+            okButton.addEventListener("click", finish, { once: true });
+            dialog.addEventListener("cancel", event => { event.preventDefault(); finish(); }, { once: true });
+            dialog.showModal();
+            okButton.focus();
+        });
+    }
+
     async function submitChangeRequest(form) {
+        if (form.dataset.submitting === "true" || form.dataset.confirming === "true") return;
         const submitButton = form.querySelector('button[type="submit"]');
         const formData = new FormData(form);
         const isReschedule = form.dataset.requestKind === "RESCHEDULE";
@@ -512,6 +616,10 @@
             form.prepend(errorMessage);
             return;
         }
+        form.dataset.confirming = "true";
+        const confirmed = await confirmChangeRequest(form);
+        form.dataset.confirming = "false";
+        if (!confirmed) return;
         const args = {
             p_booking_id: form.dataset.bookingId,
             p_request_type: form.dataset.requestKind,
@@ -520,25 +628,49 @@
             p_requested_start_time: isReschedule ? formData.get("requested_start_time") : null,
             p_requested_time_slot: isReschedule ? formData.get("requested_time_slot") : null
         };
+        form.dataset.submitting = "true";
         submitButton.disabled = true;
         submitButton.textContent = "Submitting…";
-        const { data, error } = await supabase.rpc("kq_request_booking_change", args);
+        let timeoutId;
+        const requestTimeout = new Promise(resolve => {
+            timeoutId = window.setTimeout(() => resolve({
+                data: null,
+                error: new Error("This is taking longer than expected. Your request may still be processing. Close and reopen Booking history to check its status before trying again.")
+            }), 20000);
+        });
+        const rpcRequest = (async () => {
+            try {
+                return await supabase.rpc("kq_request_booking_change", args);
+            } catch (rpcError) {
+                return { data: null, error: rpcError };
+            }
+        })();
+        const requestResult = await Promise.race([rpcRequest, requestTimeout])
+            .finally(() => window.clearTimeout(timeoutId));
+        const { data, error } = requestResult;
         if (error) {
             form.querySelector(".customer-change-error")?.remove();
             const errorMessage = document.createElement("p");
             errorMessage.className = "customer-history-message is-error customer-change-error";
             errorMessage.textContent = error.message || "Your request could not be submitted. Please try again.";
             form.prepend(errorMessage);
+            form.dataset.submitting = "false";
             submitButton.disabled = false;
             submitButton.textContent = isReschedule ? "Submit reschedule request" : "Submit cancellation request";
             return;
         }
-        await openBookingHistory(form.dataset.bookingId);
         const result = Array.isArray(data) ? data[0] : data;
         const message = result?.status === "ACCEPTED"
-            ? "Your reschedule is confirmed."
-            : "Your request was sent to the admin for review.";
-        historyContent.insertAdjacentHTML("afterbegin", `<p class="customer-history-message is-success">${escapeHtml(message)}</p>`);
+            ? "Your reschedule is confirmed. It qualified for automatic processing, so no admin decision was needed."
+            : "Your request has been sent to the admin. Please wait for an email once it has been approved or declined.";
+        form.dataset.submitting = "false";
+        await showRequestSentDialog(message, result?.status === "ACCEPTED" ? "Reschedule confirmed" : "Request sent");
+        // Refresh after the user acknowledges the sent confirmation so a slow history
+        // query cannot delay or hide the successful submission message.
+        void openBookingHistory(args.p_booking_id).catch(historyError => {
+                console.warn("Booking request was submitted, but history refresh failed.", historyError);
+                if (historyContent) historyContent.innerHTML = `<p class="customer-history-message is-success">${escapeHtml(message)} Close and reopen Booking history to refresh it.</p>`;
+        });
     }
 
     async function setSessionUser(user) {

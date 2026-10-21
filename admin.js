@@ -1,6 +1,7 @@
 const STORAGE_KEY = "kqBookings";
 const PAYMENT_KEY = "kqPayments";
 const EXPENSE_KEY = "kqExpenses";
+const EXPENSE_ARCHIVE_KEY = "kqArchivedExpenses";
 const INVENTORY_KEY = "kqInventory";
 
 const defaultInventory = [
@@ -13,6 +14,7 @@ let bookings = [];
 let bookingChangeRequests = [];
 let payments = JSON.parse(localStorage.getItem(PAYMENT_KEY) || "[]");
 let expenses = JSON.parse(localStorage.getItem(EXPENSE_KEY) || "[]");
+let archivedExpenses = JSON.parse(localStorage.getItem(EXPENSE_ARCHIVE_KEY) || "[]");
 let inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null") || defaultInventory;
 
 const accountMenuWrap = document.getElementById("accountMenuWrap");
@@ -43,6 +45,7 @@ const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
     localStorage.setItem(PAYMENT_KEY, JSON.stringify(payments));
     localStorage.setItem(EXPENSE_KEY, JSON.stringify(expenses));
+    localStorage.setItem(EXPENSE_ARCHIVE_KEY, JSON.stringify(archivedExpenses));
     localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
 };
 
@@ -112,9 +115,8 @@ async function loadBookingChangeRequests() {
     if (!container || !window.supabaseClient) return;
     const { data, error } = await window.supabaseClient
         .from("booking_change_requests")
-        .select("id,booking_id,user_id,request_type,reason,requested_event_date,requested_start_time,requested_time_slot,status,reservation_fee_nonrefundable,created_at")
-        .eq("status", "PENDING")
-        .order("created_at", { ascending: true });
+        .select("id,booking_id,user_id,request_type,reason,requested_event_date,requested_start_time,requested_time_slot,status,reservation_fee_nonrefundable,admin_note,created_at,reviewed_at")
+        .order("created_at", { ascending: false });
     if (error) {
         bookingChangeRequests = [];
         container.innerHTML = '<div class="empty-state">Unable to load these requests. Apply booking-change-requests.sql in Supabase, then refresh.</div>';
@@ -123,13 +125,13 @@ async function loadBookingChangeRequests() {
         return;
     }
     bookingChangeRequests = data || [];
-    if (count) count.textContent = `${bookingChangeRequests.length} request${bookingChangeRequests.length === 1 ? "" : "s"} awaiting your review`;
+    const pendingRequests = bookingChangeRequests.filter(request => String(request.status).toUpperCase() === "PENDING");
+    if (count) count.textContent = `${pendingRequests.length} request${pendingRequests.length === 1 ? "" : "s"} awaiting your review`;
+    renderBookings();
     updateAdminNotifications();
-    if (!bookingChangeRequests.length) {
+    if (!pendingRequests.length) {
         container.innerHTML = '<div class="empty-state">No cancellation or reschedule requests need review.</div>';
-        return;
-    }
-    container.innerHTML = bookingChangeRequests.map(request => {
+    } else container.innerHTML = pendingRequests.slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at))).map(request => {
         const booking = bookings.find(item => String(item.id) === String(request.booking_id));
         const isCancellation = request.request_type === "CANCELLATION";
         const requestedDate = request.requested_event_date
@@ -138,8 +140,33 @@ async function loadBookingChangeRequests() {
         const requestedTime = request.requested_start_time
             ? new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(`2000-01-01T${String(request.requested_start_time).slice(0, 5)}:00`))
             : "";
-        return `<article class="booking-change-request-card"><div class="booking-change-request-top"><div><span class="badge">${isCancellation ? "CANCELLATION" : "RESCHEDULE"}</span><h4>${escapeHtml(booking?.fullName || "Customer")} <small>· ${escapeHtml(request.booking_id)}</small></h4><p>${escapeHtml(booking?.eventType || "Event")} · current date ${escapeHtml(booking?.eventDate || "not set")}${!isCancellation ? ` · requested ${escapeHtml(requestedDate)} at ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(requestedTime)}` : ""}</p></div><span class="booking-change-fee ${request.reservation_fee_nonrefundable ? "is-nonrefundable" : ""}">${request.reservation_fee_nonrefundable ? "Reservation fee non-refundable" : "No fee penalty"}</span></div><div class="booking-change-reason"><strong>Customer reason</strong><p>${escapeHtml(request.reason)}</p></div><div class="booking-change-actions"><button type="button" class="small-btn edit" data-change-review="accept" data-request-id="${escapeAttr(request.id)}">Accept request</button><button type="button" class="small-btn delete" data-change-review="reject" data-request-id="${escapeAttr(request.id)}">Decline request</button></div></article>`;
+        return `<article class="booking-change-request-card"><div class="booking-change-request-top"><div><span class="badge">${isCancellation ? "CANCELLATION" : "RESCHEDULE"}</span><h4>${escapeHtml(booking?.fullName || "Customer")} <small>· ${escapeHtml(request.booking_id)}</small></h4><p>${escapeHtml(booking?.eventType || "Event")} · current date ${escapeHtml(booking?.eventDate || "not set")}${!isCancellation ? ` · requested ${escapeHtml(requestedDate)} at ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(requestedTime)}` : ""}</p></div><div class="booking-change-card-actions"><span class="booking-change-fee ${request.reservation_fee_nonrefundable ? "is-nonrefundable" : ""}">${request.reservation_fee_nonrefundable ? "Reservation fee non-refundable" : "No fee penalty"}</span><details class="booking-change-menu"><summary aria-label="Request actions" title="Request actions">⋮</summary><div class="booking-change-menu-options"><button type="button" data-change-review="accept" data-request-id="${escapeAttr(request.id)}">Accept</button><button type="button" data-change-review="reject" data-request-id="${escapeAttr(request.id)}">Decline</button><button type="button" data-view-change-request="${escapeAttr(request.id)}">View</button></div></details></div></div><div class="booking-change-reason"><strong>Customer reason</strong><p>${escapeHtml(request.reason)}</p></div></article>`;
     }).join("");
+}
+
+function openCustomerRequestHistory(bookingId) {
+    const booking = bookings.find(item => String(item.id) === String(bookingId));
+    if (!booking) return;
+    const clientBookingIds = new Set(bookings
+        .filter(item => booking.user_id ? String(item.user_id) === String(booking.user_id) : String(item.id) === String(bookingId))
+        .map(item => String(item.id)));
+    const requests = bookingChangeRequests
+        .filter(request => clientBookingIds.has(String(request.booking_id)))
+        .slice()
+        .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+    const history = requests.length ? requests.map(request => {
+        const kind = String(request.request_type).toUpperCase() === "CANCELLATION" ? "Cancellation" : "Reschedule";
+        const status = String(request.status || "PENDING").toUpperCase();
+        const statusLabel = status === "ACCEPTED" ? "APPROVED" : status === "REJECTED" ? "DECLINED" : "PENDING";
+        const statusClassName = status === "ACCEPTED" ? "is-accepted" : status === "REJECTED" ? "is-rejected" : "is-pending";
+        const submitted = request.created_at ? new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.created_at)) : "Date not recorded";
+        const requestedDate = request.requested_event_date ? new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(new Date(`${String(request.requested_event_date).slice(0, 10)}T12:00:00`)) : "";
+        const requestedTime = request.requested_start_time ? new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(`2000-01-01T${String(request.requested_start_time).slice(0, 5)}:00`)) : "";
+        const relatedBooking = bookings.find(item => String(item.id) === String(request.booking_id));
+        return `<article class="booking-change-request-card booking-change-history-card"><div class="booking-change-request-top"><div><span class="badge">${escapeHtml(kind)}</span><h4>${escapeHtml(relatedBooking?.eventType || "Event")} · ${escapeHtml(relatedBooking?.eventDate || "Date not set")}</h4><p>Booking ${escapeHtml(request.booking_id)} · submitted ${escapeHtml(submitted)}${requestedDate ? ` · requested ${escapeHtml(requestedDate)} at ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(requestedTime)}` : ""}</p></div><span class="booking-change-history-status ${statusClassName}">${statusLabel}</span></div><div class="booking-change-reason"><strong>Client reason</strong><p>${escapeHtml(request.reason || "No reason recorded")}</p></div>${request.admin_note ? `<div class="booking-change-admin-note"><strong>Admin response</strong><p>${escapeHtml(request.admin_note)}</p></div>` : ""}</article>`;
+    }).join("") : '<div class="empty-state">This client has no cancellation or reschedule requests.</div>';
+    openModal(`<section class="client-request-history"><header class="client-request-history-header"><span class="eyebrow">CLIENT REQUESTS</span><h3>Request history</h3><p>${escapeHtml(booking.fullName || "Customer")}<span> · </span>${escapeHtml(booking.email || "")}<br><span>${escapeHtml(booking.eventType || "Event")} · ${escapeHtml(booking.eventDate || "Date not set")}</span></p></header><div class="booking-change-request-list booking-change-history-modal-list">${history}</div></section>`);
+    document.querySelector("#modal .modal-card")?.classList.add("request-history-modal-card");
 }
 
 function openBookingChangeReview(requestId, accepted) {
@@ -150,7 +177,7 @@ function openBookingChangeReview(requestId, accepted) {
     const effect = accepted
         ? (isCancellation ? "The booking will be cancelled and moved to the archive." : "The approved booking date and time will be changed.")
         : "The customer's original booking will stay unchanged.";
-    openModal(`<h3>${actionLabel}</h3><p class="field-help">${effect}${request.reservation_fee_nonrefundable ? " The reservation fee remains non-refundable even if this request is declined." : ""}</p><div class="modal-field full"><label for="bookingChangeAdminNote">Admin response / note (optional)</label><textarea id="bookingChangeAdminNote" rows="3" maxlength="1000" placeholder="Add a note for the customer"></textarea></div><div class="modal-actions"><button type="button" class="btn primary" id="confirmBookingChangeReview" data-request-id="${escapeAttr(request.id)}" data-accept="${accepted ? "true" : "false"}">${actionLabel}</button></div>`);
+    openModal(`<div class="booking-change-confirmation"><span class="eyebrow">CONFIRM REQUEST</span><h3>Are you sure?</h3><p class="field-help">You are about to ${accepted ? "accept" : "decline"} this ${isCancellation ? "cancellation" : "reschedule"} request. ${effect}${request.reservation_fee_nonrefundable ? " The reservation fee remains non-refundable even if this request is declined." : ""} The customer will be notified by in-app notification and email.</p><div class="modal-field full"><label for="bookingChangeAdminNote">Admin response / note (optional)</label><textarea id="bookingChangeAdminNote" rows="3" maxlength="1000" placeholder="Add a note for the customer"></textarea></div><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingChangeReview">Go back</button><button type="button" class="btn primary" id="confirmBookingChangeReview" data-request-id="${escapeAttr(request.id)}" data-accept="${accepted ? "true" : "false"}">Yes, ${accepted ? "accept" : "decline"} request</button></div></div>`);
 }
 
 async function submitBookingChangeReview(requestId, accepted) {
@@ -167,12 +194,27 @@ async function submitBookingChangeReview(requestId, accepted) {
         showAdminToast(error.message || "Unable to review this request.", "error");
         return;
     }
+    const { data: emailResult, error: emailError } = await window.supabaseClient.functions.invoke("send-booking-change-review-email", {
+        body: { requestId }
+    });
+    let emailNotice = "";
+    if (emailError) {
+        console.warn("Booking change request was reviewed, but the customer email was not sent.", emailError);
+        let providerMessage = emailResult?.error;
+        const response = emailError.context;
+        if (!providerMessage && response && typeof response.clone === "function") {
+            try { providerMessage = (await response.clone().json())?.error; } catch { /* Keep the fallback notice. */ }
+        }
+        if (!providerMessage && Number(response?.status) === 404) providerMessage = "The email function is not deployed to Supabase yet.";
+        if (!providerMessage && emailError.name === "FunctionsFetchError") providerMessage = "Could not reach the email service. Check the connection and Supabase function deployment.";
+        emailNotice = " The in-app notification was saved, but the email could not be sent" + (providerMessage ? `: ${providerMessage}` : ". Check the Supabase function deployment and Gmail secrets.");
+    }
     closeModal();
     await loadBookings();
     await loadBookingChangeRequests();
-    showAdminToast(accepted
-        ? "Customer request accepted. A notification was sent to the customer."
-        : "Customer request declined. A notification was sent to the customer.");
+    showAdminToast((accepted
+        ? "Customer request accepted. An in-app notification was sent to the customer."
+        : "Customer request declined. An in-app notification was sent to the customer.") + emailNotice, emailNotice ? "error" : "success");
 }
 
 async function requireAdmin() {
@@ -240,7 +282,30 @@ function showSection(id) {
     renderAll();
 }
 
-document.querySelectorAll(".nav-item").forEach(btn => btn.addEventListener("click", () => showSection(btn.dataset.section)));
+const mobileNavToggle = document.getElementById("mobileNavToggle");
+const adminSidebar = document.querySelector(".sidebar");
+function setMobileAdminNav(open) {
+    if (!mobileNavToggle || !adminSidebar) return;
+    adminSidebar.classList.toggle("is-mobile-nav-open", open);
+    mobileNavToggle.setAttribute("aria-expanded", String(open));
+    mobileNavToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+}
+mobileNavToggle?.addEventListener("click", () => setMobileAdminNav(!adminSidebar.classList.contains("is-mobile-nav-open")));
+document.querySelectorAll(".nav-item").forEach(btn => btn.addEventListener("click", () => {
+    showSection(btn.dataset.section);
+    if (window.matchMedia("(max-width: 760px)").matches) setMobileAdminNav(false);
+}));
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && adminSidebar?.classList.contains("is-mobile-nav-open")) {
+        setMobileAdminNav(false);
+        mobileNavToggle?.focus();
+    }
+});
+document.addEventListener("click", event => {
+    if (window.matchMedia("(max-width: 760px)").matches && adminSidebar?.classList.contains("is-mobile-nav-open") && !adminSidebar.contains(event.target)) {
+        setMobileAdminNav(false);
+    }
+});
 function followDashboardShortcut(target) {
     const section = target.dataset.sectionJump;
     const status = target.dataset.statusFilter;
@@ -581,6 +646,11 @@ function closeBookingActions() {
     activeBookingMenuId = null;
 }
 
+// The popover is positioned against the viewport, so dismiss it when its
+// trigger can move during a page or nested-container scroll.
+window.addEventListener("scroll", closeBookingActions, true);
+window.addEventListener("resize", closeBookingActions);
+
 function toggleBookingActions(event, bookingId, trigger) {
     event.preventDefault();
     event.stopPropagation();
@@ -623,6 +693,66 @@ function toggleBookingActions(event, bookingId, trigger) {
     });
 
     activeBookingMenuId = bookingId;
+    activeBookingMenuTrigger = trigger;
+    trigger.setAttribute("aria-expanded", "true");
+    popover.showPopover();
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = popover.getBoundingClientRect();
+    const edge = 8;
+    const left = Math.max(edge, Math.min(triggerRect.right - menuRect.width, window.innerWidth - menuRect.width - edge));
+    const belowTop = triggerRect.bottom + 6;
+    const top = belowTop + menuRect.height <= window.innerHeight - edge
+        ? belowTop
+        : Math.max(edge, triggerRect.top - menuRect.height - 6);
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+}
+
+function toggleOcularActions(event, requestId, trigger) {
+    event.preventDefault();
+    event.stopPropagation();
+    const popover = document.getElementById("bookingActionsPopover");
+    if (!popover) return;
+
+    const menuId = `ocular:${requestId}`;
+    if (popover.matches(":popover-open") && activeBookingMenuId === menuId) {
+        closeBookingActions();
+        return;
+    }
+
+    closeBookingActions();
+    const request = quotationRequests.find(item => String(item.id) === String(requestId));
+    if (!request) return;
+
+    const status = String(request.status || "REQUESTED").toUpperCase();
+    const actions = [{ label: "View details", className: "edit", run: () => viewQuotation(request.id) }];
+    if (status === "APPROVED") {
+        actions.push(
+            { label: "Resend approval email", className: "edit", run: () => resendOcularApprovalEmail(request.id) },
+            { label: "Cancel", className: "decline", run: () => confirmOcularInspectionStatus(request.id, "CANCELLED") }
+        );
+    } else if (status === "REQUESTED") {
+        actions.push(
+            { label: "Approve", className: "approve", run: () => confirmOcularInspectionStatus(request.id, "APPROVED") },
+            { label: "Decline", className: "decline", run: () => confirmOcularInspectionStatus(request.id, "DECLINED") }
+        );
+    }
+
+    popover.replaceChildren();
+    actions.forEach(action => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `booking-actions-item ${action.className}`;
+        button.setAttribute("role", "menuitem");
+        button.textContent = action.label;
+        button.addEventListener("click", () => {
+            closeBookingActions();
+            action.run();
+        });
+        popover.appendChild(button);
+    });
+
+    activeBookingMenuId = menuId;
     activeBookingMenuTrigger = trigger;
     trigger.setAttribute("aria-expanded", "true");
     popover.showPopover();
@@ -682,6 +812,15 @@ function renderArchive() {
             <td class="archive-record">${escapeHtml(bookingMessageField(booking.adminNotes, "Cancellation reason") || "No cancellation reason recorded")}</td>
             <td><button class="small-btn edit" onclick="viewBooking('${escapeAttr(booking.id)}')">View record</button></td>
         </tr>`).join("");
+    const expenseArchiveEmpty = document.getElementById("emptyExpenseArchive");
+    if (expenseArchiveEmpty) {
+        expenseArchiveEmpty.style.display = archivedExpenses.length ? "none" : "block";
+        document.getElementById("archivedExpenseTableBody").innerHTML = archivedExpenses
+            .slice()
+            .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
+            .map(expense => `<tr><td><strong>${escapeHtml(expense.description)}</strong></td><td>${escapeHtml(expense.date || "—")}</td><td>${money(expense.amount)}</td><td>${escapeHtml(expense.archivedAt ? new Date(expense.archivedAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—")}</td></tr>`)
+            .join("");
+    }
 }
 
 function renderPayments() {
@@ -714,14 +853,78 @@ function renderPayments() {
 function renderSales() {
     const revenue = payments.reduce((s, p) => s + Number(p.paid || 0), 0);
     const totalExpenses = expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const monthPicker = document.getElementById("salesAnalyticsMonth");
+    if (monthPicker && !monthPicker.value) monthPicker.value = currentMonth;
+    const selectedMonth = monthPicker?.value || currentMonth;
+    const selectedYear = Number(selectedMonth.slice(0, 4)) || now.getFullYear();
     document.getElementById("salesRevenue").textContent = money(revenue);
     document.getElementById("salesExpenses").textContent = money(totalExpenses);
     document.getElementById("salesNet").textContent = money(revenue - totalExpenses);
-    document.getElementById("salesTableBody").innerHTML = bookings.filter(b => payments.some(p => p.bookingId === b.id)).map(b => {
+    document.getElementById("salesTableBody").innerHTML = bookings.filter(b => String(b.status).toUpperCase() === "APPROVED" && payments.some(p => p.bookingId === b.id)).map(b => {
         const p = payments.find(x => x.bookingId === b.id) || {};
         return `<tr><td>${escapeHtml(b.fullName)}</td><td>${escapeHtml(b.eventType)}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td><td>${money(Number(p.total) - Number(p.paid))}</td></tr>`;
     }).join("");
-    document.getElementById("expenseList").innerHTML = expenses.length ? expenses.map((e, i) => `<div class="expense-item"><span>${escapeHtml(e.description)}<small> • ${escapeHtml(e.date || "")}</small></span><strong>${money(e.amount)}</strong><button class="small-btn delete" onclick="deleteExpense(${i})">×</button></div>`).join("") : '<div class="empty-state">No expenses recorded.</div>';
+    document.getElementById("expenseList").innerHTML = expenses.length ? expenses.map((e, i) => `<div class="expense-item"><span>${escapeHtml(e.description)}<small> • ${escapeHtml(e.date || "")}</small></span><strong>${money(e.amount)}</strong><div class="expense-actions"><button type="button" class="small-btn edit" onclick="openExpenseForm(${i})">Edit</button><button type="button" class="small-btn" onclick="archiveExpense(${i})">Archive</button></div></div>`).join("") : '<div class="empty-state">No expenses recorded.</div>';
+    const monthlyIncome = Array(12).fill(0);
+    const monthlyExpenseTotals = Array(12).fill(0);
+    bookings.forEach(booking => {
+        const match = String(booking.eventDate || "").match(/^(\d{4})-(\d{2})/);
+        if (!match || Number(match[1]) !== selectedYear || String(booking.status).toUpperCase() !== "APPROVED") return;
+        const monthIndex = Number(match[2]) - 1;
+        monthlyIncome[monthIndex] += Number(payments.find(payment => payment.bookingId === booking.id)?.paid || 0);
+    });
+    [...expenses, ...archivedExpenses].forEach(expense => {
+        const match = String(expense.date || "").match(/^(\d{4})-(\d{2})/);
+        if (!match || Number(match[1]) !== selectedYear) return;
+        monthlyExpenseTotals[Number(match[2]) - 1] += Number(expense.amount || 0);
+    });
+    const monthlyNet = monthlyIncome.map((income, index) => income - monthlyExpenseTotals[index]);
+    const peakNet = Math.max(...monthlyNet);
+    const peakIndex = monthlyNet.indexOf(peakNet);
+    const scale = Math.max(...monthlyNet.map(value => Math.abs(value)), 1);
+    const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat("en-PH", { month: "short" }).format(new Date(selectedYear, index, 1)));
+    const compactMoney = value => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", notation: "compact", maximumFractionDigits: 1 }).format(value);
+    document.getElementById("salesAnalyticsMonthLabel").textContent = `Net income by month for ${selectedYear}`;
+    document.getElementById("monthlyNetIncomeChart").innerHTML = monthlyNet.map((value, index) => {
+        const height = value === 0 ? 2 : Math.max(4, Math.abs(value) / scale * 100);
+        const selected = String(index + 1).padStart(2, "0") === selectedMonth.slice(5, 7);
+        const peak = index === peakIndex;
+        const chartTitle = `${monthNames[index]} ${selectedYear} · Income ${money(monthlyIncome[index])} · Expenses ${money(monthlyExpenseTotals[index])} · Net ${money(value)}`;
+        return `<div class="monthly-net-column${selected ? " is-selected" : ""}${peak ? " is-peak" : ""}" title="${escapeAttr(chartTitle)}" aria-label="${escapeAttr(chartTitle)}"><span class="monthly-net-value">${escapeHtml(compactMoney(value))}</span><span class="monthly-net-bar-track"><i class="monthly-net-bar${value < 0 ? " is-negative" : ""}" style="height:${height}%"></i></span><span class="monthly-net-month">${escapeHtml(monthNames[index])}</span></div>`;
+    }).join("");
+    const hasYearRecords = monthlyIncome.some(value => value !== 0) || monthlyExpenseTotals.some(value => value !== 0);
+    document.getElementById("monthlyNetIncomePeak").textContent = hasYearRecords
+        ? `Highest net income: ${monthNames[peakIndex]} ${selectedYear} · ${money(peakNet)}`
+        : `No income or expenses recorded for ${selectedYear}.`;
+    const monthlyBookingCount = bookings.filter(booking => String(booking.eventDate || "").slice(0, 7) === selectedMonth && String(booking.status).toUpperCase() === "APPROVED").length;
+    const monthlyExpenseCount = [...expenses, ...archivedExpenses].filter(expense => String(expense.date || "").slice(0, 7) === selectedMonth).length;
+    document.getElementById("monthlyEventsCount").textContent = `${monthlyBookingCount} ${monthlyBookingCount === 1 ? "booking" : "bookings"} · ${monthlyExpenseCount} ${monthlyExpenseCount === 1 ? "expense" : "expenses"}`;
+}
+
+function openMonthlyActivityReport() {
+    const selectedMonth = document.getElementById("salesAnalyticsMonth")?.value;
+    if (!selectedMonth) return;
+    const monthDate = new Date(`${selectedMonth}-01T00:00:00`);
+    const monthLabel = new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric" }).format(monthDate);
+    const reportBookings = bookings
+        .filter(booking => String(booking.eventDate || "").slice(0, 7) === selectedMonth && String(booking.status).toUpperCase() === "APPROVED")
+        .sort((a, b) => String(a.eventDate || "").localeCompare(String(b.eventDate || "")) || String(a.startTime || "").localeCompare(String(b.startTime || "")));
+    const reportExpenses = [...expenses, ...archivedExpenses]
+        .filter(expense => String(expense.date || "").slice(0, 7) === selectedMonth)
+        .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    const eventIncome = reportBookings
+        .reduce((sum, booking) => sum + Number(payments.find(payment => payment.bookingId === booking.id)?.paid || 0), 0);
+    const expenseTotal = reportExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+    const dateLabel = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—";
+    const bookingRows = reportBookings.map(booking => {
+        const payment = payments.find(item => item.bookingId === booking.id) || {};
+        return `<tr><td>${escapeHtml(dateLabel(booking.eventDate))}<br><small>${escapeHtml(booking.timeSlot || "")} ${escapeHtml(booking.startTime || "")}</small></td><td><strong>${escapeHtml(booking.fullName || "Client")}</strong></td><td>${escapeHtml(booking.eventType || "Event")}<br><small>${escapeHtml(booking.package || "Not selected")} · ${escapeHtml(booking.guests ?? "")} guests</small></td><td><span class="status ${statusClass(booking.status)}">${escapeHtml(booking.status || "UNKNOWN")}</span></td><td>${money(payment.total || booking.amount || 0)}</td><td>${money(payment.paid || 0)}</td></tr>`;
+    }).join("");
+    const expenseRows = reportExpenses.map(expense => `<tr><td>${escapeHtml(dateLabel(expense.date))}</td><td><strong>${escapeHtml(expense.description)}</strong></td><td>${money(expense.amount)}</td><td><span class="monthly-report-record-status">${expense.archivedAt ? "Archived" : "Recorded"}</span></td></tr>`).join("");
+    openModal(`<div class="monthly-activity-report"><div class="monthly-report-header"><span class="badge">MONTHLY REPORT</span><h3>${escapeHtml(monthLabel)} Activity</h3><p>Bookings and expenses recorded for this month.</p></div><div class="monthly-report-summary"><article><span>Event income</span><strong>${money(eventIncome)}</strong></article><article><span>Expenses</span><strong>${money(expenseTotal)}</strong></article><article><span>Net income</span><strong>${money(eventIncome - expenseTotal)}</strong></article></div><section><div class="panel-head"><h4>Bookings (${reportBookings.length})</h4></div><div class="table-wrap"><table><thead><tr><th>Date & time</th><th>Client</th><th>Event</th><th>Status</th><th>Total</th><th>Paid</th></tr></thead><tbody>${bookingRows || ""}</tbody></table></div>${reportBookings.length ? "" : '<div class="empty-state">No bookings for this month.</div>'}</section><section><div class="panel-head"><h4>Expenses (${reportExpenses.length})</h4></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Record</th></tr></thead><tbody>${expenseRows || ""}</tbody></table></div>${reportExpenses.length ? "" : '<div class="empty-state">No expenses for this month.</div>'}</section></div>`);
+    document.querySelector("#modal .modal-card").classList.add("monthly-activity-modal-card");
 }
 
 function renderInventory() {
@@ -731,7 +934,38 @@ function renderInventory() {
     }).join("");
 }
 
-function renderAll() { renderDashboard(); renderBookings(); renderArchive(); renderPayments(); renderSales(); renderInventory(); }
+function expenseMonthKey(dateValue) {
+    const match = String(dateValue || "").match(/^(\d{4})-(\d{2})/);
+    return match ? Number(match[1]) * 12 + Number(match[2]) - 1 : null;
+}
+function archiveExpiredExpenses() {
+    const now = new Date();
+    const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
+    const expired = expenses.filter(expense => {
+        const monthKey = expenseMonthKey(expense.date);
+        return monthKey !== null && monthKey < currentMonthKey;
+    });
+    if (!expired.length) return false;
+    const expiredSet = new Set(expired);
+    const archivedAt = now.toISOString();
+    archivedExpenses.push(...expired.map(expense => ({ ...expense, archivedAt })));
+    expenses = expenses.filter(expense => !expiredSet.has(expense));
+    save();
+    return true;
+}
+function renderAll() {
+    archiveExpiredExpenses();
+    renderDashboard(); renderBookings(); renderArchive(); renderPayments(); renderSales(); renderInventory();
+}
+function scheduleExpenseArchive() {
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 2);
+    const untilMonthChange = Math.max(1000, nextMonth.getTime() - now.getTime());
+    window.setTimeout(() => {
+        if (archiveExpiredExpenses()) { renderArchive(); renderSales(); }
+        scheduleExpenseArchive();
+    }, Math.min(24 * 60 * 60 * 1000, untilMonthChange));
+}
 
 async function changeStatus(id, newStatus) {
     const b = bookings.find(x => x.id === id); if (!b) return;
@@ -892,21 +1126,29 @@ function editPayment(id) {
             <div class="modal-field"><label>Amount Paid</label><input type="number" id="paymentPaid" min="0" max="${Number(p.total)}" value="${Number(p.paid)}"></div>
             <div class="modal-field"><label>Payment Status</label>
                 <select id="paymentStatus">
-                    <option ${p.status === "NO DOWN PAYMENT" ? "selected" : ""}>NO DOWN PAYMENT</option>
-                    <option ${p.status === "DOWN PAYMENT MADE" ? "selected" : ""}>DOWN PAYMENT MADE</option>
-                    <option ${p.status === "PARTIAL PAYMENT" ? "selected" : ""}>PARTIAL PAYMENT</option>
-                    <option ${p.status === "FULLY PAID" ? "selected" : ""}>FULLY PAID</option>
+                    <option value="" selected disabled>Choose status</option>
+                    <option value="FULLY PAID">FULLY PAID</option>
                 </select>
+                <small class="field-help">Current status: ${escapeHtml(p.status || "DOWN PAYMENT MADE")}</small>
             </div>
         </div>
         <div class="modal-actions"><button class="btn primary" onclick="savePayment('${id}')">Save Payment</button></div>`);
+    const paidInput = document.getElementById("paymentPaid");
+    const statusSelect = document.getElementById("paymentStatus");
+    statusSelect.addEventListener("change", () => {
+        if (statusSelect.value === "FULLY PAID") paidInput.value = Number(p.total);
+    });
 }
 
 async function savePayment(id) {
     const p = payments.find(x => x.bookingId === id); if (!p) return;
-    const paid = Math.max(0, Math.min(Number(p.total), Number(document.getElementById("paymentPaid").value) || 0));
     const selected = document.getElementById("paymentStatus").value;
-    const status = paid <= 0 ? "NO DOWN PAYMENT" : paid >= Number(p.total) ? "FULLY PAID" : selected === "DOWN PAYMENT MADE" && paid > 0 ? "DOWN PAYMENT MADE" : "PARTIAL PAYMENT";
+    if (selected !== "FULLY PAID") {
+        showAdminToast("Choose FULLY PAID to save this payment update.", "error");
+        return;
+    }
+    const paid = Number(p.total);
+    const status = "FULLY PAID";
     const { error } = await window.supabaseClient.from("bookings").update({ down_payment_amount: paid }).eq("id", id);
     if (error) { showAdminToast(error.message || "Unable to save payment update.", "error"); return; }
     p.paid = paid;
@@ -918,18 +1160,34 @@ async function savePayment(id) {
 }
 
 document.getElementById("addExpenseBtn").addEventListener("click", () => {
-    openModal(`<h3>Add Expense</h3><div class="modal-grid">
-        <div class="modal-field full"><label>Description</label><input id="expenseDescription" placeholder="e.g. Balloons / Transportation"></div>
-        <div class="modal-field"><label>Amount</label><input id="expenseAmount" type="number" min="0" placeholder="0"></div>
-        <div class="modal-field"><label>Date</label><input id="expenseDate" type="date" value="${new Date().toISOString().slice(0, 10)}"></div>
-    </div><div class="modal-actions"><button class="btn primary" onclick="saveExpense()">Add Expense</button></div>`);
+    openExpenseForm();
 });
-function saveExpense() {
+document.getElementById("salesAnalyticsMonth")?.addEventListener("change", renderSales);
+document.getElementById("monthlyActivityView")?.addEventListener("click", openMonthlyActivityReport);
+function openExpenseForm(index = null) {
+    const expense = index === null ? null : expenses[index];
+    if (index !== null && !expense) return;
+    openModal(`<h3>${expense ? "Edit" : "Add"} Expense</h3><div class="modal-grid">
+        <div class="modal-field full"><label>Description</label><input id="expenseDescription" value="${escapeAttr(expense?.description || "")}" placeholder="e.g. Balloons / Transportation"></div>
+        <div class="modal-field"><label>Amount</label><input id="expenseAmount" type="number" min="0" step="0.01" value="${expense ? Number(expense.amount) : ""}" placeholder="0"></div>
+        <div class="modal-field"><label>Date</label><input id="expenseDate" type="date" value="${escapeAttr(expense?.date || new Date().toISOString().slice(0, 10))}"></div>
+    </div><div class="modal-actions"><button class="btn primary" onclick="saveExpense(${index === null ? "null" : index})">${expense ? "Save Changes" : "Add Expense"}</button></div>`);
+}
+function saveExpense(index = null) {
     const description = document.getElementById("expenseDescription").value.trim(), amount = Number(document.getElementById("expenseAmount").value) || 0, date = document.getElementById("expenseDate").value;
     if (!description || amount <= 0) { alert("Please enter a description and valid amount."); return }
-    expenses.push({ description, amount, date }); save(); closeModal(); renderAll();
+    const expense = { description, amount, date };
+    if (Number.isInteger(index) && expenses[index]) expenses[index] = expense;
+    else expenses.push(expense);
+    save(); closeModal(); renderAll();
 }
-function deleteExpense(i) { if (confirm("Delete this expense?")) { expenses.splice(i, 1); save(); renderAll() } }
+function archiveExpense(i) {
+    const expense = expenses[i];
+    if (!expense) return;
+    expenses.splice(i, 1);
+    archivedExpenses.push({ ...expense, archivedAt: new Date().toISOString() });
+    save(); renderAll();
+}
 
 document.getElementById("addInventoryBtn").addEventListener("click", () => openInventoryForm());
 function openInventoryForm(item = null) {
@@ -950,8 +1208,9 @@ function saveInventory(id) {
 }
 function editInventory(id) { openInventoryForm(inventory.find(x => x.id === id)) }
 
-function openModal(html) { document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card"); document.getElementById("modalContent").innerHTML = html; document.getElementById("modal").classList.remove("hidden") }
-function closeModal() { document.getElementById("modal").classList.add("hidden"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card") }
+let modalReturnFocus = null;
+function openModal(html) { const modal = document.getElementById("modal"); modalReturnFocus = document.activeElement instanceof HTMLElement && !modal.contains(document.activeElement) ? document.activeElement : modalReturnFocus; document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card", "monthly-activity-modal-card", "request-history-modal-card", "ocular-request-modal-card", "ocular-action-confirmation-card"); document.getElementById("modalContent").innerHTML = html; modal.classList.remove("hidden"); modal.setAttribute("aria-hidden", "false") }
+function closeModal() { const modal = document.getElementById("modal"); if (modal.contains(document.activeElement)) document.activeElement.blur(); modal.classList.add("hidden"); modal.setAttribute("aria-hidden", "true"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card", "monthly-activity-modal-card", "ocular-action-confirmation-card"); const returnFocus = modalReturnFocus; modalReturnFocus = null; if (returnFocus?.isConnected) returnFocus.focus() }
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal() });
 
@@ -1291,6 +1550,7 @@ function renderQuotationRequests() {
                     request.inspection_region,
                     request.inspection_address,
                     request.inspection_date,
+                    request.payment_reference,
                     request.additional_request
                 ]
                     .filter(Boolean)
@@ -1329,7 +1589,6 @@ function renderQuotationRequests() {
 
     table.innerHTML =
         rows.map(request => {
-
             return `
 
                 <tr>
@@ -1360,14 +1619,6 @@ function renderQuotationRequests() {
 
                     <td>
 
-                        <strong>${escapeHtml(request.venue_name || "Venue not provided")}</strong><br>
-                        <small>${escapeHtml(request.inspection_address || "")}</small>
-
-                    </td>
-
-
-                    <td>
-
                         ${money(request.inspection_fee)}
 
                     </td>
@@ -1375,36 +1626,17 @@ function renderQuotationRequests() {
 
                     <td>
 
-                        ${escapeHtml([request.inspection_city, request.inspection_province, request.inspection_region].filter(Boolean).join(", ") || "Not specified")}
+                        ${escapeHtml(request.payment_reference || request.additional_request || "Not provided")}
 
                     </td>
 
-
                     <td>
-
-                        ${escapeHtml(request.additional_request || "Not provided")}
-
+                        <span class="status ${statusClass(request.status)}">${escapeHtml(request.status || "REQUESTED")}</span>
                     </td>
 
 
-                    <td>
-
-                        <div class="action-group ocular-action-group ${request.status === "REQUESTED" ? "is-pending" : "is-processed"}">
-
-                            <button
-                                class="small-btn edit ocular-view-action"
-                                onclick="viewQuotation('${request.id}')">
-
-                                View
-
-                            </button>
-
-                            ${request.status === "REQUESTED" ? `
-                                <button class="small-btn approve" onclick="setOcularInspectionStatus('${request.id}', 'APPROVED')">Accept</button>
-                                <button class="small-btn decline" onclick="setOcularInspectionStatus('${request.id}', 'DECLINED')">Decline</button>
-                            ` : ""}
-
-                        </div>
+                    <td class="booking-actions-cell">
+                        <button type="button" class="booking-actions-trigger" onclick="toggleOcularActions(event, '${escapeAttr(request.id)}', this)" aria-haspopup="menu" aria-controls="bookingActionsPopover" aria-expanded="false" aria-label="Actions for ocular request ${escapeAttr(request.request_code || request.id)}" title="More actions"><span aria-hidden="true">⋮</span></button>
 
                     </td>
 
@@ -1417,9 +1649,20 @@ function renderQuotationRequests() {
 }
 
 
-async function setOcularInspectionStatus(id, status) {
+function confirmOcularInspectionStatus(id, status) {
     const isDeclining = status === "DECLINED";
-    if (isDeclining && !window.confirm("Decline this ocular inspection request?")) return;
+    const isCancelling = status === "CANCELLED";
+    const action = isDeclining ? "decline" : isCancelling ? "cancel" : "approve";
+    const effect = isDeclining
+        ? "The customer will be notified that the request was declined."
+        : isCancelling
+            ? "The approved inspection will be cancelled."
+            : "The customer will be notified that the request was approved.";
+    openModal(`<section class="booking-change-confirmation ocular-status-confirmation"><span class="eyebrow">OCULAR INSPECTION</span><h3>Are you sure?</h3><p class="field-help">Do you want to ${action} this ocular inspection request? ${effect}</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelOcularStatusReview">Go back</button><button type="button" class="btn ${isDeclining || isCancelling ? "danger" : "primary"}" id="confirmOcularStatusReview" data-request-id="${escapeAttr(id)}" data-status="${escapeAttr(status)}">Yes, ${action}</button></div></section>`);
+    document.querySelector("#modal .modal-card")?.classList.add("ocular-action-confirmation-card");
+}
+
+async function setOcularInspectionStatus(id, status) {
 
     try {
         const result = status === "APPROVED"
@@ -1431,12 +1674,63 @@ async function setOcularInspectionStatus(id, status) {
         const { error } = result;
         if (error) throw error;
 
+        let emailNotice = "";
+        if (status === "APPROVED" || status === "DECLINED") {
+            const emailResult = await sendOcularStatusEmail(id);
+            if (!emailResult.sent) emailNotice = ` Email was not sent: ${emailResult.error}`;
+            else {
+                const recipient = quotationRequests.find(item => String(item.id) === String(id))?.customer_email || "the customer";
+                emailNotice = ` Email sent to ${recipient}.`;
+            }
+        }
+
         await loadQuotationRequests();
-        showAdminToast(isDeclining ? "Ocular inspection request declined." : "Ocular inspection request accepted.");
+        const message = isDeclining
+            ? "Ocular inspection request declined."
+            : isCancelling
+                ? "Ocular inspection request cancelled."
+                : "Ocular inspection request accepted.";
+        const toastType = emailNotice.startsWith(" Email was not sent:") || isDeclining ? "error" : "success";
+        showAdminToast(`${message}${emailNotice}`, toastType);
     } catch (error) {
         console.error("Ocular inspection status update failed:", error);
         showAdminToast(error.message || "Unable to update ocular inspection request.", "error");
     }
+}
+
+async function sendOcularStatusEmail(id) {
+    try {
+        const { data, error } = await window.supabaseClient.functions.invoke("send-ocular-approval-email", {
+            body: { requestId: String(id) }
+        });
+        if (!error) return { sent: true, error: "" };
+
+        let message = data?.error;
+        if (!message && typeof error.context?.clone === "function") {
+            try {
+                const responseText = await error.context.clone().text();
+                try { message = JSON.parse(responseText)?.error; }
+                catch { message = responseText.trim().slice(0, 300); }
+            } catch { /* Fall back to the invocation error below. */ }
+        }
+        console.error("Ocular status email failed:", error);
+        return { sent: false, error: message || error.message || "The customer email could not be sent." };
+    } catch (error) {
+        console.error("Ocular status email request failed:", error);
+        return { sent: false, error: error?.message || "The customer email could not be sent." };
+    }
+}
+
+async function resendOcularApprovalEmail(id) {
+    const request = quotationRequests.find(item => String(item.id) === String(id));
+    if (!request || String(request.status || "").toUpperCase() !== "APPROVED") return;
+
+    const result = await sendOcularStatusEmail(id);
+    if (!result.sent) {
+        showAdminToast(result.error, "error");
+        return;
+    }
+    showAdminToast(`Approval email sent to ${request.customer_email || "the customer"}.`);
 }
 
 
@@ -1457,165 +1751,70 @@ async function viewQuotation(id) {
     if (!request) return;
 
 
+    const rawInspectionDate = String(request.inspection_date || "");
+    const inspectionDateHasTime = /[T ]\d{2}:\d{2}/.test(rawInspectionDate);
+    const requestDate = rawInspectionDate
+        ? inspectionDateHasTime
+            ? new Intl.DateTimeFormat("en-PH", { dateStyle: "long", timeStyle: "short" }).format(new Date(rawInspectionDate))
+            : new Intl.DateTimeFormat("en-PH", { dateStyle: "long" }).format(new Date(`${rawInspectionDate.slice(0, 10)}T12:00:00`))
+        : "Date not selected";
+    const purposeLabel = request.request_purpose === "OCULAR_INSPECTION" ? "Ocular / venue inspection" : "Additional request";
     openModal(`
+        <div class="ocular-request-modal">
+            <header class="ocular-request-header">
+                <span class="eyebrow">OCULAR INSPECTION</span>
+                <h3>Request details</h3>
+                <p>Request <strong>${escapeHtml(request.request_code || `#${request.id}`)}</strong><span class="ocular-status-pill">${escapeHtml(request.status || "REQUESTED")}</span></p>
+            </header>
 
-        <h3>
-            Ocular Inspection Request
-        </h3>
+            <section class="ocular-detail-section" aria-labelledby="ocularCustomerDetailsTitle">
+                <h4 id="ocularCustomerDetailsTitle">Customer information</h4>
+                <div class="quotation-detail-list">
+                    <div class="quotation-detail-row"><span>Customer name</span><strong>${escapeHtml(request.customer_name || "Not provided")}</strong></div>
+                    <div class="quotation-detail-row"><span>Contact number</span><strong>${escapeHtml(request.customer_contact || "Not provided")}</strong></div>
+                    <div class="quotation-detail-row is-wide"><span>Email address</span><strong>${escapeHtml(request.customer_email || "Not provided")}</strong></div>
+                </div>
+            </section>
 
+            <section class="ocular-detail-section" aria-labelledby="ocularVenueDetailsTitle">
+                <h4 id="ocularVenueDetailsTitle">Inspection details</h4>
+                <div class="quotation-detail-list">
+                    <div class="quotation-detail-row is-wide"><span>Preferred date and time</span><strong>${escapeHtml(requestDate)}${request.inspection_time && !inspectionDateHasTime ? ` · ${escapeHtml(request.inspection_time)}` : ""}</strong></div>
+                    <div class="quotation-detail-row"><span>Venue name</span><strong>${escapeHtml(request.venue_name || "Not provided")}</strong></div>
+                    <div class="quotation-detail-row"><span>Purpose</span><strong>${escapeHtml(purposeLabel)}</strong></div>
+                    <div class="quotation-detail-row is-wide"><span>City / municipality</span><strong>${escapeHtml([request.inspection_city, request.inspection_province, request.inspection_region].filter(Boolean).join(" — ") || "Not provided")}</strong></div>
+                    <div class="quotation-detail-row is-wide"><span>Venue address</span><strong>${escapeHtml(request.inspection_address || "Not provided")}</strong></div>
+                    ${request.inspection_fee != null ? `<div class="quotation-detail-row"><span>Current inspection fee</span><strong>${money(request.inspection_fee)}</strong></div>` : ""}
+                    ${request.inspection_distance_km != null ? `<div class="quotation-detail-row"><span>Recorded distance</span><strong>${escapeHtml(request.inspection_distance_km)} km</strong></div>` : ""}
+                    ${request.design_estimate_package ? `<div class="quotation-detail-row is-wide"><span>Image-matched suggestion</span><strong>${escapeHtml(request.design_estimate_package)} — ${money(request.design_estimate_price)}</strong></div>` : ""}
+                </div>
+            </section>
 
-        <div class="quotation-detail-list">
+            ${request.design_image_path ? `<section class="ocular-detail-section"><h4>Customer design moodboard</h4><p id="adminQuotationImageStatus" class="field-help">Loading private design image…</p><img id="adminQuotationDesignImage" class="admin-design-preview" alt="Customer-uploaded design moodboard" hidden>${Array.isArray(request.design_estimate_features) && request.design_estimate_features.length ? `<p>${escapeHtml(request.design_estimate_explanation || "Free preliminary visual estimate.")}</p><ul class="admin-design-features">${request.design_estimate_features.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}<small class="field-help">Preliminary estimate only; confirm package and final price with the customer.</small></section>` : ""}
 
-
-            <div class="quotation-detail-row">
-                <span>Request ID</span>
-                <strong>
-                    ${escapeHtml(request.request_code || `#${request.id}`)}
-                </strong>
-            </div>
-
-            <div class="quotation-detail-row"><span>Customer Name</span><strong>${escapeHtml(request.customer_name || "Not provided")}</strong></div>
-            <div class="quotation-detail-row"><span>Email</span><strong>${escapeHtml(request.customer_email || "Not provided")}</strong></div>
-            <div class="quotation-detail-row"><span>Contact Number</span><strong>${escapeHtml(request.customer_contact || "Not provided")}</strong></div>
-            <div class="quotation-detail-row"><span>Preferred Inspection</span><strong>${escapeHtml(request.inspection_date || "Date not selected")} ${escapeHtml(request.inspection_time || "")}</strong></div>
-            <div class="quotation-detail-row"><span>Venue Name</span><strong>${escapeHtml(request.venue_name || "Not provided")}</strong></div>
-            <div class="quotation-detail-row"><span>City / Municipality</span><strong>${escapeHtml([request.inspection_city, request.inspection_province, request.inspection_region].filter(Boolean).join(" — ") || "Not provided / estimate skipped")}</strong></div>
-            <div class="quotation-detail-row"><span>Venue Address</span><strong>${escapeHtml(request.inspection_address || "Not provided")}</strong></div>
-            <div class="quotation-detail-row"><span>Inspection Fee</span><strong>${request.inspection_fee == null ? "Not calculated" : money(request.inspection_fee)}</strong></div>
-            <div class="quotation-detail-row"><span>Distance from North Caloocan</span><strong>${request.inspection_distance_km == null ? "Not calculated" : `${escapeHtml(request.inspection_distance_km)} km`}</strong></div>
-
-
-            <div class="quotation-detail-row">
-                <span>Request Purpose</span>
-                <strong>Ocular / Venue Inspection</strong>
-            </div>
-
-            <div class="quotation-detail-row">
-                <span>Inspection Venue</span>
-                <strong>${escapeHtml(request.inspection_address || "Not specified")}</strong>
-            </div>
-
-
-            ${request.design_estimate_package ? `<div class="quotation-detail-row"><span>Image-Matched Suggestion</span><strong>${escapeHtml(request.design_estimate_package)} — ${money(request.design_estimate_price)}</strong></div>` : ""}
-
-            ${request.design_image_path ? `<div class="modal-field full"><label>Customer Design Moodboard</label><p id="adminQuotationImageStatus" class="field-help">Loading private design image…</p><img id="adminQuotationDesignImage" class="admin-design-preview" alt="Customer-uploaded design moodboard" hidden>${Array.isArray(request.design_estimate_features) && request.design_estimate_features.length ? `<p>${escapeHtml(request.design_estimate_explanation || "Free preliminary visual estimate.")}</p><ul class="admin-design-features">${request.design_estimate_features.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}<small class="field-help">Preliminary estimate only; confirm package and final price with the customer.</small></div>` : ""}
-
-
+            <section class="ocular-detail-section ocular-edit-section" aria-labelledby="ocularAdminUpdateTitle">
+                <h4 id="ocularAdminUpdateTitle">Admin update</h4>
+                <div class="ocular-edit-grid">
+                    <div class="modal-field"><label for="inspectionDistanceKm">Confirmed route distance (km)</label><input id="inspectionDistanceKm" type="number" min="0" step="0.1" value="${request.inspection_distance_km ?? ""}" placeholder="Enter route distance"></div>
+                    <div class="modal-field"><label for="inspectionFeeInput">Inspection fee (₱)</label><input id="inspectionFeeInput" type="number" min="0" step="100" value="${request.inspection_fee ?? ""}" placeholder="System-calculated fee"></div>
+                </div>
+                <small class="field-help">System-calculated inspection fees are rounded up to the nearest ₱100.</small>
+                <div class="modal-field full ocular-additional-request"><label for="ocularAdditionalRequest">${request.request_purpose === "OCULAR_INSPECTION" ? "Payment reference" : "Additional request"}</label><textarea id="ocularAdditionalRequest" readonly>${escapeHtml(request.payment_reference || request.additional_request || "No additional request.")}</textarea></div>
+                <div class="modal-field full"><label for="quotationAdminNotes">Admin notes</label><textarea id="quotationAdminNotes" placeholder="Add notes or instructions for this customer...">${escapeHtml(request.admin_notes || "")}</textarea></div>
+                <div class="modal-field full"><label for="quotationStatus">Request status</label><select id="quotationStatus">
+                    <option value="REQUESTED" ${request.status === "REQUESTED" ? "selected" : ""}>Requested</option>
+                    <option value="REVIEWING" ${request.status === "REVIEWING" ? "selected" : ""}>Reviewing</option>
+                    <option value="APPROVED" ${request.status === "APPROVED" ? "selected" : ""}>Approved</option>
+                    <option value="REVISION" ${request.status === "REVISION" ? "selected" : ""}>Revision required</option>
+                    <option value="DECLINED" ${request.status === "DECLINED" ? "selected" : ""}>Declined</option>
+                    <option value="CANCELLED" ${request.status === "CANCELLED" ? "selected" : ""}>Cancelled</option>
+                    <option value="CONVERTED" ${request.status === "CONVERTED" ? "selected" : ""}>Converted to booking</option>
+                </select></div>
+            </section>
+            <div class="modal-actions ocular-modal-actions"><button class="btn primary" onclick="updateQuotation('${request.id}')">Save changes</button></div>
         </div>
-
-
-        <div class="modal-field full"
-             style="margin-top:18px;">
-
-            <label for="inspectionDistanceKm">Confirmed Route Distance from North Caloocan (km)</label>
-            <input id="inspectionDistanceKm" type="number" min="0" step="0.1" value="${request.inspection_distance_km ?? ""}" placeholder="Enter route distance">
-
-            <label for="inspectionFeeInput" style="margin-top:10px;">Inspection Fee (₱)</label>
-            <input id="inspectionFeeInput" type="number" min="0" step="100" value="${request.inspection_fee ?? ""}" placeholder="System-calculated fee">
-            <small class="field-help">System-calculated inspection fees are rounded up to the nearest ₱100.</small>
-
-            <label>${request.request_purpose === "OCULAR_INSPECTION" ? "Payment Reference" : "Additional Request"}</label>
-
-            <textarea readonly>${escapeHtml(
-        request.additional_request ||
-        "No additional request."
-    )}</textarea>
-
-        </div>
-
-
-        <div class="modal-field full"
-             style="margin-top:15px;">
-
-            <label>
-                Admin Notes
-            </label>
-
-            <textarea
-                id="quotationAdminNotes"
-                placeholder="Add notes or instructions for this customer..."
-            >${escapeHtml(
-        request.admin_notes || ""
-    )}</textarea>
-
-        </div>
-
-
-        <div class="modal-field full"
-             style="margin-top:15px;">
-
-            <label>
-                Quotation Status
-            </label>
-
-            <select id="quotationStatus">
-
-                <option
-                    value="REQUESTED"
-                    ${request.status === "REQUESTED"
-            ? "selected"
-            : ""}>
-                    Requested
-                </option>
-
-                <option
-                    value="REVIEWING"
-                    ${request.status === "REVIEWING"
-            ? "selected"
-            : ""}>
-                    Reviewing
-                </option>
-
-                <option
-                    value="APPROVED"
-                    ${request.status === "APPROVED"
-            ? "selected"
-            : ""}>
-                    Approved
-                </option>
-
-                <option
-                    value="REVISION"
-                    ${request.status === "REVISION"
-            ? "selected"
-            : ""}>
-                    Revision Required
-                </option>
-
-                <option
-                    value="DECLINED"
-                    ${request.status === "DECLINED"
-            ? "selected"
-            : ""}>
-                    Declined
-                </option>
-
-                <option
-                    value="CONVERTED"
-                    ${request.status === "CONVERTED"
-            ? "selected"
-            : ""}>
-                    Converted to Booking
-                </option>
-
-            </select>
-
-        </div>
-
-
-        <div class="modal-actions">
-
-            <button
-                class="btn primary"
-                onclick="updateQuotation('${request.id}')">
-
-                Save Changes
-
-            </button>
-
-        </div>
-
     `);
+    document.querySelector("#modal .modal-card")?.classList.add("ocular-request-modal-card");
 
     const inspectionDistanceInput = document.getElementById('inspectionDistanceKm');
     const inspectionFeeInput = document.getElementById('inspectionFeeInput');
@@ -1677,6 +1876,8 @@ async function updateQuotation(id) {
 
     if (!status) return;
 
+    const previousStatus = String(quotationRequests.find(item => String(item.id) === String(id))?.status || "").toUpperCase();
+
 
     try {
 
@@ -1714,6 +1915,13 @@ async function updateQuotation(id) {
             if (acceptError) throw acceptError;
         }
 
+        let emailNotice = "";
+        if (String(status).toUpperCase() !== previousStatus && ["APPROVED", "DECLINED"].includes(String(status).toUpperCase())) {
+            const emailResult = await sendOcularStatusEmail(id);
+            if (!emailResult.sent) emailNotice = ` Email was not sent: ${emailResult.error}`;
+            else emailNotice = ` A status email was sent to ${quotationRequests.find(item => String(item.id) === String(id))?.customer_email || "the customer"}.`;
+        }
+
 
         closeModal();
 
@@ -1721,7 +1929,9 @@ async function updateQuotation(id) {
         await loadQuotationRequests();
 
 
-        showAdminToast("Ocular inspection request updated successfully.");
+        const resultStatus = String(status).toUpperCase();
+        const toastType = emailNotice.startsWith(" Email was not sent:") || resultStatus === "DECLINED" ? "error" : "success";
+        showAdminToast(`Ocular inspection request updated successfully.${emailNotice}`, toastType);
 
 
     } catch (error) {
@@ -1834,13 +2044,40 @@ async function initializeAdmin() {
 document.getElementById("refreshBookingChangeRequests")?.addEventListener("click", () => void loadBookingChangeRequests());
 document.getElementById("bookingChangeRequestList")?.addEventListener("click", event => {
     const button = event.target.closest("[data-change-review]");
-    if (!button) return;
-    openBookingChangeReview(button.dataset.requestId, button.dataset.changeReview === "accept");
+    if (button) {
+        const menu = button.closest("details");
+        if (menu) menu.open = false;
+        openBookingChangeReview(button.dataset.requestId, button.dataset.changeReview === "accept");
+        return;
+    }
+    const viewButton = event.target.closest("[data-view-change-request]");
+    if (viewButton) {
+        const menu = viewButton.closest("details");
+        if (menu) menu.open = false;
+        const request = bookingChangeRequests.find(item => String(item.id) === String(viewButton.dataset.viewChangeRequest));
+        if (request) openCustomerRequestHistory(request.booking_id);
+    }
 });
 document.getElementById("modalContent")?.addEventListener("click", event => {
+    if (event.target.closest("#cancelOcularStatusReview")) {
+        closeModal();
+        return;
+    }
+    const ocularStatusButton = event.target.closest("#confirmOcularStatusReview");
+    if (ocularStatusButton) {
+        const { requestId, status } = ocularStatusButton.dataset;
+        closeModal();
+        void setOcularInspectionStatus(requestId, status);
+        return;
+    }
+    if (event.target.closest("#cancelBookingChangeReview")) {
+        closeModal();
+        return;
+    }
     const button = event.target.closest("#confirmBookingChangeReview");
     if (!button) return;
     void submitBookingChangeReview(button.dataset.requestId, button.dataset.accept === "true");
 });
 
 initializeAdmin();
+scheduleExpenseArchive();

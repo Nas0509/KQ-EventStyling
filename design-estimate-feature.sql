@@ -27,6 +27,7 @@ alter table public.ocular_inspection_requests
     add column if not exists venue_name text,
     add column if not exists inspection_fee numeric,
     add column if not exists inspection_distance_km numeric,
+    add column if not exists payment_reference text,
     add column if not exists design_image_path text,
     add column if not exists design_estimate_package text,
     add column if not exists design_estimate_price numeric,

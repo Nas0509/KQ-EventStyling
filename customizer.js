@@ -1062,6 +1062,54 @@ function updateSummary() {
 // REQUEST QUOTATION
 // ========================================
 
+let customizerToastTimer;
+
+function showCustomizerToast(message, type = "error", title = "Please check the form") {
+    let toast = document.getElementById("customizerToast");
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "customizerToast";
+        toast.className = "customizer-toast";
+        toast.setAttribute("role", type === "error" ? "alert" : "status");
+        toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+
+        const icon = document.createElement("span");
+        icon.className = "customizer-toast-icon";
+        icon.setAttribute("aria-hidden", "true");
+
+        const content = document.createElement("div");
+        content.className = "customizer-toast-content";
+        const heading = document.createElement("strong");
+        heading.className = "customizer-toast-title";
+        const text = document.createElement("span");
+        text.className = "customizer-toast-message";
+        content.append(heading, text);
+
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "customizer-toast-close";
+        close.setAttribute("aria-label", "Dismiss notification");
+        close.textContent = "×";
+        close.addEventListener("click", () => {
+            toast.classList.remove("is-visible");
+            window.clearTimeout(customizerToastTimer);
+        });
+
+        toast.append(icon, content, close);
+        document.body.appendChild(toast);
+    }
+
+    toast.className = `customizer-toast is-${type}`;
+    toast.setAttribute("role", type === "error" ? "alert" : "status");
+    toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+    toast.querySelector(".customizer-toast-icon").textContent = type === "error" ? "!" : "✓";
+    toast.querySelector(".customizer-toast-title").textContent = title;
+    toast.querySelector(".customizer-toast-message").textContent = message;
+    window.clearTimeout(customizerToastTimer);
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    customizerToastTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 6000);
+}
+
 async function requestQuotation() {
     const nameInput = document.getElementById("ocularName");
     const emailInput = document.getElementById("ocularEmail");
@@ -1078,7 +1126,7 @@ async function requestQuotation() {
     const venueName = venueNameInput?.value.trim() || "";
 
     if (!window.supabaseClient) {
-        alert("Supabase is not connected.");
+        showCustomizerToast("The request service is temporarily unavailable. Please try again shortly.", "error", "Request unavailable");
         return;
     }
 
@@ -1095,25 +1143,21 @@ async function requestQuotation() {
         const customerContact = phoneInput?.value.trim() || "";
 
         if (!customerName || !customerEmail || !customerContact || !preferredDate || !preferredTime || !venueName || !inspectionAddressValue) {
-            alert("Please complete your name, email, contact number, preferred ocular date and time, venue name, and venue address.");
+            showCustomizerToast("Complete your name, email, contact number, preferred date and time, venue name, and venue address.");
             return;
         }
 
         const inspectionFee = Number.isFinite(window.kqInspectionFee) ? window.kqInspectionFee : null;
         const inspectionPaymentReference = inspectionPaymentReferenceInput?.value.trim() || "";
         if (!window.kqInspectionLocation || !inspectionFee) {
-            alert("Choose your Luzon city or municipality from the suggestions to calculate the inspection fee.");
+            showCustomizerToast("Choose your Luzon city or municipality from the suggestions so we can calculate the inspection fee.");
             return;
         }
         const inspectionDistanceKm = Number.isFinite(window.kqInspectionDistanceKm) ? window.kqInspectionDistanceKm : null;
-        if (!inspectionPaymentReference) {
-            alert("Pay the inspection fee shown using the QR code, then enter your payment transaction/reference number.");
-            return;
-        }
 
         const requestedSlot = getInspectionSlotForTime(preferredTime);
         if (!requestedSlot) {
-            alert("Choose an ocular appointment time between 6:00 AM and midnight.");
+            showCustomizerToast("Choose an ocular appointment time between 6:00 AM and midnight.");
             return;
         }
 
@@ -1124,7 +1168,7 @@ async function requestQuotation() {
         if (availabilityError) throw availabilityError;
         const currentAvailabilityRow = currentAvailabilityRows?.find(row => row.event_date === preferredDate);
         if (!currentAvailabilityRow) {
-            alert("We could not confirm availability for that date. Please refresh the calendar and try again.");
+            showCustomizerToast("We could not confirm availability for that date. Refresh the calendar and try again.");
             await loadInspectionAvailabilityForMonth();
             return;
         }
@@ -1139,7 +1183,7 @@ async function requestQuotation() {
         renderInspectionCalendar();
         if (refreshedAvailability[requestedSlot]) {
             updateInspectionTimeAvailability();
-            alert("That time slot has already been booked. Please choose another available time.");
+            showCustomizerToast("That time slot has already been booked. Choose another available time.");
             return;
         }
 
@@ -1151,7 +1195,14 @@ async function requestQuotation() {
         if (scheduleError) throw scheduleError;
         if (scheduleIssue) {
             updateInspectionTimeAvailability();
-            alert(scheduleIssue);
+            showCustomizerToast(scheduleIssue);
+            return;
+        }
+
+        if (!inspectionPaymentReference) {
+            showCustomizerToast("Your selected date and time are available. The payment QR code is shown above; pay the inspection fee and enter the transaction/reference number to continue.");
+            document.getElementById("inspectionPaymentBlock")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            inspectionPaymentReferenceInput?.focus({ preventScroll: true });
             return;
         }
 
@@ -1170,7 +1221,7 @@ async function requestQuotation() {
             venue_name: venueName,
             inspection_fee: inspectionFee,
             inspection_distance_km: inspectionDistanceKm,
-            additional_request: inspectionPaymentReference,
+            payment_reference: inspectionPaymentReference,
             status: "REQUESTED",
             admin_notes: ""
         };
@@ -1187,7 +1238,7 @@ async function requestQuotation() {
         showQuotationModal();
     } catch (error) {
         console.error("Ocular inspection request failed:", error);
-        alert(error.message || "Unable to send the ocular inspection request. Please try again.");
+        showCustomizerToast(error.message || "Unable to send the ocular inspection request. Please try again.", "error", "Request not sent");
     }
 }
 

@@ -13,7 +13,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=20261020-readonly-client-notes">
+          href="css/admin.css?v=20261021-ocular-confirm-dialog">
 
 </head>
 
@@ -34,9 +34,14 @@
 
         </a>
 
+        <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Open menu" aria-expanded="false" aria-controls="adminSidebarNav">
+            <span></span><span></span><span></span>
+        </button>
+
+        <div class="sidebar-menu-panel" id="adminMobileMenu">
 
         <!-- NAVIGATION -->
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" id="adminSidebarNav">
 
             <button type="button"
                     class="nav-item active"
@@ -122,6 +127,8 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.3a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4Z"></path><path d="m19.2 13.5 1.1.9-1.5 2.6-1.4-.5a7.5 7.5 0 0 1-1.6.9l-.3 1.5h-3l-.3-1.5a7.5 7.5 0 0 1-1.6-.9l-1.4.5-1.5-2.6 1.1-.9a7.2 7.2 0 0 1 0-1.9l-1.1-.9 1.5-2.6 1.4.5a7.5 7.5 0 0 1 1.6-.9l.3-1.5h3l.3 1.5a7.5 7.5 0 0 1 1.6.9l1.4-.5 1.5 2.6-1.1.9a7.2 7.2 0 0 1 0 1.9Z"></path></svg>
                 </button>
             </div>
+        </div>
+
         </div>
 
     </aside>
@@ -377,6 +384,16 @@
                 </div>
                 <div id="emptyArchive" class="empty-state">No cancelled bookings have been archived.</div>
             </div>
+            <div class="panel table-panel expense-archive-panel">
+                <div class="panel-head"><div><h3>Archived Expenses</h3><small>Expenses from previous months and expenses archived manually.</small></div></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Description</th><th>Expense Date</th><th>Amount</th><th>Archived On</th></tr></thead>
+                        <tbody id="archivedExpenseTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="emptyExpenseArchive" class="empty-state">No expenses have been archived.</div>
+            </div>
         </section>
 
 
@@ -605,6 +622,10 @@
                         Converted
                     </option>
 
+                    <option value="CANCELLED">
+                        Cancelled
+                    </option>
+
                 </select>
 
             </div>
@@ -635,19 +656,14 @@
                                 </th>
 
                                 <th>
-                                    Venue
-                                </th>
-
-                                <th>
                                     Inspection Fee
                                 </th>
-
                                 <th>
-                                    Location
+                                    Payment Reference
                                 </th>
 
                                 <th>
-                                    Payment Reference
+                                    Status
                                 </th>
 
                                 <th>
@@ -969,6 +985,17 @@
 
                     <div id="expenseList"
                          class="expense-list"></div>
+                    <section id="monthlySalesSummary" class="monthly-sales-summary" aria-label="Monthly sales analytics">
+                        <div class="monthly-sales-heading">
+                            <div><h4>Monthly Net Income</h4><p id="salesAnalyticsMonthLabel"></p></div>
+                            <label for="salesAnalyticsMonth">Choose month<input type="month" id="salesAnalyticsMonth"></label>
+                        </div>
+                        <div id="monthlyNetIncomeChart" class="monthly-net-income-chart" role="img" aria-label="Monthly net income bar chart"></div>
+                        <p id="monthlyNetIncomePeak" class="monthly-net-income-peak"></p>
+                    </section>
+                    <section class="monthly-events-view" aria-label="Events for selected month">
+                        <div class="monthly-events-heading"><div><h4>Monthly activity</h4><span id="monthlyEventsCount">0 bookings · 0 expenses</span></div><button type="button" class="small-btn edit monthly-activity-view" id="monthlyActivityView">VIEW</button></div>
+                    </section>
 
                 </article>
 
@@ -1073,7 +1100,7 @@
     </main>
 
 
-    <div id="bookingActionsPopover" class="booking-actions-popover" popover="auto" role="menu" aria-label="Booking actions"></div>
+    <div id="bookingActionsPopover" class="booking-actions-popover" popover="auto" role="menu" aria-label="Record actions"></div>
 
     <!-- =====================================================
          MODAL
@@ -1108,7 +1135,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="admin.js?v=20261020-client-notes-restored"></script>
+    <script src="admin.js?v=20261021-ocular-confirm-dialog"></script>
 
 
 </body>

@@ -994,6 +994,28 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     }
 
+    function showAlreadyBookedModal(booking) {
+        document.getElementById("alreadyBookedModal")?.remove();
+        const modal = document.createElement("div");
+        modal.id = "alreadyBookedModal";
+        modal.style.cssText = "position:fixed;inset:0;background:rgba(18,38,49,.58);display:flex;align-items:center;justify-content:center;z-index:100000;padding:20px";
+        const eventDateText = booking?.event_date
+            ? new Intl.DateTimeFormat("en-PH", { dateStyle: "long" }).format(new Date(`${String(booking.event_date).slice(0, 10)}T12:00:00`))
+            : "the selected date";
+        modal.innerHTML = `<section role="alertdialog" aria-modal="true" aria-labelledby="alreadyBookedTitle" style="width:min(100%,440px);background:#fff;border-radius:18px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,.24)">
+            <div style="width:46px;height:46px;display:grid;place-items:center;border-radius:50%;background:#fff4df;color:#a56600;font-size:24px;font-weight:700">!</div>
+            <h2 id="alreadyBookedTitle" style="margin:16px 0 8px;color:#173b4b;font-size:23px">You already have a similar booking</h2>
+            <p style="margin:0;color:#536872;line-height:1.65">There is already a ${String(booking?.event_type || "event")} booking for ${eventDateText} in the ${String(booking?.time_slot || "selected").toLowerCase()} slot with similar details${booking?.id ? ` (reference ${String(booking.id)})` : ""}. Please check your booking history before submitting another request.</p>
+            <button type="button" id="closeAlreadyBooked" style="margin-top:22px;width:100%;padding:13px 18px;border:0;border-radius:9px;background:#1688b4;color:white;font-size:15px;font-weight:700;cursor:pointer">Okay, got it</button>
+        </section>`;
+        document.body.appendChild(modal);
+        document.body.style.overflow = "hidden";
+        modal.querySelector("#closeAlreadyBooked")?.addEventListener("click", () => {
+            modal.remove();
+            document.body.style.overflow = "";
+        });
+    }
+
     // ========================================
     // SUBMIT BOOKING
     // ========================================
@@ -1282,6 +1304,31 @@ document.addEventListener("DOMContentLoaded", async function () {
                 terms_accepted_at: new Date().toISOString(),
                 status: "PENDING"
             };
+
+            // Catch accidental repeat submissions for the same customer and event details.
+            const { data: existingBookings, error: duplicateCheckError } = await window.supabaseClient
+                .from("bookings")
+                .select("id,event_type,event_date,start_time,time_slot,guests,package_type,status")
+                .eq("user_id", user.id)
+                .eq("event_date", selectedDate)
+                .in("status", ["PENDING", "APPROVED"]);
+            if (duplicateCheckError) throw new Error(`We couldn't verify your existing bookings. Please try again. ${duplicateCheckError.message}`);
+            const minutesOf = value => {
+                const [hour, minute] = String(value || "").slice(0, 5).split(":").map(Number);
+                return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : -10000;
+            };
+            const duplicateBooking = (existingBookings || []).find(existing => {
+                const sameEvent = String(existing.event_type || "").trim().toLowerCase() === eventType.trim().toLowerCase();
+                const sameSlot = String(existing.time_slot || "").trim().toUpperCase() === selectedTimeSlot;
+                const closeStartTime = Math.abs(minutesOf(existing.start_time) - minutesOf(selectedStartTime)) <= 60;
+                const sameGuests = Number(existing.guests) === guests;
+                const samePackage = String(existing.package_type || "").trim().toUpperCase() === databasePackageType.toUpperCase();
+                return sameEvent && sameSlot && closeStartTime && (sameGuests || samePackage);
+            });
+            if (duplicateBooking) {
+                showAlreadyBookedModal(duplicateBooking);
+                return;
+            }
 
             console.log("📦 Submitting booking:", bookingId, "Reservation fee:", reservationFee);
             const { data: booking, error: bookingError } = await window.supabaseClient
