@@ -241,8 +241,7 @@ loginForm.addEventListener(
                             "kqReturnAfterLogin"
                         );
 
-                        window.location.href =
-                            "admin.html";
+                        window.location.replace("admin.html");
 
                     },
                     700
@@ -285,8 +284,7 @@ loginForm.addEventListener(
                         );
 
 
-                        window.location.href =
-                            destination;
+                        window.location.replace(destination);
 
                     },
                     700
@@ -350,3 +348,25 @@ if (rememberMe) {
         ? Boolean(savedEmail)
         : savedRememberPreference === "true";
 }
+
+let authenticatedRedirectInProgress = false;
+window.addEventListener("pageshow", async () => {
+    if (!window.supabaseClient || authenticatedRedirectInProgress || loginForm?.querySelector("button[type='submit']")?.disabled) return;
+
+    const { data, error } = await window.supabaseClient.auth.getSession();
+    if (error || !data?.session?.user) return;
+
+    const { data: profile, error: profileError } = await window.supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+    if (profileError || !profile) return;
+
+    authenticatedRedirectInProgress = true;
+    const destination = String(profile.role || "").toLowerCase() === "admin"
+        ? "admin.html"
+        : sessionStorage.getItem("kqReturnAfterLogin") || "index.html";
+    sessionStorage.removeItem("kqReturnAfterLogin");
+    window.location.replace(destination);
+});
