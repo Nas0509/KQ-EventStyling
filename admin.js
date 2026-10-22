@@ -310,7 +310,11 @@ function setMobileAdminNav(open) {
     mobileNavToggle.setAttribute("aria-expanded", String(open));
     mobileNavToggle.setAttribute("aria-label", open ? "Close menu" : "Open menu");
 }
-mobileNavToggle?.addEventListener("click", () => setMobileAdminNav(!adminSidebar.classList.contains("is-mobile-nav-open")));
+mobileNavToggle?.addEventListener("click", () => {
+    if (sidebarAccountMenu && !sidebarAccountMenu.hidden) setAccountMenuOpen(false);
+    closeAdminNotificationPanel();
+    setMobileAdminNav(!adminSidebar.classList.contains("is-mobile-nav-open"));
+});
 document.querySelectorAll(".nav-item").forEach(btn => btn.addEventListener("click", () => {
     showSection(btn.dataset.section);
     if (window.matchMedia("(max-width: 760px)").matches) setMobileAdminNav(false);
@@ -353,7 +357,12 @@ document.querySelectorAll("[data-section-jump]").forEach(target => {
     }
 });
 settingsMenuBtn?.addEventListener("click", () => {
-    setAccountMenuOpen(sidebarAccountMenu?.hidden ?? true);
+    const open = sidebarAccountMenu?.hidden ?? true;
+    if (window.matchMedia("(max-width: 760px)").matches) {
+        setMobileAdminNav(false);
+        closeAdminNotificationPanel();
+    }
+    setAccountMenuOpen(open);
 });
 window.addEventListener("resize", () => {
     if (sidebarAccountMenu && !sidebarAccountMenu.hidden) setAccountMenuOpen(true);
@@ -1506,6 +1515,10 @@ function positionAdminNotificationPanel() {
 }
 adminNotificationBtn?.addEventListener("click", () => {
     const isOpen = adminNotificationPanel.hidden;
+    if (window.matchMedia("(max-width: 760px)").matches) {
+        setMobileAdminNav(false);
+        setAccountMenuOpen(false);
+    }
     adminNotificationPanel.hidden = !isOpen;
     adminNotificationBtn.setAttribute("aria-expanded", String(isOpen));
     if (isOpen) positionAdminNotificationPanel();
