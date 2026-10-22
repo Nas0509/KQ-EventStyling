@@ -653,6 +653,16 @@ tbody tr:hover {
         color: #267c3b;
     }
 
+    .status.PAYMENT_FULLY_PAID {
+        background: #168a4a;
+        color: #fff;
+    }
+
+    .status.PAYMENT_DOWN_PAYMENT {
+        background: #e5f8eb;
+        color: #267c3b;
+    }
+
     .status.DECLINED,
     .status.CANCELLED {
         background: #fde8e8;

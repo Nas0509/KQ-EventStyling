@@ -875,7 +875,10 @@ function renderPayments() {
         : "No payment records yet.";
     document.getElementById("paymentTableBody").innerHTML = visiblePayments.map(b => {
         const p = payments.find(x => x.bookingId === b.id) || { total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" };
-        return `<tr><td data-label="Client"><strong>${escapeHtml(b.fullName)}</strong></td><td data-label="Event">${escapeHtml(b.eventType)}</td><td data-label="Date">${escapeHtml(b.eventDate)}</td><td data-label="Total">${money(p.total)}</td><td data-label="Paid">${money(p.paid)}</td><td data-label="Balance">${money(Number(p.total) - Number(p.paid))}</td><td data-label="Status"><span class="status ${p.status === "FULLY PAID" ? "APPROVED" : p.status === "NO DOWN PAYMENT" ? "PENDING" : "APPROVED"}">${escapeHtml(p.status)}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editPayment('${b.id}')">Update</button></td></tr>`;
+        const paymentStatusClass = p.status === "FULLY PAID"
+            ? "PAYMENT_FULLY_PAID"
+            : p.status === "NO DOWN PAYMENT" ? "PENDING" : "PAYMENT_DOWN_PAYMENT";
+        return `<tr><td data-label="Client"><strong>${escapeHtml(b.fullName)}</strong></td><td data-label="Event">${escapeHtml(b.eventType)}</td><td data-label="Date">${escapeHtml(b.eventDate)}</td><td data-label="Total">${money(p.total)}</td><td data-label="Paid">${money(p.paid)}</td><td data-label="Balance">${money(Number(p.total) - Number(p.paid))}</td><td data-label="Status"><span class="status ${paymentStatusClass}">${escapeHtml(p.status)}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editPayment('${b.id}')">Update</button></td></tr>`;
     }).join("");
 }
 
