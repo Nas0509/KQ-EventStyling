@@ -53,16 +53,23 @@ function statusClass(status) { return String(status || "").toUpperCase().replace
 
 function syncPayments() {
     bookings.forEach(b => {
-        if (!payments.find(p => p.bookingId === b.id)) {
-            const paid = Number(b.down_payment_amount) || 0;
-            payments.push({ bookingId: b.id, total: Number(b.amount) || 0, paid, status: paid > 0 ? "DOWN PAYMENT MADE" : "NO DOWN PAYMENT" });
-        } else if (String(b.payment_status || "").toUpperCase() === "PAID") {
-            const payment = payments.find(p => p.bookingId === b.id);
-            payment.paid = Math.max(Number(payment.paid) || 0, Number(b.down_payment_amount) || 0);
-            if (payment.paid < Number(payment.total)) payment.status = "DOWN PAYMENT MADE";
+        const total = Number(b.amount) || 0;
+        const paid = Number(b.down_payment_amount) || 0;
+        const payment = payments.find(p => String(p.bookingId) === String(b.id));
+        const status = paid <= 0
+            ? "NO DOWN PAYMENT"
+            : total > 0 && paid >= total
+                ? "FULLY PAID"
+                : "DOWN PAYMENT MADE";
+        if (payment) {
+            payment.total = total;
+            payment.paid = paid;
+            payment.status = status;
+        } else {
+            payments.push({ bookingId: b.id, total, paid, status });
         }
     });
-    payments = payments.filter(p => bookings.some(b => b.id === p.bookingId));
+    payments = payments.filter(p => bookings.some(b => String(b.id) === String(p.bookingId)));
     save();
 }
 // Bookings come from Supabase so submissions are shared across devices.
