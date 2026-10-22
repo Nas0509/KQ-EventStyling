@@ -3,6 +3,15 @@ const PAYMENT_KEY = "kqPayments";
 const EXPENSE_KEY = "kqExpenses";
 const EXPENSE_ARCHIVE_KEY = "kqArchivedExpenses";
 const INVENTORY_KEY = "kqInventory";
+const INVENTORY_USAGE_KEY = "kqInventoryUsage";
+const PACKAGE_BALLOON_REQUIREMENTS = {
+    "Simple Styling": 50,
+    "Package A": 50,
+    "Package B": 160,
+    "Package C": 215,
+    "Package D": 330,
+    "Package E": 640
+};
 
 const defaultInventory = [
     { id: 1, name: "Balloons", category: "Decoration", quantity: 200, unit: "pcs", cost: 5, reorder: 50 },
@@ -16,6 +25,7 @@ let payments = JSON.parse(localStorage.getItem(PAYMENT_KEY) || "[]");
 let expenses = JSON.parse(localStorage.getItem(EXPENSE_KEY) || "[]");
 let archivedExpenses = JSON.parse(localStorage.getItem(EXPENSE_ARCHIVE_KEY) || "[]");
 let inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null") || defaultInventory;
+let inventoryUsage = JSON.parse(localStorage.getItem(INVENTORY_USAGE_KEY) || "{}") || {};
 
 const accountMenuWrap = document.getElementById("accountMenuWrap");
 const settingsMenuBtn = document.getElementById("settingsMenuBtn");
@@ -47,7 +57,63 @@ const save = () => {
     localStorage.setItem(EXPENSE_KEY, JSON.stringify(expenses));
     localStorage.setItem(EXPENSE_ARCHIVE_KEY, JSON.stringify(archivedExpenses));
     localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
+    localStorage.setItem(INVENTORY_USAGE_KEY, JSON.stringify(inventoryUsage));
 };
+
+function getBookingPackageName(booking) {
+    const packageMatch = String(booking?.message || "").match(/Selected package:\s*(Simple Styling|Package [A-E])\b/i);
+    const packageName = booking?.selectedPackageName || packageMatch?.[1] || "";
+    return packageName.toLowerCase() === "simple styling"
+        ? "Simple Styling"
+        : packageName.replace(/package\s+([a-e])/i, (_, letter) => `Package ${letter.toUpperCase()}`);
+}
+
+function getBookingInventoryPlan(booking) {
+    const packageName = getBookingPackageName(booking);
+    const quantity = PACKAGE_BALLOON_REQUIREMENTS[packageName];
+    if (!quantity) return { error: "This booking has no recognized package, so its material usage cannot be calculated." };
+    const balloonItem = inventory.find(item => String(item.name || "").trim().toLowerCase() === "balloons")
+        || inventory.find(item => /balloon/i.test(String(item.name || "")));
+    if (!balloonItem) return { error: "Add a Balloons item to Inventory before approving this booking." };
+    const available = Number(balloonItem.quantity) || 0;
+    if (available < quantity) {
+        return { error: `Not enough balloons for ${packageName}. Required: ${quantity}; available: ${available}.` };
+    }
+    return {
+        packageName,
+        items: [{ inventoryId: balloonItem.id, name: balloonItem.name, quantity }]
+    };
+}
+
+function deductBookingInventory(booking, plan) {
+    if (!booking || !plan?.items?.length) return;
+    const key = String(booking.id);
+    const existingUse = inventoryUsage[key];
+    if (existingUse && !existingUse.restored) return;
+    plan.items.forEach(used => {
+        const item = inventory.find(material => String(material.id) === String(used.inventoryId));
+        if (item) item.quantity = Math.max(0, Number(item.quantity) - used.quantity);
+    });
+    inventoryUsage[key] = {
+        packageName: plan.packageName,
+        items: plan.items,
+        deductedAt: new Date().toISOString(),
+        restored: false
+    };
+}
+
+function restoreBookingInventory(bookingId) {
+    const key = String(bookingId);
+    const usage = inventoryUsage[key];
+    if (!usage || usage.restored) return false;
+    (usage.items || []).forEach(used => {
+        const item = inventory.find(material => String(material.id) === String(used.inventoryId));
+        if (item) item.quantity = (Number(item.quantity) || 0) + (Number(used.quantity) || 0);
+    });
+    usage.restored = true;
+    usage.restoredAt = new Date().toISOString();
+    return true;
+}
 
 function statusClass(status) { return String(status || "").toUpperCase().replace(/\s+/g, "_"); }
 
@@ -80,6 +146,7 @@ function normalizeBooking(row) {
         : (String(row.package_type || row.package || "").toUpperCase() === "BIG" ? "BIG" : "SIMPLE");
     return {
         ...row,
+        selectedPackageName: selectedPackage,
         fullName: row.full_name || "",
         eventType: row.event_type || "",
         eventDate: row.event_date || "",
@@ -112,6 +179,13 @@ async function loadBookings() {
     }
 
     bookings = (data || []).map(normalizeBooking);
+    let inventoryRestored = false;
+    bookings.forEach(booking => {
+        if (String(booking.status || "").toUpperCase() === "CANCELLED") {
+            inventoryRestored = restoreBookingInventory(booking.id) || inventoryRestored;
+        }
+    });
+    if (inventoryRestored) save();
     syncPayments();
     renderAll();
 }
@@ -1028,18 +1102,27 @@ function changeStatus(id, newStatus) {
     const booking = bookings.find(item => String(item.id) === String(id));
     if (!booking || !["APPROVED", "DECLINED"].includes(newStatus)) return;
     const approving = newStatus === "APPROVED";
+    const isNewApproval = approving && String(booking.status || "").toUpperCase() !== "APPROVED";
+    const inventoryPlan = isNewApproval ? getBookingInventoryPlan(booking) : null;
+    if (inventoryPlan?.error) {
+        showAdminToast(inventoryPlan.error, "error");
+        return;
+    }
     const action = approving ? "approve" : "decline";
     const effect = approving
-        ? "This will mark the booking as approved and notify the customer through the booking workflow."
+        ? `This will mark the booking as approved and notify the customer through the booking workflow.${isNewApproval ? ` It will deduct ${inventoryPlan.items.reduce((sum, item) => sum + item.quantity, 0)} balloons for ${inventoryPlan.packageName}.` : " Inventory for this booking has already been recorded."}`
         : "This will mark the booking as declined. Make sure this is the intended decision before continuing.";
     openModal(`<section class="booking-status-confirmation"><span class="eyebrow">BOOKING STATUS</span><h3>Are you sure you want to ${action} this booking?</h3><p class="field-help"><strong>${escapeHtml(booking.fullName || "Customer")}</strong> · ${escapeHtml(booking.eventType || "Event")} · ${escapeHtml(booking.eventDate || "Date not set")}</p><p class="field-help">${effect}</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingStatusChange">Go back</button><button type="button" class="btn ${approving ? "primary" : "danger"}" id="confirmBookingStatusChange" data-booking-id="${escapeAttr(id)}" data-status="${escapeAttr(newStatus)}">Yes, ${action} booking</button></div></section>`);
     document.querySelector("#modal .modal-card")?.classList.add("booking-status-confirmation-card");
 }
 
 async function applyBookingStatus(id, newStatus) {
-    const b = bookings.find(x => x.id === id); if (!b) return;
+    const b = bookings.find(x => String(x.id) === String(id)); if (!b) return;
+    const isNewApproval = newStatus === "APPROVED" && String(b.status || "").toUpperCase() !== "APPROVED";
+    const inventoryPlan = isNewApproval ? getBookingInventoryPlan(b) : null;
+    if (inventoryPlan?.error) { showAdminToast(inventoryPlan.error, "error"); return; }
     const reservationFee = Number(b.required_down_payment) || 0;
-    const existingPayment = payments.find(p => p.bookingId === id);
+    const existingPayment = payments.find(p => String(p.bookingId) === String(id));
     const verifiedPayment = newStatus === "APPROVED"
         ? Math.max(Number(b.down_payment_amount) || 0, reservationFee, Number(existingPayment?.paid) || 0)
         : Number(b.down_payment_amount) || 0;
@@ -1052,9 +1135,10 @@ async function applyBookingStatus(id, newStatus) {
         .eq("id", id);
     if (error) { showAdminToast(`Unable to update booking status: ${error.message}`, "error"); return; }
     b.status = newStatus;
+    if (isNewApproval) deductBookingInventory(b, inventoryPlan);
     if (newStatus === "APPROVED") {
         b.down_payment_amount = verifiedPayment;
-        let payment = payments.find(p => p.bookingId === id);
+        let payment = payments.find(p => String(p.bookingId) === String(id));
         if (!payment) {
             payment = { bookingId: id, total: Number(b.amount) || 0, paid: verifiedPayment, status: "NO DOWN PAYMENT" };
             payments.push(payment);
@@ -1112,7 +1196,7 @@ function requestCancelBooking(id) {
 }
 
 async function confirmCancelBooking(id) {
-    const booking = bookings.find(item => item.id === id);
+    const booking = bookings.find(item => String(item.id) === String(id));
     const reason = document.getElementById("cancellationReason")?.value.trim() || "";
     if (!booking || !reason) {
         showAdminToast("Enter a cancellation reason to keep with the archived booking.", "error");
@@ -1131,6 +1215,8 @@ async function confirmCancelBooking(id) {
     }
     booking.status = "CANCELLED";
     booking.adminNotes = notes;
+    restoreBookingInventory(booking.id);
+    save();
     closeModal();
     renderAll();
     showAdminToast("Booking cancelled and saved in the Archive.");
