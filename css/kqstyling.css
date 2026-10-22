@@ -3249,3 +3249,15 @@ body.logout-modal-open {
     .nav-links a::after { display: none; }
     .nav-links a.active { background: #eaf6fb; }
 }
+
+@media (max-width: 800px) {
+    .account-menu {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 82px);
+        right: 12px;
+        left: auto;
+        width: min(320px, calc(100vw - 24px));
+        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 96px);
+        overflow-y: auto;
+    }
+}
