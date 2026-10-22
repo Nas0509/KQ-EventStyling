@@ -65,7 +65,7 @@ async function checkAdmin() {
             "Unable to verify your account."
         );
 
-        await supabaseClient.auth.signOut();
+        await supabaseClient.auth.signOut({ scope: "local" });
 
         window.location.href =
             "login.html";
@@ -429,7 +429,7 @@ if (logoutBtn) {
         "click",
         async function () {
 
-            await supabaseClient.auth.signOut();
+            await supabaseClient.auth.signOut({ scope: "local" });
 
             window.location.href =
                 "login.html";

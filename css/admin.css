@@ -494,14 +494,17 @@ h2 {
 .booking-change-reason p { margin: 5px 0 0; color: #354e5b; font-size: .86rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .booking-change-card-actions { display: flex; align-items: center; gap: 8px; }
 .booking-change-menu { position: relative; flex: 0 0 auto; }
-.booking-change-menu summary { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid #d8e4eb; border-radius: 10px; color: #405766; background: #fff; font-size: 23px; line-height: 1; cursor: pointer; list-style: none; }
+.booking-change-menu summary.booking-actions-trigger { width: 38px; height: 38px; padding: 0 0 4px; }
 .booking-change-menu summary::-webkit-details-marker { display: none; }
 .booking-change-menu[open] summary, .booking-change-menu summary:hover { border-color: #2495c1; color: #147da9; background: #f0f9fc; }
-.booking-change-menu-options { position: absolute; z-index: 20; top: calc(100% + 5px); right: 0; display: grid; min-width: 132px; padding: 5px; border: 1px solid #dce6eb; border-radius: 11px; background: #fff; box-shadow: 0 10px 25px rgba(27, 58, 75, .16); }
-.booking-change-menu-options button { padding: 9px 10px; border: 0; border-radius: 7px; color: #314d5b; background: transparent; text-align: left; font: inherit; font-size: .82rem; cursor: pointer; }
+.booking-change-menu-options { position: absolute; z-index: 20; top: calc(100% + 5px); right: 0; display: grid; width: 178px; padding: 6px; border: 1px solid #dce6ec; border-radius: 12px; background: #fff; box-shadow: 0 14px 36px rgba(22, 39, 50, .18), 0 2px 7px rgba(22, 39, 50, .06); }
+.booking-change-menu-options button { min-height: 38px; padding: 9px 11px; border: 0; border-radius: 8px; color: #314d5b; background: transparent; text-align: left; font: inherit; font-size: .84rem; font-weight: 650; cursor: pointer; }
 .booking-change-menu-options button:hover, .booking-change-menu-options button:focus-visible { background: #edf7fb; color: #147da9; }
+.booking-change-menu-options button.approve { color: #21824a; }
+.booking-change-menu-options button.approve:hover { background: #edf7fb; color: #21824a; }
 .booking-change-menu-options button[data-change-review="reject"] { color: #c94141; }
 .booking-change-menu-options button[data-change-review="reject"]:hover { background: #fff0ee; }
+.booking-change-menu-options button.edit { color: #147da9; }
 .booking-change-history-status { flex: 0 0 auto; padding: 7px 10px; border-radius: 999px; font-size: .68rem; font-weight: 800; }
 .booking-change-history-status.is-accepted { color: #187343; background: #e7f6ed; }
 .booking-change-history-status.is-rejected { color: #a33c31; background: #fff0ee; }
@@ -527,6 +530,12 @@ h2 {
 .booking-change-confirmation .field-help { line-height: 1.65; }
 .booking-change-confirmation .modal-actions { flex-wrap: wrap; }
 .modal-card.ocular-action-confirmation-card { width: min(500px, calc(100vw - 40px)); padding: 28px; }
+.modal-card.booking-status-confirmation-card { width: min(500px, calc(100vw - 40px)); padding: 28px; }
+.booking-status-confirmation .eyebrow { display: block; margin: 0 40px 6px 0; color: #1887b4; font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.booking-status-confirmation h3 { margin: 0 40px 12px 0; }
+.booking-status-confirmation .field-help { margin: 0 0 10px; color: #5d707b; line-height: 1.65; }
+.booking-status-confirmation .field-help strong { color: #263f4d; }
+.booking-status-confirmation .modal-actions { margin-top: 22px; flex-wrap: wrap; }
 .ocular-status-confirmation h3 { margin-bottom: 10px; }
 .ocular-status-confirmation .field-help { margin: 0; color: #5d707b; line-height: 1.65; }
 .ocular-status-confirmation .modal-actions { margin-top: 22px; }
@@ -571,6 +580,9 @@ h2 {
     .booking-change-confirmation .modal-actions button { width: 100%; }
     .modal-card.ocular-request-modal-card { width: calc(100vw - 20px); max-height: 94vh; padding: 21px 16px; }
     .modal-card.ocular-action-confirmation-card { width: calc(100vw - 20px); padding: 22px 18px; }
+    .modal-card.booking-status-confirmation-card { width: calc(100vw - 20px); padding: 22px 18px; }
+    .booking-status-confirmation .modal-actions { flex-direction: column-reverse; }
+    .booking-status-confirmation .modal-actions button { width: 100%; }
     .ocular-request-header { margin-right: 34px; margin-bottom: 15px; }
     .ocular-request-header h3 { font-size: 1.48rem; }
     .ocular-detail-section { margin-bottom: 12px; padding: 13px; }
@@ -791,7 +803,20 @@ tbody tr:hover {
 .monthly-sales-heading h4 { margin: 0; color: var(--ink); font-size: 1rem; }
 .monthly-sales-heading p { margin: 4px 0 0; color: var(--ink-soft); font-size: .8rem; }
 .monthly-sales-heading label { display: grid; gap: 4px; color: var(--ink-soft); font-size: .75rem; font-weight: 700; }
-.monthly-sales-heading input { min-height: 38px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+.sales-month-picker { position: relative; z-index: 2; display: grid; width: min(210px, 100%); gap: 4px; color: var(--ink-soft); font-size: .75rem; font-weight: 700; }
+.sales-month-picker-trigger { display: flex; width: 100%; min-width: 0; min-height: 38px; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-size: .82rem; text-align: left; cursor: pointer; }
+.sales-month-picker-trigger:focus-visible,
+.sales-month-picker-year button:focus-visible,
+.sales-month-picker-grid button:focus-visible { outline: 3px solid rgba(41, 155, 211, .28); outline-offset: 2px; }
+.sales-month-picker-popover[hidden] { display: none !important; }
+.sales-month-picker-popover { position: absolute; top: calc(100% + 5px); right: 0; left: 0; width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #dce7ed; border-radius: 10px; background: #fff; box-shadow: 0 12px 28px rgba(20, 43, 57, .16); }
+.sales-month-picker-year { display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; align-items: center; gap: 6px; margin-bottom: 7px; text-align: center; }
+.sales-month-picker-year strong { color: var(--ink); font-size: .88rem; }
+.sales-month-picker-year button { width: 34px; height: 32px; border: 1px solid #dce7ed; border-radius: 7px; background: #fff; color: #167cae; font: inherit; font-size: 1.2rem; cursor: pointer; }
+.sales-month-picker-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.sales-month-picker-grid button { min-width: 0; min-height: 34px; padding: 5px 2px; border: 0; border-radius: 7px; background: transparent; color: #435965; font: inherit; font-size: .76rem; cursor: pointer; }
+.sales-month-picker-grid button:hover { background: #edf7fb; }
+.sales-month-picker-grid button.is-selected { background: #168bb9; color: #fff; font-weight: 750; }
 .monthly-net-income-chart { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; width: 100%; min-width: 0; box-sizing: border-box; padding: 12px 0 8px; border-bottom: 1px solid #dbeaf1; }
 .monthly-net-column { display: grid; grid-template-rows: 22px 136px 20px; align-items: end; min-width: 0; padding: 3px 1px; border-radius: 8px; text-align: center; }
 .monthly-net-column.is-selected { background: #e7f5fb; }
@@ -805,6 +830,7 @@ tbody tr:hover {
 .monthly-net-income-peak { margin: 12px 0 0; padding: 11px 13px; border-radius: 9px; background: #f7fbfd; color: var(--ink-soft); font-size: .82rem; line-height: 1.45; }
 .monthly-net-income-peak:not(:empty) { font-weight: 600; }
 .expense-archive-panel { margin-top: 18px; }
+.expense-archive-panel > .panel-head { padding: 18px 20px 0; }
 .monthly-events-view { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
 .monthly-events-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
 .monthly-events-heading h4 { margin: 0; color: var(--ink); font-size: .98rem; }
@@ -824,6 +850,9 @@ tbody tr:hover {
 .monthly-activity-report .table-wrap { max-height: 330px; overflow: auto; }
 .monthly-report-record-status { color: var(--ink-soft); font-size: .8rem; }
 .monthly-activity-report td small { color: var(--ink-soft); }
+.monthly-report-cell-stack { display: grid; gap: 3px; }
+.monthly-report-cell-stack small,
+.monthly-report-subvalue { display: block; margin-top: 3px; color: #71838f; line-height: 1.4; }
 
 @media (max-width: 700px) {
     .expense-item { flex-wrap: wrap; }
@@ -1696,9 +1725,9 @@ tbody tr:hover {
     .sidebar {
         position: relative;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
-        column-gap: 12px;
+        column-gap: 8px;
         width: 100%;
         height: auto;
         padding: 10px 14px;
@@ -1708,7 +1737,16 @@ tbody tr:hover {
     }
     .sidebar .brand { grid-column: 1; grid-row: 1; width: auto; justify-content: flex-start; padding: 0; margin: 0; }
     .sidebar .brand-logo { width: 44px; height: 44px; }
-    .mobile-nav-toggle { display: flex; grid-column: 2; grid-row: 1; }
+    .sidebar > .admin-header-actions { grid-column: 2; grid-row: 1; width: auto; min-width: 0; min-height: 44px; justify-content: flex-end; gap: 8px; }
+    .sidebar > .admin-header-actions .admin-user { width: auto; gap: 0; }
+    .sidebar > .admin-header-actions > .admin-user { display: none; }
+    .sidebar > .admin-header-actions .admin-user > div { display: none; }
+    .sidebar > .admin-header-actions .admin-user .avatar { width: 34px; height: 34px; }
+    .sidebar > .admin-header-actions .admin-notification-btn { width: 38px; height: 38px; }
+    .sidebar > .admin-header-actions > .account-menu-wrap { width: auto; flex: 0 0 auto; }
+    .sidebar > .admin-header-actions > .account-menu-wrap .sidebar-settings-button { width: 38px; height: 38px; color: #167cae; }
+    .sidebar > .admin-header-actions > .account-menu-wrap .sidebar-settings-button svg { width: 20px; height: 20px; }
+    .mobile-nav-toggle { display: flex; grid-column: 3; grid-row: 1; }
     .sidebar-menu-panel { display: none; position: absolute; top: calc(100% + 8px); left: 12px; right: 12px; z-index: 40; padding: 8px; border: 1px solid #dce7ec; border-radius: 15px; background: #fff; box-shadow: 0 16px 38px rgba(24, 50, 64, .18); }
     .sidebar.is-mobile-nav-open .sidebar-menu-panel { display: grid; gap: 6px; }
     .sidebar-nav { display: grid; grid-template-columns: 1fr; gap: 3px; width: 100%; margin: 0; padding: 0; border: 0; }
@@ -2172,6 +2210,423 @@ tbody tr:hover {
 .btn.danger { background: #c94d4d; color: #fff; transition: background .18s ease; }
 .btn.danger:hover { background: #ae3e3e; }
 .btn.danger:disabled { cursor: wait; opacity: .7; }
+.expense-action-confirmation .eyebrow { display: block; margin: 0 40px 6px 0; color: #1887b4; font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+.expense-action-confirmation h3 { margin: 0 40px 12px 0; }
+.expense-action-confirmation .field-help { margin: 0; color: #5d707b; line-height: 1.6; }
+.expense-action-confirmation .field-help strong { color: #263f4d; }
+.expense-action-confirmation .modal-actions { margin-top: 22px; flex-wrap: wrap; }
+
+#expenseAmount { appearance: textfield; -moz-appearance: textfield; }
+#expenseAmount::-webkit-inner-spin-button,
+#expenseAmount::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
+
+@media (max-width: 760px) {
+    .monthly-activity-report .table-wrap { max-height: none; overflow: visible; }
+    .monthly-report-booking-table,
+    .monthly-report-expense-table {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .monthly-report-booking-table thead,
+    .monthly-report-expense-table thead { display: none; }
+    .monthly-report-booking-table tbody,
+    .monthly-report-expense-table tbody { display: grid; gap: 9px; }
+    .monthly-report-booking-table tbody tr,
+    .monthly-report-expense-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 9px;
+        background: #fff;
+    }
+    .monthly-report-booking-table tbody td,
+    .monthly-report-expense-table tbody td {
+        display: block;
+        min-width: 0;
+        padding: 9px 10px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .78rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    .monthly-report-booking-table tbody td::before,
+    .monthly-report-expense-table tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .62rem;
+        font-weight: 750;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    .monthly-report-booking-table tbody td:nth-child(3),
+    .monthly-report-booking-table tbody td:last-child,
+    .monthly-report-expense-table tbody td:nth-child(2) { grid-column: 1 / -1; }
+    .monthly-report-booking-table tbody td:last-child,
+    .monthly-report-expense-table tbody td:last-child { border-bottom: 0; }
+    .monthly-report-cell-stack { display: grid; gap: 2px; }
+    .monthly-report-cell-stack small,
+    .monthly-report-subvalue { display: block; color: #71838f; overflow-wrap: anywhere; }
+    .monthly-report-booking-table .status { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+}
+
+.payment-status-picker { position: relative; width: 100%; min-width: 0; }
+.payment-status-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: .9rem;
+    text-align: left;
+    cursor: pointer;
+}
+.payment-status-trigger:focus-visible { outline: 3px solid rgba(41, 155, 211, .28); outline-offset: 2px; }
+.payment-status-options[hidden] { display: none !important; }
+.payment-status-options {
+    position: absolute;
+    z-index: 15;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 5px;
+    border: 1px solid #dce7ed;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 10px 24px rgba(20, 43, 57, .16);
+}
+.payment-status-options button {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: .86rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+.payment-status-options button:hover,
+.payment-status-options button:focus-visible { background: #edf7fb; color: #146f99; outline: none; }
+
+@media (max-width: 760px) {
+    #ocularTableWrap { overflow: visible; }
+    #ocularRequestTable {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    #ocularRequestTable thead { display: none; }
+    #ocularRequestTable tbody { display: grid; gap: 10px; }
+    #ocularRequestTable tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #ocularRequestTable tbody td {
+        display: block;
+        min-width: 0;
+        padding: 10px 11px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .8rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #ocularRequestTable tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .64rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    #ocularRequestTable tbody td:nth-child(3),
+    #ocularRequestTable tbody td:nth-child(5),
+    #ocularRequestTable tbody td:last-child { grid-column: 1 / -1; }
+    #ocularRequestTable tbody td:last-child { display: flex; align-items: center; justify-content: space-between; border-bottom: 0; }
+    #ocularRequestTable tbody td:last-child::before { margin: 0; }
+    #ocularRequestTable .booking-client-cell { display: grid; gap: 2px; min-width: 0; }
+    #ocularRequestTable .booking-client-cell small,
+    #ocularRequestTable .ocular-schedule-value { display: block; color: #71838f; overflow-wrap: anywhere; }
+
+    #bookingTableWrap { overflow: visible; }
+    #archiveTableWrap,
+    #archivedExpenseTableWrap { overflow: visible; }
+    #archiveBookingTable,
+    #archivedExpenseTable {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    #archiveBookingTable thead,
+    #archivedExpenseTable thead { display: none; }
+    #archiveBookingTable tbody,
+    #archivedExpenseTable tbody {
+        display: grid;
+        gap: 10px;
+    }
+    #archiveBookingTable tbody tr,
+    #archivedExpenseTable tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #archiveBookingTable tbody td,
+    #archivedExpenseTable tbody td {
+        display: block;
+        min-width: 0;
+        padding: 10px 11px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .8rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #archiveBookingTable tbody td::before,
+    #archivedExpenseTable tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .64rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    #archiveBookingTable tbody td:first-child,
+    #archiveBookingTable tbody td.archive-record,
+    #archiveBookingTable tbody td:last-child,
+    #archivedExpenseTable tbody td:first-child,
+    #archivedExpenseTable tbody td:last-child { grid-column: 1 / -1; }
+    #archiveBookingTable tbody td:last-child { border-bottom: 0; }
+    #archiveBookingTable .booking-client-cell,
+    #archiveBookingTable .archive-date-cell { display: grid; gap: 2px; min-width: 0; }
+    #archiveBookingTable .booking-client-cell small,
+    #archiveBookingTable .archive-date-cell small { color: #71838f; overflow-wrap: anywhere; }
+    #archiveBookingTable .archive-record { overflow-wrap: anywhere; }
+    #archivedExpenseTable tbody td:last-child { display: flex; align-items: center; justify-content: space-between; border-bottom: 0; }
+    #archivedExpenseTable tbody td:last-child::before { margin: 0; }
+    #paymentTableWrap { overflow: visible; }
+    #adminPaymentTable {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    #adminPaymentTable thead { display: none; }
+    #adminPaymentTable tbody { display: grid; gap: 10px; }
+    #adminPaymentTable tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #adminPaymentTable tbody td {
+        display: block;
+        min-width: 0;
+        padding: 10px 11px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .8rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #adminPaymentTable tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .64rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    #adminPaymentTable tbody td:first-child,
+    #adminPaymentTable tbody td:last-child { grid-column: 1 / -1; }
+    #adminPaymentTable .status {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.25;
+    }
+    #adminPaymentTable tbody td:last-child { display: flex; align-items: center; justify-content: space-between; border-bottom: 0; }
+    #adminPaymentTable tbody td:last-child::before { margin: 0; }
+    #salesTableWrap { overflow: visible; }
+    #salesBookingTable {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    #salesBookingTable thead { display: none; }
+    #salesBookingTable tbody { display: grid; gap: 10px; }
+    #salesBookingTable tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #salesBookingTable tbody td {
+        display: block;
+        min-width: 0;
+        padding: 10px 11px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .8rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #salesBookingTable tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .64rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    #salesBookingTable tbody td:first-child { grid-column: 1 / -1; }
+    #salesBookingTable tbody td:last-child { border-bottom: 0; }
+    #inventoryTableWrap { overflow: visible; }
+    #adminInventoryTable {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    #adminInventoryTable thead { display: none; }
+    #adminInventoryTable tbody { display: grid; gap: 10px; }
+    #adminInventoryTable tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #adminInventoryTable tbody td {
+        display: block;
+        min-width: 0;
+        padding: 9px 10px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .78rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #adminInventoryTable tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .62rem;
+        font-weight: 750;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    #adminInventoryTable tbody td:first-child,
+    #adminInventoryTable tbody td:last-child { grid-column: 1 / -1; }
+    #adminInventoryTable tbody td:last-child { display: flex; align-items: center; justify-content: space-between; border-bottom: 0; }
+    #adminInventoryTable tbody td:last-child::before { margin: 0; }
+    #adminInventoryTable .status { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+    #adminBookingTable {
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    #adminBookingTable thead { display: none; }
+    #adminBookingTable tbody {
+        display: grid;
+        gap: 10px;
+    }
+    #adminBookingTable tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid #e1e9ee;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #adminBookingTable tbody td {
+        display: block;
+        min-width: 0;
+        padding: 10px 11px;
+        border-bottom: 1px solid #edf2f5;
+        font-size: .8rem;
+        line-height: 1.4;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    #adminBookingTable tbody td::before {
+        display: block;
+        margin-bottom: 4px;
+        color: #71838f;
+        content: attr(data-label);
+        font-size: .64rem;
+        font-weight: 750;
+        letter-spacing: .045em;
+        line-height: 1.2;
+        text-transform: uppercase;
+    }
+    #adminBookingTable tbody td:first-child,
+    #adminBookingTable tbody td.booking-style-cell { grid-column: 1 / -1; }
+    #adminBookingTable tbody td:last-child {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        grid-column: 1 / -1;
+        border-bottom: 0;
+    }
+    #adminBookingTable tbody td:last-child::before { margin: 0; }
+    #adminBookingTable .booking-client-cell { display: grid; gap: 2px; min-width: 0; }
+    #adminBookingTable .booking-client-cell strong { overflow-wrap: anywhere; }
+    #adminBookingTable .booking-client-cell small { color: #71838f; overflow-wrap: anywhere; }
+    #adminBookingTable .booking-style-cell { min-width: 0; max-width: none; }
+    #adminBookingTable .booking-actions-cell { width: auto; text-align: left; }
+}
 
 /* Compact booking actions menu */
 .booking-actions-cell {

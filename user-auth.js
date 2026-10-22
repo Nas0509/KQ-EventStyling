@@ -138,7 +138,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         try {
             const { data } = await window.supabaseClient
                 .from("profiles")
-                .select("full_name, contact_number, email")
+                .select("role, full_name, contact_number, email")
                 .eq("id", user.id)
                 .maybeSingle();
             profile = data;
@@ -146,6 +146,10 @@ document.addEventListener("DOMContentLoaded", async function () {
             console.warn("Unable to load account profile details:", error);
         }
         if (accountDetailsUserId !== user.id) return;
+        if (String(profile?.role || "").toLowerCase() === "admin") {
+            window.location.replace("admin.html");
+            return;
+        }
         const name = profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "Customer";
         const email = profile?.email || user.email || "";
         const phone = profile?.contact_number || user.user_metadata?.contact_number || "";
@@ -467,7 +471,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                     } =
                         await window.supabaseClient
                             .auth
-                            .signOut();
+                            .signOut({ scope: "local" });
 
 
                     if (error) {

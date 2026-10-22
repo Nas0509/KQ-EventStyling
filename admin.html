@@ -13,7 +13,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=20261021-ocular-confirm-dialog">
+          href="css/admin.css?v=20261022-monthly-report-spacing">
 
 </head>
 
@@ -123,8 +123,8 @@
                         <span>Logout</span>
                     </button>
                 </div>
-                <button type="button" id="settingsMenuBtn" class="sidebar-settings-button" aria-label="Account settings" title="Account settings" aria-expanded="false" aria-controls="sidebarAccountMenu">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.3a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4Z"></path><path d="m19.2 13.5 1.1.9-1.5 2.6-1.4-.5a7.5 7.5 0 0 1-1.6.9l-.3 1.5h-3l-.3-1.5a7.5 7.5 0 0 1-1.6-.9l-1.4.5-1.5-2.6 1.1-.9a7.2 7.2 0 0 1 0-1.9l-1.1-.9 1.5-2.6 1.4.5a7.5 7.5 0 0 1 1.6-.9l.3-1.5h3l.3 1.5a7.5 7.5 0 0 1 1.6.9l1.4-.5 1.5 2.6-1.1.9a7.2 7.2 0 0 1 0 1.9Z"></path></svg>
+                <button type="button" id="settingsMenuBtn" class="sidebar-settings-button" aria-label="Profile and account settings" title="Profile and account settings" aria-expanded="false" aria-controls="sidebarAccountMenu">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="3.5"></circle><path d="M5.5 20a6.5 6.5 0 0 1 13 0"></path></svg>
                 </button>
             </div>
         </div>
@@ -376,8 +376,8 @@
                 </div>
             </div>
             <div class="panel table-panel">
-                <div class="table-wrap">
-                    <table>
+                <div class="table-wrap" id="archiveTableWrap">
+                    <table id="archiveBookingTable">
                         <thead><tr><th>Client</th><th>Event</th><th>Date & Time</th><th>Package</th><th>Cancellation Record</th><th>Action</th></tr></thead>
                         <tbody id="archiveTableBody"></tbody>
                     </table>
@@ -386,9 +386,9 @@
             </div>
             <div class="panel table-panel expense-archive-panel">
                 <div class="panel-head"><div><h3>Archived Expenses</h3><small>Expenses from previous months and expenses archived manually.</small></div></div>
-                <div class="table-wrap">
-                    <table>
-                        <thead><tr><th>Description</th><th>Expense Date</th><th>Amount</th><th>Archived On</th></tr></thead>
+                <div class="table-wrap" id="archivedExpenseTableWrap">
+                    <table id="archivedExpenseTable">
+                        <thead><tr><th>Description</th><th>Expense Date</th><th>Amount</th><th>Archived On</th><th>Action</th></tr></thead>
                         <tbody id="archivedExpenseTableBody"></tbody>
                     </table>
                 </div>
@@ -486,9 +486,9 @@
 
             <div class="panel table-panel">
 
-                <div class="table-wrap">
+                <div class="table-wrap" id="bookingTableWrap">
 
-                    <table>
+                    <table id="adminBookingTable">
 
                         <thead>
 
@@ -635,9 +635,9 @@
 
             <div class="panel table-panel">
 
-                <div class="table-wrap">
+                <div class="table-wrap" id="ocularTableWrap">
 
-                    <table>
+                    <table id="ocularRequestTable">
 
                         <thead>
 
@@ -775,9 +775,9 @@
 
             <div class="panel table-panel">
 
-                <div class="table-wrap">
+                <div class="table-wrap" id="paymentTableWrap">
 
-                    <table>
+                    <table id="adminPaymentTable">
 
                         <thead>
 
@@ -929,9 +929,9 @@
                     </div>
 
 
-                    <div class="table-wrap">
+                    <div class="table-wrap" id="salesTableWrap">
 
-                        <table>
+                        <table id="salesBookingTable">
 
                             <thead>
 
@@ -988,7 +988,15 @@
                     <section id="monthlySalesSummary" class="monthly-sales-summary" aria-label="Monthly sales analytics">
                         <div class="monthly-sales-heading">
                             <div><h4>Monthly Net Income</h4><p id="salesAnalyticsMonthLabel"></p></div>
-                            <label for="salesAnalyticsMonth">Choose month<input type="month" id="salesAnalyticsMonth"></label>
+                            <div class="sales-month-picker" id="salesMonthPicker">
+                                <label id="salesMonthPickerLabel">Choose month</label>
+                                <input type="hidden" id="salesAnalyticsMonth">
+                                <button type="button" id="salesMonthPickerTrigger" class="sales-month-picker-trigger" aria-labelledby="salesMonthPickerLabel salesMonthPickerTrigger" aria-expanded="false" aria-controls="salesMonthPickerPopover">Choose month <span aria-hidden="true">▾</span></button>
+                                <div id="salesMonthPickerPopover" class="sales-month-picker-popover" hidden>
+                                    <div class="sales-month-picker-year"><button type="button" data-sales-year-step="-1" aria-label="Previous year">‹</button><strong id="salesMonthPickerYear"></strong><button type="button" data-sales-year-step="1" aria-label="Next year">›</button></div>
+                                    <div class="sales-month-picker-grid" id="salesMonthPickerMonths"></div>
+                                </div>
+                            </div>
                         </div>
                         <div id="monthlyNetIncomeChart" class="monthly-net-income-chart" role="img" aria-label="Monthly net income bar chart"></div>
                         <p id="monthlyNetIncomePeak" class="monthly-net-income-peak"></p>
@@ -1041,9 +1049,9 @@
 
             <div class="panel table-panel">
 
-                <div class="table-wrap">
+                <div class="table-wrap" id="inventoryTableWrap">
 
-                    <table>
+                    <table id="adminInventoryTable">
 
                         <thead>
 
@@ -1135,7 +1143,7 @@
 
     <script src="supabase-config.js"></script>
 
-    <script src="admin.js?v=20261021-ocular-confirm-dialog"></script>
+    <script src="admin.js?v=20261022-monthly-report-spacing"></script>
 
 
 </body>

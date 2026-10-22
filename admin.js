@@ -140,7 +140,7 @@ async function loadBookingChangeRequests() {
         const requestedTime = request.requested_start_time
             ? new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(`2000-01-01T${String(request.requested_start_time).slice(0, 5)}:00`))
             : "";
-        return `<article class="booking-change-request-card"><div class="booking-change-request-top"><div><span class="badge">${isCancellation ? "CANCELLATION" : "RESCHEDULE"}</span><h4>${escapeHtml(booking?.fullName || "Customer")} <small>· ${escapeHtml(request.booking_id)}</small></h4><p>${escapeHtml(booking?.eventType || "Event")} · current date ${escapeHtml(booking?.eventDate || "not set")}${!isCancellation ? ` · requested ${escapeHtml(requestedDate)} at ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(requestedTime)}` : ""}</p></div><div class="booking-change-card-actions"><span class="booking-change-fee ${request.reservation_fee_nonrefundable ? "is-nonrefundable" : ""}">${request.reservation_fee_nonrefundable ? "Reservation fee non-refundable" : "No fee penalty"}</span><details class="booking-change-menu"><summary aria-label="Request actions" title="Request actions">⋮</summary><div class="booking-change-menu-options"><button type="button" data-change-review="accept" data-request-id="${escapeAttr(request.id)}">Accept</button><button type="button" data-change-review="reject" data-request-id="${escapeAttr(request.id)}">Decline</button><button type="button" data-view-change-request="${escapeAttr(request.id)}">View</button></div></details></div></div><div class="booking-change-reason"><strong>Customer reason</strong><p>${escapeHtml(request.reason)}</p></div></article>`;
+        return `<article class="booking-change-request-card"><div class="booking-change-request-top"><div><span class="badge">${isCancellation ? "CANCELLATION" : "RESCHEDULE"}</span><h4>${escapeHtml(booking?.fullName || "Customer")} <small>· ${escapeHtml(request.booking_id)}</small></h4><p>${escapeHtml(booking?.eventType || "Event")} · current date ${escapeHtml(booking?.eventDate || "not set")}${!isCancellation ? ` · requested ${escapeHtml(requestedDate)} at ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(requestedTime)}` : ""}</p></div><div class="booking-change-card-actions"><span class="booking-change-fee ${request.reservation_fee_nonrefundable ? "is-nonrefundable" : ""}">${request.reservation_fee_nonrefundable ? "Reservation fee non-refundable" : "No fee penalty"}</span><details class="booking-change-menu"><summary class="booking-actions-trigger" aria-label="Request actions" title="Request actions">⋮</summary><div class="booking-change-menu-options"><button type="button" class="booking-actions-item edit" data-view-change-request="${escapeAttr(request.id)}">View details</button><button type="button" class="booking-actions-item approve" data-change-review="accept" data-request-id="${escapeAttr(request.id)}">Approve</button><button type="button" class="booking-actions-item decline" data-change-review="reject" data-request-id="${escapeAttr(request.id)}">Decline</button></div></details></div></div><div class="booking-change-reason"><strong>Customer reason</strong><p>${escapeHtml(request.reason)}</p></div></article>`;
     }).join("");
 }
 
@@ -172,16 +172,19 @@ function openCustomerRequestHistory(bookingId) {
 function openBookingChangeReview(requestId, accepted) {
     const request = bookingChangeRequests.find(item => String(item.id) === String(requestId));
     if (!request) return;
-    const actionLabel = accepted ? "Accept request" : "Decline request";
     const isCancellation = request.request_type === "CANCELLATION";
+    const requestLabel = isCancellation ? "cancellation" : "reschedule";
+    const actionLabel = accepted ? "approve" : "decline";
     const effect = accepted
         ? (isCancellation ? "The booking will be cancelled and moved to the archive." : "The approved booking date and time will be changed.")
         : "The customer's original booking will stay unchanged.";
-    openModal(`<div class="booking-change-confirmation"><span class="eyebrow">CONFIRM REQUEST</span><h3>Are you sure?</h3><p class="field-help">You are about to ${accepted ? "accept" : "decline"} this ${isCancellation ? "cancellation" : "reschedule"} request. ${effect}${request.reservation_fee_nonrefundable ? " The reservation fee remains non-refundable even if this request is declined." : ""} The customer will be notified by in-app notification and email.</p><div class="modal-field full"><label for="bookingChangeAdminNote">Admin response / note (optional)</label><textarea id="bookingChangeAdminNote" rows="3" maxlength="1000" placeholder="Add a note for the customer"></textarea></div><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingChangeReview">Go back</button><button type="button" class="btn primary" id="confirmBookingChangeReview" data-request-id="${escapeAttr(request.id)}" data-accept="${accepted ? "true" : "false"}">Yes, ${accepted ? "accept" : "decline"} request</button></div></div>`);
+    openModal(`<div class="booking-change-confirmation"><span class="eyebrow">CONFIRM REQUEST</span><h3>Are you sure you want to ${actionLabel} this ${requestLabel} request?</h3><p class="field-help">${effect}${request.reservation_fee_nonrefundable ? " The reservation fee remains non-refundable even if this request is declined." : ""} The customer will be notified by in-app notification and email.</p><div class="modal-field full"><label for="bookingChangeAdminNote">Admin response / note (optional)</label><textarea id="bookingChangeAdminNote" rows="3" maxlength="1000" placeholder="Add a note for the customer"></textarea></div><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingChangeReview">Go back</button><button type="button" class="btn ${accepted ? "primary" : "danger"}" id="confirmBookingChangeReview" data-request-id="${escapeAttr(request.id)}" data-accept="${accepted ? "true" : "false"}">Yes, ${actionLabel} ${requestLabel}</button></div></div>`);
 }
 
 async function submitBookingChangeReview(requestId, accepted) {
     const button = document.getElementById("confirmBookingChangeReview");
+    const requestType = bookingChangeRequests.find(item => String(item.id) === String(requestId))?.request_type;
+    const requestLabel = requestType === "CANCELLATION" ? "cancellation" : "reschedule";
     const note = document.getElementById("bookingChangeAdminNote")?.value.trim() || null;
     if (button) { button.disabled = true; button.textContent = "Saving…"; }
     const { error } = await window.supabaseClient.rpc("kq_admin_review_booking_change", {
@@ -190,7 +193,7 @@ async function submitBookingChangeReview(requestId, accepted) {
         p_admin_note: note
     });
     if (error) {
-        if (button) { button.disabled = false; button.textContent = accepted ? "Accept request" : "Decline request"; }
+        if (button) { button.disabled = false; button.textContent = `Yes, ${accepted ? "approve" : "decline"} ${requestLabel}`; }
         showAdminToast(error.message || "Unable to review this request.", "error");
         return;
     }
@@ -237,7 +240,7 @@ async function requireAdmin() {
         .single();
 
     if (error || profile?.role !== "admin") {
-        await window.supabaseClient.auth.signOut();
+        await window.supabaseClient.auth.signOut({ scope: "local" });
         window.location.replace("login.html");
         return false;
     }
@@ -284,6 +287,23 @@ function showSection(id) {
 
 const mobileNavToggle = document.getElementById("mobileNavToggle");
 const adminSidebar = document.querySelector(".sidebar");
+const adminHeaderActions = document.querySelector(".admin-header-actions");
+const adminTopbar = document.querySelector(".topbar");
+const sidebarBottom = document.querySelector(".sidebar-bottom");
+function placeAdminHeaderActions() {
+    if (!adminHeaderActions || !adminSidebar || !mobileNavToggle || !adminTopbar) return;
+    if (window.matchMedia("(max-width: 760px)").matches) {
+        if (adminHeaderActions.parentElement !== adminSidebar) adminSidebar.insertBefore(adminHeaderActions, mobileNavToggle);
+        if (accountMenuWrap && accountMenuWrap.parentElement !== adminHeaderActions) adminHeaderActions.appendChild(accountMenuWrap);
+    } else if (adminHeaderActions.parentElement !== adminTopbar) {
+        adminTopbar.appendChild(adminHeaderActions);
+    }
+    if (!window.matchMedia("(max-width: 760px)").matches && accountMenuWrap && sidebarBottom && accountMenuWrap.parentElement !== sidebarBottom) {
+        sidebarBottom.appendChild(accountMenuWrap);
+    }
+}
+placeAdminHeaderActions();
+window.addEventListener("resize", placeAdminHeaderActions);
 function setMobileAdminNav(open) {
     if (!mobileNavToggle || !adminSidebar) return;
     adminSidebar.classList.toggle("is-mobile-nav-open", open);
@@ -369,7 +389,7 @@ document.getElementById("logoutBtn")?.addEventListener("click", () => {
         button.textContent = "Signing out…";
         try {
             if (window.supabaseClient) {
-                const { error } = await window.supabaseClient.auth.signOut();
+                const { error } = await window.supabaseClient.auth.signOut({ scope: "local" });
                 if (error) throw error;
             }
             window.location.href = "login.html";
@@ -786,13 +806,13 @@ function renderBookings() {
     }
     document.getElementById("bookingTableBody").innerHTML = rows.map(b =>`
         <tr>
-            <td><strong>${escapeHtml(b.fullName)}</strong><br><small>${escapeHtml(b.email)}</small></td>
-            <td>${escapeHtml(b.eventType)}</td><td>${escapeHtml(b.eventDate)}</td>
-            <td>${escapeHtml(b.package || "Not selected")}</td>
-            <td class="booking-style-cell"><span><strong>Theme</strong> ${escapeHtml(bookingMessageField(b.message, "Theme") || "Not specified")}</span><span><strong>Colors</strong> ${escapeHtml(bookingMessageField(b.message, "Preferred colors") || "Not specified")}</span></td>
-            <td>${escapeHtml(b.timeSlot || "")} ${escapeHtml(b.startTime || "")}</td>
-            <td><span class="status ${statusClass(b.status)}">${escapeHtml(b.status)}</span></td>
-            <td class="booking-actions-cell"><button type="button" class="booking-actions-trigger" onclick="toggleBookingActions(event, '${escapeAttr(b.id)}', this)" aria-haspopup="menu" aria-controls="bookingActionsPopover" aria-expanded="false" aria-label="Actions for ${escapeAttr(b.fullName)}" title="More actions"><span aria-hidden="true">⋮</span></button></td>
+            <td data-label="Client"><span class="booking-client-cell"><strong>${escapeHtml(b.fullName)}</strong><small>${escapeHtml(b.email)}</small></span></td>
+            <td data-label="Event">${escapeHtml(b.eventType)}</td><td data-label="Date">${escapeHtml(b.eventDate)}</td>
+            <td data-label="Package">${escapeHtml(b.package || "Not selected")}</td>
+            <td data-label="Theme & colors" class="booking-style-cell"><span><strong>Theme</strong> ${escapeHtml(bookingMessageField(b.message, "Theme") || "Not specified")}</span><span><strong>Colors</strong> ${escapeHtml(bookingMessageField(b.message, "Preferred colors") || "Not specified")}</span></td>
+            <td data-label="Time">${escapeHtml(b.timeSlot || "")} ${escapeHtml(b.startTime || "")}</td>
+            <td data-label="Status"><span class="status ${statusClass(b.status)}">${escapeHtml(b.status)}</span></td>
+            <td data-label="Action" class="booking-actions-cell"><button type="button" class="booking-actions-trigger" onclick="toggleBookingActions(event, '${escapeAttr(b.id)}', this)" aria-haspopup="menu" aria-controls="bookingActionsPopover" aria-expanded="false" aria-label="Actions for ${escapeAttr(b.fullName)}" title="More actions"><span aria-hidden="true">⋮</span></button></td>
         </tr>`).join("");
 }
 
@@ -805,20 +825,20 @@ function renderArchive() {
     empty.style.display = cancelled.length ? "none" : "block";
     document.getElementById("archiveTableBody").innerHTML = cancelled.map(booking => `
         <tr>
-            <td><strong>${escapeHtml(booking.fullName)}</strong><br><small>${escapeHtml(booking.email)}</small></td>
-            <td>${escapeHtml(booking.eventType)}</td>
-            <td>${escapeHtml(booking.eventDate)}<br><small>${escapeHtml(booking.timeSlot || "")} ${escapeHtml(booking.startTime || "")}</small></td>
-            <td>${escapeHtml(booking.package || "Not selected")}</td>
-            <td class="archive-record">${escapeHtml(bookingMessageField(booking.adminNotes, "Cancellation reason") || "No cancellation reason recorded")}</td>
-            <td><button class="small-btn edit" onclick="viewBooking('${escapeAttr(booking.id)}')">View record</button></td>
+            <td data-label="Client"><span class="booking-client-cell"><strong>${escapeHtml(booking.fullName)}</strong><small>${escapeHtml(booking.email)}</small></span></td>
+            <td data-label="Event">${escapeHtml(booking.eventType)}</td>
+            <td data-label="Date & time"><span class="archive-date-cell">${escapeHtml(booking.eventDate)}<small>${escapeHtml(booking.timeSlot || "")} ${escapeHtml(booking.startTime || "")}</small></span></td>
+            <td data-label="Package">${escapeHtml(booking.package || "Not selected")}</td>
+            <td data-label="Cancellation record" class="archive-record">${escapeHtml(bookingMessageField(booking.adminNotes, "Cancellation reason") || "No cancellation reason recorded")}</td>
+            <td data-label="Action"><button class="small-btn edit" onclick="viewBooking('${escapeAttr(booking.id)}')">View record</button></td>
         </tr>`).join("");
     const expenseArchiveEmpty = document.getElementById("emptyExpenseArchive");
     if (expenseArchiveEmpty) {
         expenseArchiveEmpty.style.display = archivedExpenses.length ? "none" : "block";
         document.getElementById("archivedExpenseTableBody").innerHTML = archivedExpenses
-            .slice()
-            .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
-            .map(expense => `<tr><td><strong>${escapeHtml(expense.description)}</strong></td><td>${escapeHtml(expense.date || "—")}</td><td>${money(expense.amount)}</td><td>${escapeHtml(expense.archivedAt ? new Date(expense.archivedAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—")}</td></tr>`)
+            .map((expense, index) => ({ expense, index }))
+            .sort((a, b) => String(b.expense.date || "").localeCompare(String(a.expense.date || "")))
+            .map(({ expense, index }) => `<tr><td data-label="Description"><strong>${escapeHtml(expense.description)}</strong></td><td data-label="Expense date">${escapeHtml(expense.date || "—")}</td><td data-label="Amount">${money(expense.amount)}</td><td data-label="Archived on">${escapeHtml(expense.archivedAt ? new Date(expense.archivedAt).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" }) : "—")}</td><td data-label="Action"><button type="button" class="small-btn edit" onclick="unarchiveExpense(${index})">Unarchive</button></td></tr>`)
             .join("");
     }
 }
@@ -846,7 +866,7 @@ function renderPayments() {
         : "No payment records yet.";
     document.getElementById("paymentTableBody").innerHTML = visiblePayments.map(b => {
         const p = payments.find(x => x.bookingId === b.id) || { total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" };
-        return `<tr><td><strong>${escapeHtml(b.fullName)}</strong></td><td>${escapeHtml(b.eventType)}</td><td>${escapeHtml(b.eventDate)}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td><td>${money(Number(p.total) - Number(p.paid))}</td><td><span class="status ${p.status === "FULLY PAID" ? "APPROVED" : p.status === "NO DOWN PAYMENT" ? "PENDING" : "APPROVED"}">${escapeHtml(p.status)}</span></td><td><button class="small-btn edit" onclick="editPayment('${b.id}')">Update</button></td></tr>`;
+        return `<tr><td data-label="Client"><strong>${escapeHtml(b.fullName)}</strong></td><td data-label="Event">${escapeHtml(b.eventType)}</td><td data-label="Date">${escapeHtml(b.eventDate)}</td><td data-label="Total">${money(p.total)}</td><td data-label="Paid">${money(p.paid)}</td><td data-label="Balance">${money(Number(p.total) - Number(p.paid))}</td><td data-label="Status"><span class="status ${p.status === "FULLY PAID" ? "APPROVED" : p.status === "NO DOWN PAYMENT" ? "PENDING" : "APPROVED"}">${escapeHtml(p.status)}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editPayment('${b.id}')">Update</button></td></tr>`;
     }).join("");
 }
 
@@ -858,13 +878,30 @@ function renderSales() {
     const monthPicker = document.getElementById("salesAnalyticsMonth");
     if (monthPicker && !monthPicker.value) monthPicker.value = currentMonth;
     const selectedMonth = monthPicker?.value || currentMonth;
+    const monthPickerYear = Number(selectedMonth.slice(0, 4)) || now.getFullYear();
+    const monthPickerYearLabel = document.getElementById("salesMonthPickerYear");
+    const monthPickerTrigger = document.getElementById("salesMonthPickerTrigger");
+    const monthPickerMonths = document.getElementById("salesMonthPickerMonths");
+    if (monthPickerYearLabel) monthPickerYearLabel.textContent = String(monthPickerYear);
+    if (monthPickerTrigger) {
+        const selectedLabel = new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric" }).format(new Date(`${selectedMonth}-01T00:00:00`));
+        monthPickerTrigger.innerHTML = `${escapeHtml(selectedLabel)} <span aria-hidden="true">▾</span>`;
+    }
+    if (monthPickerMonths) {
+        monthPickerMonths.innerHTML = Array.from({ length: 12 }, (_, index) => {
+            const value = String(index + 1).padStart(2, "0");
+            const label = new Intl.DateTimeFormat("en-PH", { month: "short" }).format(new Date(monthPickerYear, index, 1));
+            const isSelected = selectedMonth === `${monthPickerYear}-${value}`;
+            return `<button type="button" data-sales-month="${value}" class="${isSelected ? "is-selected" : ""}" aria-pressed="${isSelected}">${escapeHtml(label)}</button>`;
+        }).join("");
+    }
     const selectedYear = Number(selectedMonth.slice(0, 4)) || now.getFullYear();
     document.getElementById("salesRevenue").textContent = money(revenue);
     document.getElementById("salesExpenses").textContent = money(totalExpenses);
     document.getElementById("salesNet").textContent = money(revenue - totalExpenses);
     document.getElementById("salesTableBody").innerHTML = bookings.filter(b => String(b.status).toUpperCase() === "APPROVED" && payments.some(p => p.bookingId === b.id)).map(b => {
         const p = payments.find(x => x.bookingId === b.id) || {};
-        return `<tr><td>${escapeHtml(b.fullName)}</td><td>${escapeHtml(b.eventType)}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td><td>${money(Number(p.total) - Number(p.paid))}</td></tr>`;
+        return `<tr><td data-label="Client">${escapeHtml(b.fullName)}</td><td data-label="Event">${escapeHtml(b.eventType)}</td><td data-label="Total">${money(p.total)}</td><td data-label="Collected">${money(p.paid)}</td><td data-label="Balance">${money(Number(p.total) - Number(p.paid))}</td></tr>`;
     }).join("");
     document.getElementById("expenseList").innerHTML = expenses.length ? expenses.map((e, i) => `<div class="expense-item"><span>${escapeHtml(e.description)}<small> • ${escapeHtml(e.date || "")}</small></span><strong>${money(e.amount)}</strong><div class="expense-actions"><button type="button" class="small-btn edit" onclick="openExpenseForm(${i})">Edit</button><button type="button" class="small-btn" onclick="archiveExpense(${i})">Archive</button></div></div>`).join("") : '<div class="empty-state">No expenses recorded.</div>';
     const monthlyIncome = Array(12).fill(0);
@@ -920,17 +957,17 @@ function openMonthlyActivityReport() {
     const dateLabel = value => value ? new Date(`${value}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" }) : "—";
     const bookingRows = reportBookings.map(booking => {
         const payment = payments.find(item => item.bookingId === booking.id) || {};
-        return `<tr><td>${escapeHtml(dateLabel(booking.eventDate))}<br><small>${escapeHtml(booking.timeSlot || "")} ${escapeHtml(booking.startTime || "")}</small></td><td><strong>${escapeHtml(booking.fullName || "Client")}</strong></td><td>${escapeHtml(booking.eventType || "Event")}<br><small>${escapeHtml(booking.package || "Not selected")} · ${escapeHtml(booking.guests ?? "")} guests</small></td><td><span class="status ${statusClass(booking.status)}">${escapeHtml(booking.status || "UNKNOWN")}</span></td><td>${money(payment.total || booking.amount || 0)}</td><td>${money(payment.paid || 0)}</td></tr>`;
+        return `<tr><td data-label="Date & time"><span class="monthly-report-cell-stack">${escapeHtml(dateLabel(booking.eventDate))}<small>${escapeHtml(booking.timeSlot || "")} ${escapeHtml(booking.startTime || "")}</small></span></td><td data-label="Client"><strong>${escapeHtml(booking.fullName || "Client")}</strong></td><td data-label="Event">${escapeHtml(booking.eventType || "Event")}<small class="monthly-report-subvalue">${escapeHtml(booking.package || "Not selected")} · ${escapeHtml(booking.guests ?? "")} guests</small></td><td data-label="Status"><span class="status ${statusClass(booking.status)}">${escapeHtml(booking.status || "UNKNOWN")}</span></td><td data-label="Total">${money(payment.total || booking.amount || 0)}</td><td data-label="Paid">${money(payment.paid || 0)}</td></tr>`;
     }).join("");
-    const expenseRows = reportExpenses.map(expense => `<tr><td>${escapeHtml(dateLabel(expense.date))}</td><td><strong>${escapeHtml(expense.description)}</strong></td><td>${money(expense.amount)}</td><td><span class="monthly-report-record-status">${expense.archivedAt ? "Archived" : "Recorded"}</span></td></tr>`).join("");
-    openModal(`<div class="monthly-activity-report"><div class="monthly-report-header"><span class="badge">MONTHLY REPORT</span><h3>${escapeHtml(monthLabel)} Activity</h3><p>Bookings and expenses recorded for this month.</p></div><div class="monthly-report-summary"><article><span>Event income</span><strong>${money(eventIncome)}</strong></article><article><span>Expenses</span><strong>${money(expenseTotal)}</strong></article><article><span>Net income</span><strong>${money(eventIncome - expenseTotal)}</strong></article></div><section><div class="panel-head"><h4>Bookings (${reportBookings.length})</h4></div><div class="table-wrap"><table><thead><tr><th>Date & time</th><th>Client</th><th>Event</th><th>Status</th><th>Total</th><th>Paid</th></tr></thead><tbody>${bookingRows || ""}</tbody></table></div>${reportBookings.length ? "" : '<div class="empty-state">No bookings for this month.</div>'}</section><section><div class="panel-head"><h4>Expenses (${reportExpenses.length})</h4></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Record</th></tr></thead><tbody>${expenseRows || ""}</tbody></table></div>${reportExpenses.length ? "" : '<div class="empty-state">No expenses for this month.</div>'}</section></div>`);
+    const expenseRows = reportExpenses.map(expense => `<tr><td data-label="Date">${escapeHtml(dateLabel(expense.date))}</td><td data-label="Description"><strong>${escapeHtml(expense.description)}</strong></td><td data-label="Amount">${money(expense.amount)}</td><td data-label="Record"><span class="monthly-report-record-status">${expense.archivedAt ? "Archived" : "Recorded"}</span></td></tr>`).join("");
+    openModal(`<div class="monthly-activity-report"><div class="monthly-report-header"><span class="badge">MONTHLY REPORT</span><h3>${escapeHtml(monthLabel)} Activity</h3><p>Bookings and expenses recorded for this month.</p></div><div class="monthly-report-summary"><article><span>Event income</span><strong>${money(eventIncome)}</strong></article><article><span>Expenses</span><strong>${money(expenseTotal)}</strong></article><article><span>Net income</span><strong>${money(eventIncome - expenseTotal)}</strong></article></div><section><div class="panel-head"><h4>Bookings (${reportBookings.length})</h4></div><div class="table-wrap"><table class="monthly-report-booking-table"><thead><tr><th>Date & time</th><th>Client</th><th>Event</th><th>Status</th><th>Total</th><th>Paid</th></tr></thead><tbody>${bookingRows || ""}</tbody></table></div>${reportBookings.length ? "" : '<div class="empty-state">No bookings for this month.</div>'}</section><section><div class="panel-head"><h4>Expenses (${reportExpenses.length})</h4></div><div class="table-wrap"><table class="monthly-report-expense-table"><thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Record</th></tr></thead><tbody>${expenseRows || ""}</tbody></table></div>${reportExpenses.length ? "" : '<div class="empty-state">No expenses for this month.</div>'}</section></div>`);
     document.querySelector("#modal .modal-card").classList.add("monthly-activity-modal-card");
 }
 
 function renderInventory() {
     document.getElementById("inventoryTableBody").innerHTML = inventory.map(i => {
         const low = Number(i.quantity) <= Number(i.reorder);
-        return `<tr><td><strong>${escapeHtml(i.name)}</strong></td><td>${escapeHtml(i.category)}</td><td>${i.quantity}</td><td>${escapeHtml(i.unit)}</td><td>${money(i.cost)}</td><td>${money(Number(i.quantity) * Number(i.cost))}</td><td><span class="status ${low ? "CANCELLED" : "APPROVED"}">${low ? "LOW STOCK" : "AVAILABLE"}</span></td><td><button class="small-btn edit" onclick="editInventory(${i.id})">Update</button></td></tr>`;
+        return `<tr><td data-label="Material"><strong>${escapeHtml(i.name)}</strong></td><td data-label="Category">${escapeHtml(i.category)}</td><td data-label="Available">${i.quantity}</td><td data-label="Unit">${escapeHtml(i.unit)}</td><td data-label="Cost / item">${money(i.cost)}</td><td data-label="Total cost">${money(Number(i.quantity) * Number(i.cost))}</td><td data-label="Status"><span class="status ${low ? "CANCELLED" : "APPROVED"}">${low ? "LOW STOCK" : "AVAILABLE"}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editInventory(${i.id})">Update</button></td></tr>`;
     }).join("");
 }
 
@@ -942,6 +979,7 @@ function archiveExpiredExpenses() {
     const now = new Date();
     const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
     const expired = expenses.filter(expense => {
+        if (expense.unarchivedAt) return false;
         const monthKey = expenseMonthKey(expense.date);
         return monthKey !== null && monthKey < currentMonthKey;
     });
@@ -967,7 +1005,19 @@ function scheduleExpenseArchive() {
     }, Math.min(24 * 60 * 60 * 1000, untilMonthChange));
 }
 
-async function changeStatus(id, newStatus) {
+function changeStatus(id, newStatus) {
+    const booking = bookings.find(item => String(item.id) === String(id));
+    if (!booking || !["APPROVED", "DECLINED"].includes(newStatus)) return;
+    const approving = newStatus === "APPROVED";
+    const action = approving ? "approve" : "decline";
+    const effect = approving
+        ? "This will mark the booking as approved and notify the customer through the booking workflow."
+        : "This will mark the booking as declined. Make sure this is the intended decision before continuing.";
+    openModal(`<section class="booking-status-confirmation"><span class="eyebrow">BOOKING STATUS</span><h3>Are you sure you want to ${action} this booking?</h3><p class="field-help"><strong>${escapeHtml(booking.fullName || "Customer")}</strong> · ${escapeHtml(booking.eventType || "Event")} · ${escapeHtml(booking.eventDate || "Date not set")}</p><p class="field-help">${effect}</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingStatusChange">Go back</button><button type="button" class="btn ${approving ? "primary" : "danger"}" id="confirmBookingStatusChange" data-booking-id="${escapeAttr(id)}" data-status="${escapeAttr(newStatus)}">Yes, ${action} booking</button></div></section>`);
+    document.querySelector("#modal .modal-card")?.classList.add("booking-status-confirmation-card");
+}
+
+async function applyBookingStatus(id, newStatus) {
     const b = bookings.find(x => x.id === id); if (!b) return;
     const reservationFee = Number(b.required_down_payment) || 0;
     const existingPayment = payments.find(p => p.bookingId === id);
@@ -1124,19 +1174,35 @@ function editPayment(id) {
             <div class="modal-field"><label>Client</label><input value="${escapeAttr(b.fullName)}" readonly></div>
             <div class="modal-field"><label>Total Amount</label><input value="${money(p.total)}" readonly></div>
             <div class="modal-field"><label>Amount Paid</label><input type="number" id="paymentPaid" min="0" max="${Number(p.total)}" value="${Number(p.paid)}"></div>
-            <div class="modal-field"><label>Payment Status</label>
-                <select id="paymentStatus">
-                    <option value="" selected disabled>Choose status</option>
-                    <option value="FULLY PAID">FULLY PAID</option>
-                </select>
+            <div class="modal-field"><label id="paymentStatusLabel">Payment Status</label>
+                <div class="payment-status-picker">
+                    <input type="hidden" id="paymentStatus" value="">
+                    <button type="button" class="payment-status-trigger" id="paymentStatusTrigger" aria-labelledby="paymentStatusLabel paymentStatusTrigger" aria-expanded="false" aria-controls="paymentStatusOptions">Choose status <span aria-hidden="true">▾</span></button>
+                    <div class="payment-status-options" id="paymentStatusOptions" role="listbox" aria-labelledby="paymentStatusLabel" hidden>
+                        <button type="button" role="option" data-payment-status="FULLY PAID">FULLY PAID</button>
+                    </div>
+                </div>
                 <small class="field-help">Current status: ${escapeHtml(p.status || "DOWN PAYMENT MADE")}</small>
             </div>
         </div>
         <div class="modal-actions"><button class="btn primary" onclick="savePayment('${id}')">Save Payment</button></div>`);
     const paidInput = document.getElementById("paymentPaid");
-    const statusSelect = document.getElementById("paymentStatus");
-    statusSelect.addEventListener("change", () => {
-        if (statusSelect.value === "FULLY PAID") paidInput.value = Number(p.total);
+    const statusInput = document.getElementById("paymentStatus");
+    const statusTrigger = document.getElementById("paymentStatusTrigger");
+    const statusOptions = document.getElementById("paymentStatusOptions");
+    statusTrigger.addEventListener("click", () => {
+        const isOpen = statusOptions.hidden;
+        statusOptions.hidden = !isOpen;
+        statusTrigger.setAttribute("aria-expanded", String(isOpen));
+    });
+    statusOptions.addEventListener("click", event => {
+        const option = event.target.closest("[data-payment-status]");
+        if (!option) return;
+        statusInput.value = option.dataset.paymentStatus;
+        statusTrigger.innerHTML = `${escapeHtml(option.dataset.paymentStatus)} <span aria-hidden="true">▾</span>`;
+        statusOptions.hidden = true;
+        statusTrigger.setAttribute("aria-expanded", "false");
+        if (statusInput.value === "FULLY PAID") paidInput.value = Number(p.total);
     });
 }
 
@@ -1162,7 +1228,45 @@ async function savePayment(id) {
 document.getElementById("addExpenseBtn").addEventListener("click", () => {
     openExpenseForm();
 });
-document.getElementById("salesAnalyticsMonth")?.addEventListener("change", renderSales);
+const salesMonthPicker = document.getElementById("salesMonthPicker");
+const salesMonthPickerTrigger = document.getElementById("salesMonthPickerTrigger");
+const salesMonthPickerPopover = document.getElementById("salesMonthPickerPopover");
+salesMonthPickerTrigger?.addEventListener("click", () => {
+    const isOpen = salesMonthPickerPopover.hidden;
+    salesMonthPickerPopover.hidden = !isOpen;
+    salesMonthPickerTrigger.setAttribute("aria-expanded", String(isOpen));
+});
+salesMonthPickerPopover?.addEventListener("click", event => {
+    const yearButton = event.target.closest("[data-sales-year-step]");
+    const monthButton = event.target.closest("[data-sales-month]");
+    const monthInput = document.getElementById("salesAnalyticsMonth");
+    if (!monthInput) return;
+    if (yearButton) {
+        const currentValue = monthInput.value || new Date().toISOString().slice(0, 7);
+        const [year, month] = currentValue.split("-");
+        monthInput.value = `${Number(year) + Number(yearButton.dataset.salesYearStep)}-${month}`;
+        renderSales();
+    } else if (monthButton) {
+        const year = document.getElementById("salesMonthPickerYear")?.textContent || new Date().getFullYear();
+        monthInput.value = `${year}-${monthButton.dataset.salesMonth}`;
+        salesMonthPickerPopover.hidden = true;
+        salesMonthPickerTrigger.setAttribute("aria-expanded", "false");
+        renderSales();
+    }
+});
+document.addEventListener("click", event => {
+    if (salesMonthPicker && !salesMonthPicker.contains(event.target) && salesMonthPickerPopover && !salesMonthPickerPopover.hidden) {
+        salesMonthPickerPopover.hidden = true;
+        salesMonthPickerTrigger?.setAttribute("aria-expanded", "false");
+    }
+});
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && salesMonthPickerPopover && !salesMonthPickerPopover.hidden) {
+        salesMonthPickerPopover.hidden = true;
+        salesMonthPickerTrigger?.setAttribute("aria-expanded", "false");
+        salesMonthPickerTrigger?.focus();
+    }
+});
 document.getElementById("monthlyActivityView")?.addEventListener("click", openMonthlyActivityReport);
 function openExpenseForm(index = null) {
     const expense = index === null ? null : expenses[index];
@@ -1176,7 +1280,8 @@ function openExpenseForm(index = null) {
 function saveExpense(index = null) {
     const description = document.getElementById("expenseDescription").value.trim(), amount = Number(document.getElementById("expenseAmount").value) || 0, date = document.getElementById("expenseDate").value;
     if (!description || amount <= 0) { alert("Please enter a description and valid amount."); return }
-    const expense = { description, amount, date };
+    const previous = Number.isInteger(index) ? expenses[index] : null;
+    const expense = { description, amount, date, ...(previous?.unarchivedAt ? { unarchivedAt: previous.unarchivedAt } : {}) };
     if (Number.isInteger(index) && expenses[index]) expenses[index] = expense;
     else expenses.push(expense);
     save(); closeModal(); renderAll();
@@ -1184,9 +1289,30 @@ function saveExpense(index = null) {
 function archiveExpense(i) {
     const expense = expenses[i];
     if (!expense) return;
+    openModal(`<section class="expense-action-confirmation"><span class="eyebrow">ARCHIVE EXPENSE</span><h3>Are you sure you want to archive this expense?</h3><p class="field-help"><strong>${escapeHtml(expense.description)}</strong> · ${money(expense.amount)}. It will move to Archived Expenses, where you can restore it later.</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelExpenseArchive">Cancel</button><button type="button" class="btn primary" id="confirmExpenseArchive" data-expense-index="${i}">Yes, archive expense</button></div></section>`);
+}
+function applyExpenseArchive(i) {
+    const expense = expenses[i];
+    if (!expense) return;
+    const expenseData = { ...expense };
+    delete expenseData.unarchivedAt;
     expenses.splice(i, 1);
-    archivedExpenses.push({ ...expense, archivedAt: new Date().toISOString() });
-    save(); renderAll();
+    archivedExpenses.push({ ...expenseData, archivedAt: new Date().toISOString() });
+    save(); closeModal(); renderAll();
+}
+function unarchiveExpense(i) {
+    const expense = archivedExpenses[i];
+    if (!expense) return;
+    openModal(`<section class="expense-action-confirmation"><span class="eyebrow">RESTORE EXPENSE</span><h3>Are you sure you want to unarchive this expense?</h3><p class="field-help"><strong>${escapeHtml(expense.description)}</strong> · ${money(expense.amount)}. It will return to the Expenses list.</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelExpenseUnarchive">Cancel</button><button type="button" class="btn primary" id="confirmExpenseUnarchive" data-expense-index="${i}">Yes, unarchive expense</button></div></section>`);
+}
+function applyExpenseUnarchive(i) {
+    const expense = archivedExpenses[i];
+    if (!expense) return;
+    const expenseData = { ...expense };
+    delete expenseData.archivedAt;
+    archivedExpenses.splice(i, 1);
+    expenses.push({ ...expenseData, unarchivedAt: new Date().toISOString() });
+    save(); closeModal(); renderAll();
 }
 
 document.getElementById("addInventoryBtn").addEventListener("click", () => openInventoryForm());
@@ -1209,8 +1335,8 @@ function saveInventory(id) {
 function editInventory(id) { openInventoryForm(inventory.find(x => x.id === id)) }
 
 let modalReturnFocus = null;
-function openModal(html) { const modal = document.getElementById("modal"); modalReturnFocus = document.activeElement instanceof HTMLElement && !modal.contains(document.activeElement) ? document.activeElement : modalReturnFocus; document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card", "monthly-activity-modal-card", "request-history-modal-card", "ocular-request-modal-card", "ocular-action-confirmation-card"); document.getElementById("modalContent").innerHTML = html; modal.classList.remove("hidden"); modal.setAttribute("aria-hidden", "false") }
-function closeModal() { const modal = document.getElementById("modal"); if (modal.contains(document.activeElement)) document.activeElement.blur(); modal.classList.add("hidden"); modal.setAttribute("aria-hidden", "true"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card", "monthly-activity-modal-card", "ocular-action-confirmation-card"); const returnFocus = modalReturnFocus; modalReturnFocus = null; if (returnFocus?.isConnected) returnFocus.focus() }
+function openModal(html) { const modal = document.getElementById("modal"); modalReturnFocus = document.activeElement instanceof HTMLElement && !modal.contains(document.activeElement) ? document.activeElement : modalReturnFocus; document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card", "monthly-activity-modal-card", "request-history-modal-card", "ocular-request-modal-card", "ocular-action-confirmation-card", "booking-status-confirmation-card"); document.getElementById("modalContent").innerHTML = html; modal.classList.remove("hidden"); modal.setAttribute("aria-hidden", "false") }
+function closeModal() { const modal = document.getElementById("modal"); if (modal.contains(document.activeElement)) document.activeElement.blur(); modal.classList.add("hidden"); modal.setAttribute("aria-hidden", "true"); document.querySelector("#modal .modal-card").classList.remove("calendar-modal-card", "logout-confirmation-card", "booking-record-modal-card", "monthly-activity-modal-card", "ocular-action-confirmation-card", "booking-status-confirmation-card"); const returnFocus = modalReturnFocus; modalReturnFocus = null; if (returnFocus?.isConnected) returnFocus.focus() }
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal() });
 
@@ -1355,10 +1481,37 @@ function closeAdminNotificationPanel() {
     adminNotificationPanel.hidden = true;
     adminNotificationBtn.setAttribute("aria-expanded", "false");
 }
+function positionAdminNotificationPanel() {
+    if (!adminNotificationPanel || !adminNotificationBtn) return;
+    if (!window.matchMedia("(max-width: 760px)").matches) {
+        adminNotificationPanel.style.removeProperty("position");
+        adminNotificationPanel.style.removeProperty("left");
+        adminNotificationPanel.style.removeProperty("right");
+        adminNotificationPanel.style.removeProperty("top");
+        adminNotificationPanel.style.removeProperty("width");
+        adminNotificationPanel.style.removeProperty("max-height");
+        return;
+    }
+    const buttonRect = adminNotificationBtn.getBoundingClientRect();
+    const edge = 12;
+    const width = Math.max(0, window.innerWidth - edge * 2);
+    const maxHeight = Math.max(180, Math.min(window.innerHeight * 0.78, 680));
+    const top = Math.max(edge, Math.min(buttonRect.bottom + 10, window.innerHeight - maxHeight - edge));
+    adminNotificationPanel.style.position = "fixed";
+    adminNotificationPanel.style.left = `${edge}px`;
+    adminNotificationPanel.style.right = "auto";
+    adminNotificationPanel.style.top = `${top}px`;
+    adminNotificationPanel.style.width = `${width}px`;
+    adminNotificationPanel.style.maxHeight = `${Math.min(maxHeight, window.innerHeight - top - edge)}px`;
+}
 adminNotificationBtn?.addEventListener("click", () => {
     const isOpen = adminNotificationPanel.hidden;
     adminNotificationPanel.hidden = !isOpen;
     adminNotificationBtn.setAttribute("aria-expanded", String(isOpen));
+    if (isOpen) positionAdminNotificationPanel();
+});
+window.addEventListener("resize", () => {
+    if (adminNotificationPanel && !adminNotificationPanel.hidden) positionAdminNotificationPanel();
 });
 document.getElementById("closeAdminNotifications")?.addEventListener("click", closeAdminNotificationPanel);
 adminNotificationPanel?.addEventListener("click", event => {
@@ -1593,49 +1746,49 @@ function renderQuotationRequests() {
 
                 <tr>
 
-                    <td>
+                    <td data-label="Request ID">
                         <strong>${escapeHtml(request.request_code || `#${request.id}`)}</strong>
                     </td>
 
-                    <td>
-                        <strong>${escapeHtml(request.customer_name || "Customer")}</strong>
+                    <td data-label="Customer">
+                        <span class="booking-client-cell"><strong>${escapeHtml(request.customer_name || "Customer")}</strong>
 
                         <br>
 
-                        <small>${escapeHtml(request.customer_email || request.customer_contact || "Contact not provided")}</small>
+                        <small>${escapeHtml(request.customer_email || request.customer_contact || "Contact not provided")}</small></span>
                     </td>
 
 
-                    <td>
+                    <td data-label="Request / schedule">
 
                         <strong>Ocular Inspection</strong>
 
                         <br>
 
-                        <small>${escapeHtml(request.inspection_date || "Date not set")} ${escapeHtml(request.inspection_time || "")}</small>
+                        <small class="ocular-schedule-value">${escapeHtml(request.inspection_date || "Date not set")} ${escapeHtml(request.inspection_time || "")}</small>
 
                     </td>
 
 
-                    <td>
+                    <td data-label="Inspection fee">
 
                         ${money(request.inspection_fee)}
 
                     </td>
 
 
-                    <td>
+                    <td data-label="Payment reference">
 
                         ${escapeHtml(request.payment_reference || request.additional_request || "Not provided")}
 
                     </td>
 
-                    <td>
+                    <td data-label="Status">
                         <span class="status ${statusClass(request.status)}">${escapeHtml(request.status || "REQUESTED")}</span>
                     </td>
 
 
-                    <td class="booking-actions-cell">
+                    <td data-label="Action" class="booking-actions-cell">
                         <button type="button" class="booking-actions-trigger" onclick="toggleOcularActions(event, '${escapeAttr(request.id)}', this)" aria-haspopup="menu" aria-controls="bookingActionsPopover" aria-expanded="false" aria-label="Actions for ocular request ${escapeAttr(request.request_code || request.id)}" title="More actions"><span aria-hidden="true">⋮</span></button>
 
                     </td>
@@ -2059,6 +2212,32 @@ document.getElementById("bookingChangeRequestList")?.addEventListener("click", e
     }
 });
 document.getElementById("modalContent")?.addEventListener("click", event => {
+    if (event.target.closest("#cancelExpenseArchive, #cancelExpenseUnarchive")) {
+        closeModal();
+        return;
+    }
+    const archiveExpenseButton = event.target.closest("#confirmExpenseArchive");
+    if (archiveExpenseButton) {
+        applyExpenseArchive(Number(archiveExpenseButton.dataset.expenseIndex));
+        return;
+    }
+    const unarchiveExpenseButton = event.target.closest("#confirmExpenseUnarchive");
+    if (unarchiveExpenseButton) {
+        applyExpenseUnarchive(Number(unarchiveExpenseButton.dataset.expenseIndex));
+        return;
+    }
+    if (event.target.closest("#cancelBookingStatusChange")) {
+        closeModal();
+        return;
+    }
+    const bookingStatusButton = event.target.closest("#confirmBookingStatusChange");
+    if (bookingStatusButton) {
+        const { bookingId, status } = bookingStatusButton.dataset;
+        bookingStatusButton.disabled = true;
+        closeModal();
+        void applyBookingStatus(bookingId, status);
+        return;
+    }
     if (event.target.closest("#cancelOcularStatusReview")) {
         closeModal();
         return;
