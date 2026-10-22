@@ -96,6 +96,14 @@ loginForm.addEventListener(
         loginButton.textContent =
             "Logging in...";
 
+        const shouldRemember = Boolean(rememberMe?.checked);
+        localStorage.setItem("kqRememberMe", String(shouldRemember));
+        if (shouldRemember) {
+            localStorage.setItem("kqUserEmail", email);
+        } else {
+            localStorage.removeItem("kqUserEmail");
+        }
+
 
         try {
 
@@ -193,29 +201,6 @@ loginForm.addEventListener(
                 "✅ Profile:",
                 profile
             );
-
-
-            // ========================================
-            // REMEMBER EMAIL
-            // ========================================
-
-            if (
-                rememberMe &&
-                rememberMe.checked
-            ) {
-
-                localStorage.setItem(
-                    "kqUserEmail",
-                    email
-                );
-
-            } else {
-
-                localStorage.removeItem(
-                    "kqUserEmail"
-                );
-
-            }
 
 
             // ========================================
@@ -349,6 +334,8 @@ const savedEmail =
     );
 
 
+const savedRememberPreference = localStorage.getItem("kqRememberMe");
+
 if (savedEmail) {
 
     document.getElementById(
@@ -356,10 +343,10 @@ if (savedEmail) {
     ).value = savedEmail;
 
 
-    if (rememberMe) {
+}
 
-        rememberMe.checked = true;
-
-    }
-
+if (rememberMe) {
+    rememberMe.checked = savedRememberPreference === null
+        ? Boolean(savedEmail)
+        : savedRememberPreference === "true";
 }
