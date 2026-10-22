@@ -3173,3 +3173,79 @@ body.logout-modal-open {
 .customer-reschedule-clock .clock-footer > span { margin-right: auto; color: #607987; font-size: .8rem; }
 .customer-reschedule-slots .time-slot-option.is-pending:disabled { border-color: #d5e4e9; background: #f4f8fa; color: #657b85; opacity: 1; }
 .customer-reschedule-slots .time-slot-option.is-pending:disabled strong, .customer-reschedule-slots .time-slot-option.is-pending:disabled small { color: #657b85; }
+
+/* Customer mobile navigation */
+.mobile-nav-toggle {
+    display: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    flex: 0 0 44px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid #d6e4eb;
+    border-radius: 11px;
+    background: #fff;
+    color: var(--sky-dark);
+    cursor: pointer;
+}
+.mobile-nav-toggle span {
+    width: 19px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform .18s ease, opacity .18s ease;
+}
+.mobile-nav-toggle:focus-visible {
+    outline: 3px solid rgba(41, 155, 211, .28);
+    outline-offset: 2px;
+}
+
+@media (max-width: 800px) {
+    .header-content {
+        position: relative;
+        flex-wrap: nowrap;
+        gap: 10px;
+        padding: 10px 0;
+    }
+    .header-actions {
+        margin-left: auto;
+        flex: 0 0 auto;
+        gap: 8px;
+    }
+    .mobile-nav-toggle { display: flex; }
+    .mobile-nav-toggle[aria-expanded="true"] span:first-child { transform: translateY(7px) rotate(45deg); }
+    .mobile-nav-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+    .mobile-nav-toggle[aria-expanded="true"] span:last-child { transform: translateY(-7px) rotate(-45deg); }
+    .nav-links {
+        position: absolute;
+        z-index: 1050;
+        top: calc(100% + 8px);
+        right: 0;
+        left: 0;
+        display: none;
+        width: auto;
+        max-height: min(70vh, 420px);
+        padding: 8px;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 3px;
+        overflow-y: auto;
+        border: 1px solid #d9e7ed;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 14px 34px rgba(22, 51, 68, .16);
+    }
+    .nav-links.is-open { display: flex; }
+    .nav-links a {
+        display: block;
+        padding: 12px 14px;
+        border-radius: 9px;
+        white-space: normal;
+    }
+    .nav-links a::after { display: none; }
+    .nav-links a.active { background: #eaf6fb; }
+}
