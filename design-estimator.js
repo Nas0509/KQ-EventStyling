@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!input || !estimateButton) return;
 
     const maxBytes = 10 * 1024 * 1024;
+    const supportedPackages = ["Simple Styling", "Package A", "Package B", "Package C", "Package D", "Package E"];
     let selectedFile = null;
     let estimate = null;
     let previewUrl = "";
@@ -120,12 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: { imageDataUrl }
             });
             if (error) throw new Error(error.message || "The estimate could not be prepared.");
-            if (!data || !["Basic", "Elegant", "Grand"].includes(data.package)) {
+            if (!data || !supportedPackages.includes(data.package)) {
                 throw new Error("The estimate returned an unexpected result. Please try again.");
             }
             estimate = data;
             window.kqDesignEstimate = data;
-            packageName.textContent = `${data.package} Celebration`;
+            packageName.textContent = data.package;
             price.textContent = peso.format(Number(data.price));
             (Array.isArray(data.features) ? data.features : []).slice(0, 7).forEach(item => {
                 const li = document.createElement("li");

@@ -11,7 +11,7 @@
 
     const conversation = [];
     let isSending = false;
-    const welcomeMessage = "Hi! I’m KQ AI. Ask me for event themes, color combinations, package suggestions, or styling ideas. What are you planning?";
+    const welcomeMessage = "Hi! I’m KQ AI. I can help with packages, event styling, booking and payment steps, ocular inspections, and cancellation or reschedule requests. What would you like to know?";
 
     function setOpen(open) {
         panel.hidden = !open;
