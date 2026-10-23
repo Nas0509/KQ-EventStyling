@@ -752,6 +752,9 @@ img {
 .gallery-control:hover, .gallery-control:focus-visible { background: rgba(20,32,42,.9); }
 .gallery-control-prev { left: 12px; }
 .gallery-control-next { right: 12px; }
+@media (hover: none), (pointer: coarse) {
+    .gallery-control { opacity: 1; }
+}
 
 .gallery-count {
     position: absolute;
