@@ -1125,6 +1125,13 @@ async function requestQuotation() {
     const preferredTime = timeInput?.value || "";
     const venueName = venueNameInput?.value.trim() || "";
 
+    const termsAccepted = document.getElementById("ocularTermsAccepted");
+    if (!termsAccepted?.checked) {
+        showCustomizerToast("Please accept the Terms and Conditions before submitting your ocular inspection request.");
+        termsAccepted?.focus();
+        return;
+    }
+
     if (!window.supabaseClient) {
         showCustomizerToast("The request service is temporarily unavailable. Please try again shortly.", "error", "Request unavailable");
         return;
@@ -1348,6 +1355,8 @@ function showCustomizerMessage(
 // ========================================
 
 function clearOcularRequestForm() {
+    const termsAccepted = document.getElementById("ocularTermsAccepted");
+    if (termsAccepted) termsAccepted.checked = false;
     ["ocularName", "ocularEmail", "ocularPhone", "inspectionDate", "inspectionTime", "venueName", "inspectionAddress", "inspectionCity", "inspectionPaymentReference"].forEach(id => {
         const field = document.getElementById(id);
         if (field) field.value = "";

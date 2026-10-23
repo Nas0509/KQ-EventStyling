@@ -2265,6 +2265,19 @@ body.logout-modal-open {
     font-size: 0.82rem;
 }
 
+.terms-check a {
+    color: var(--sky-dark);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.terms-check a:hover,
+.terms-check a:focus-visible {
+    color: var(--sky-deep);
+    text-decoration-thickness: 2px;
+}
+
 .terms-check {
     display: flex;
     align-items: flex-start;

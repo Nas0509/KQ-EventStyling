@@ -272,3 +272,17 @@ footer {
         font-size: 2.2rem;
     }
 }
+
+
+.legal-links {
+    margin: 16px 0 0;
+    color: #66747e;
+    font-size: .78rem;
+    line-height: 1.55;
+    text-align: center;
+}
+
+.legal-links a {
+    color: #167cae;
+    font-weight: 700;
+}
