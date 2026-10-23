@@ -4,17 +4,18 @@ const EXPENSE_KEY = "kqExpenses";
 const EXPENSE_ARCHIVE_KEY = "kqArchivedExpenses";
 const INVENTORY_KEY = "kqInventory";
 const INVENTORY_USAGE_KEY = "kqInventoryUsage";
-const PACKAGE_BALLOON_REQUIREMENTS = {
+const INVENTORY_PACKAGES = ["Simple Styling", "Package A", "Package B", "Package C", "Package D", "Package E"];
+const PACKAGE_BALLOON_USAGE = {
     "Simple Styling": 50,
     "Package A": 50,
-    "Package B": 160,
-    "Package C": 215,
-    "Package D": 330,
-    "Package E": 640
+    "Package B": 100,
+    "Package C": 200,
+    "Package D": 300,
+    "Package E": 600
 };
 
 const defaultInventory = [
-    { id: 1, name: "Balloons", category: "Decoration", quantity: 200, unit: "pcs", cost: 5, reorder: 50 },
+    { id: 1, name: "Balloons", category: "Decoration", quantity: 200, unit: "pcs", cost: 5, reorder: 50, usageByPackage: { ...PACKAGE_BALLOON_USAGE } },
     { id: 2, name: "Table Covers", category: "Table Styling", quantity: 20, unit: "pcs", cost: 150, reorder: 10 },
     { id: 3, name: "LED Lights", category: "Lighting", quantity: 5, unit: "pcs", cost: 500, reorder: 5 }
 ];
@@ -25,6 +26,10 @@ let payments = JSON.parse(localStorage.getItem(PAYMENT_KEY) || "[]");
 let expenses = JSON.parse(localStorage.getItem(EXPENSE_KEY) || "[]");
 let archivedExpenses = JSON.parse(localStorage.getItem(EXPENSE_ARCHIVE_KEY) || "[]");
 let inventory = JSON.parse(localStorage.getItem(INVENTORY_KEY) || "null") || defaultInventory;
+inventory = inventory.map(item => ({
+    ...item,
+    usageByPackage: item.usageByPackage || (/balloon/i.test(String(item.name || "")) ? { ...PACKAGE_BALLOON_USAGE } : {})
+}));
 let inventoryUsage = JSON.parse(localStorage.getItem(INVENTORY_USAGE_KEY) || "{}") || {};
 
 const accountMenuWrap = document.getElementById("accountMenuWrap");
@@ -70,18 +75,24 @@ function getBookingPackageName(booking) {
 
 function getBookingInventoryPlan(booking) {
     const packageName = getBookingPackageName(booking);
-    const quantity = PACKAGE_BALLOON_REQUIREMENTS[packageName];
-    if (!quantity) return { error: "This booking has no recognized package, so its material usage cannot be calculated." };
-    const balloonItem = inventory.find(item => String(item.name || "").trim().toLowerCase() === "balloons")
-        || inventory.find(item => /balloon/i.test(String(item.name || "")));
-    if (!balloonItem) return { error: "Add a Balloons item to Inventory before approving this booking." };
-    const available = Number(balloonItem.quantity) || 0;
-    if (available < quantity) {
-        return { error: `Not enough balloons for ${packageName}. Required: ${quantity}; available: ${available}.` };
+    if (!INVENTORY_PACKAGES.includes(packageName)) return { error: "This booking has no recognized package, so its material usage cannot be calculated." };
+    const items = inventory
+        .map(item => ({
+            inventoryId: item.id,
+            name: item.name,
+            unit: item.unit || "pcs",
+            quantity: Math.max(0, Number(item.usageByPackage?.[packageName]) || 0),
+            available: Math.max(0, Number(item.quantity) || 0)
+        }))
+        .filter(item => item.quantity > 0);
+    if (!items.length) return { error: `No material usage is set for ${packageName}. Add the quantities in Inventory before approving this booking.` };
+    const shortages = items.filter(item => item.available < item.quantity);
+    if (shortages.length) {
+        return { error: `Not enough stock for ${packageName}: ${shortages.map(item => `${item.name} needs ${item.quantity} ${item.unit}, but only ${item.available} ${item.unit} are available`).join("; ")}.` };
     }
     return {
         packageName,
-        items: [{ inventoryId: balloonItem.id, name: balloonItem.name, quantity }]
+        items: items.map(({ inventoryId, name, unit, quantity }) => ({ inventoryId, name, unit, quantity }))
     };
 }
 
@@ -1060,7 +1071,11 @@ function openMonthlyActivityReport() {
 function renderInventory() {
     document.getElementById("inventoryTableBody").innerHTML = inventory.map(i => {
         const low = Number(i.quantity) <= Number(i.reorder);
-        return `<tr><td data-label="Material"><strong>${escapeHtml(i.name)}</strong></td><td data-label="Category">${escapeHtml(i.category)}</td><td data-label="Available">${i.quantity}</td><td data-label="Unit">${escapeHtml(i.unit)}</td><td data-label="Cost / item">${money(i.cost)}</td><td data-label="Total cost">${money(Number(i.quantity) * Number(i.cost))}</td><td data-label="Status"><span class="status ${low ? "CANCELLED" : "APPROVED"}">${low ? "LOW STOCK" : "AVAILABLE"}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editInventory(${i.id})">Update</button></td></tr>`;
+        const usageSummary = INVENTORY_PACKAGES
+            .filter(packageName => Number(i.usageByPackage?.[packageName]) > 0)
+            .map(packageName => `${packageName.replace("Simple Styling", "Simple")}: ${Number(i.usageByPackage[packageName])} ${i.unit || "pcs"}`)
+            .join(" · ");
+        return `<tr><td data-label="Material"><strong>${escapeHtml(i.name)}</strong><small>${usageSummary ? `Per event: ${escapeHtml(usageSummary)}` : "No package usage set"}</small></td><td data-label="Category">${escapeHtml(i.category)}</td><td data-label="Available">${i.quantity}</td><td data-label="Unit">${escapeHtml(i.unit)}</td><td data-label="Cost / item">${money(i.cost)}</td><td data-label="Total cost">${money(Number(i.quantity) * Number(i.cost))}</td><td data-label="Status"><span class="status ${low ? "CANCELLED" : "APPROVED"}">${low ? "LOW STOCK" : "AVAILABLE"}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editInventory(${i.id})">Update</button></td></tr>`;
     }).join("");
 }
 
@@ -1110,9 +1125,9 @@ function changeStatus(id, newStatus) {
     }
     const action = approving ? "approve" : "decline";
     const effect = approving
-        ? `This will mark the booking as approved and notify the customer through the booking workflow.${isNewApproval ? ` It will deduct ${inventoryPlan.items.reduce((sum, item) => sum + item.quantity, 0)} balloons for ${inventoryPlan.packageName}.` : " Inventory for this booking has already been recorded."}`
+        ? `This will mark the booking as approved and notify the customer through the booking workflow.${isNewApproval ? ` Inventory to deduct: ${inventoryPlan.items.map(item => `${item.quantity} ${item.unit} ${item.name}`).join(", ")} (${inventoryPlan.packageName}).` : " Inventory for this booking has already been recorded."}`
         : "This will mark the booking as declined. Make sure this is the intended decision before continuing.";
-    openModal(`<section class="booking-status-confirmation"><span class="eyebrow">BOOKING STATUS</span><h3>Are you sure you want to ${action} this booking?</h3><p class="field-help"><strong>${escapeHtml(booking.fullName || "Customer")}</strong> · ${escapeHtml(booking.eventType || "Event")} · ${escapeHtml(booking.eventDate || "Date not set")}</p><p class="field-help">${effect}</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingStatusChange">Go back</button><button type="button" class="btn ${approving ? "primary" : "danger"}" id="confirmBookingStatusChange" data-booking-id="${escapeAttr(id)}" data-status="${escapeAttr(newStatus)}">Yes, ${action} booking</button></div></section>`);
+    openModal(`<section class="booking-status-confirmation"><span class="eyebrow">BOOKING STATUS</span><h3>Are you sure you want to ${action} this booking?</h3><p class="field-help"><strong>${escapeHtml(booking.fullName || "Customer")}</strong> · ${escapeHtml(booking.eventType || "Event")} · ${escapeHtml(booking.eventDate || "Date not set")}</p><p class="field-help">${escapeHtml(effect)}</p><div class="modal-actions"><button type="button" class="btn secondary" id="cancelBookingStatusChange">Go back</button><button type="button" class="btn ${approving ? "primary" : "danger"}" id="confirmBookingStatusChange" data-booking-id="${escapeAttr(id)}" data-status="${escapeAttr(newStatus)}">Yes, ${action} booking</button></div></section>`);
     document.querySelector("#modal .modal-card")?.classList.add("booking-status-confirmation-card");
 }
 
@@ -1422,6 +1437,8 @@ function applyExpenseUnarchive(i) {
 
 document.getElementById("addInventoryBtn").addEventListener("click", () => openInventoryForm());
 function openInventoryForm(item = null) {
+    const usageByPackage = item?.usageByPackage || (/balloon/i.test(String(item?.name || "")) ? PACKAGE_BALLOON_USAGE : {});
+    const usageFields = INVENTORY_PACKAGES.map((packageName, index) => `<div class="modal-field"><label for="invUsage${index}">${escapeHtml(packageName)}</label><input id="invUsage${index}" type="number" min="0" step="any" value="${usageByPackage[packageName] ?? ""}" placeholder="0"></div>`).join("");
     openModal(`<h3>${item ? "Update" : "Add"} Material</h3><div class="modal-grid">
         <div class="modal-field"><label>Material Name</label><input id="invName" value="${escapeAttr(item?.name || "")}"></div>
         <div class="modal-field"><label>Category</label><input id="invCategory" value="${escapeAttr(item?.category || "")}"></div>
@@ -1429,10 +1446,11 @@ function openInventoryForm(item = null) {
         <div class="modal-field"><label>Unit</label><input id="invUnit" value="${escapeAttr(item?.unit || "pcs")}"></div>
         <div class="modal-field"><label>Cost per Item</label><input id="invCost" type="number" min="0" value="${item?.cost ?? ""}"></div>
         <div class="modal-field"><label>Low Stock Threshold</label><input id="invReorder" type="number" min="0" value="${item?.reorder ?? 5}"></div>
-    </div><div class="modal-actions"><button class="btn primary" onclick="saveInventory(${item?.id || "null"})">Save Material</button></div>`);
+    </div><h4>Material usage per approved event</h4><p class="field-help">Enter how many units of this material each package uses. Leave 0 if it is not used in that package. Low stock is flagged using the threshold above.</p><div class="modal-grid">${usageFields}</div><div class="modal-actions"><button class="btn primary" onclick="saveInventory(${item?.id || "null"})">Save Material</button></div>`);
 }
 function saveInventory(id) {
-    const data = { name: document.getElementById("invName").value.trim(), category: document.getElementById("invCategory").value.trim(), quantity: Number(document.getElementById("invQty").value) || 0, unit: document.getElementById("invUnit").value.trim(), cost: Number(document.getElementById("invCost").value) || 0, reorder: Number(document.getElementById("invReorder").value) || 0 };
+    const usageByPackage = Object.fromEntries(INVENTORY_PACKAGES.map((packageName, index) => [packageName, Math.max(0, Number(document.getElementById(`invUsage${index}`).value) || 0)]));
+    const data = { name: document.getElementById("invName").value.trim(), category: document.getElementById("invCategory").value.trim(), quantity: Number(document.getElementById("invQty").value) || 0, unit: document.getElementById("invUnit").value.trim(), cost: Number(document.getElementById("invCost").value) || 0, reorder: Number(document.getElementById("invReorder").value) || 0, usageByPackage };
     if (!data.name) { alert("Material name is required."); return }
     if (id) { const i = inventory.find(x => x.id === id); Object.assign(i, data) } else inventory.push({ id: Date.now(), ...data });
     save(); closeModal(); renderAll();
