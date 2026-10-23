@@ -133,11 +133,7 @@ function syncPayments() {
         const total = Number(b.amount) || 0;
         const paid = Number(b.down_payment_amount) || 0;
         const payment = payments.find(p => String(p.bookingId) === String(b.id));
-        const status = paid <= 0
-            ? "NO DOWN PAYMENT"
-            : total > 0 && paid >= total
-                ? "FULLY PAID"
-                : "DOWN PAYMENT MADE";
+        const status = total > 0 && paid >= total ? "FULLY PAID" : "UNPAID";
         if (payment) {
             payment.total = total;
             payment.paid = paid;
@@ -639,8 +635,7 @@ function renderDashboard() {
     const approved = bookings.filter(b => b.status === "APPROVED").length;
     const declined = bookings.filter(b => b.status === "DECLINED").length;
     const upcoming = bookings.filter(b => b.status === "APPROVED" && new Date(b.eventDate) >= new Date(new Date().toDateString())).length;
-    const unpaid = payments.filter(p => p.status === "NO DOWN PAYMENT").length;
-    const partial = payments.filter(p => p.status === "PARTIAL PAYMENT" || p.status === "DOWN PAYMENT MADE").length;
+    const unpaid = payments.filter(p => p.status !== "FULLY PAID").length;
     const paid = payments.filter(p => p.status === "FULLY PAID").length;
     const sales = payments.reduce((sum, p) => sum + Number(p.paid || 0), 0);
     document.getElementById("statPending").textContent = pending;
@@ -648,7 +643,6 @@ function renderDashboard() {
     document.getElementById("statDeclined").textContent = declined;
     document.getElementById("statUpcoming").textContent = upcoming;
     document.getElementById("statUnpaid").textContent = unpaid;
-    document.getElementById("statPartial").textContent = partial;
     document.getElementById("statPaid").textContent = paid;
     document.getElementById("statSales").textContent = money(sales);
 
@@ -954,9 +948,8 @@ function renderPayments() {
     document.getElementById("paymentCollected").textContent = money(collected);
     document.getElementById("paymentOutstanding").textContent = money(contract - collected);
     const visiblePayments = approved.filter(b => {
-        const status = (payments.find(p => p.bookingId === b.id) || {}).status || "NO DOWN PAYMENT";
-        if (filter === "UNPAID") return status === "NO DOWN PAYMENT";
-        if (filter === "PARTIAL") return status === "PARTIAL PAYMENT" || status === "DOWN PAYMENT MADE";
+        const status = (payments.find(p => p.bookingId === b.id) || {}).status || "UNPAID";
+        if (filter === "UNPAID") return status !== "FULLY PAID";
         if (filter === "PAID") return status === "FULLY PAID";
         return true;
     });
@@ -966,10 +959,10 @@ function renderPayments() {
         ? "No payments match this status filter."
         : "No payment records yet.";
     document.getElementById("paymentTableBody").innerHTML = visiblePayments.map(b => {
-        const p = payments.find(x => x.bookingId === b.id) || { total: Number(b.amount) || 0, paid: 0, status: "NO DOWN PAYMENT" };
+        const p = payments.find(x => x.bookingId === b.id) || { total: Number(b.amount) || 0, paid: 0, status: "UNPAID" };
         const paymentStatusClass = p.status === "FULLY PAID"
             ? "PAYMENT_FULLY_PAID"
-            : p.status === "NO DOWN PAYMENT" ? "PENDING" : "PAYMENT_DOWN_PAYMENT";
+            : "PENDING";
         return `<tr><td data-label="Client"><strong>${escapeHtml(b.fullName)}</strong></td><td data-label="Event">${escapeHtml(b.eventType)}</td><td data-label="Date">${escapeHtml(b.eventDate)}</td><td data-label="Total">${money(p.total)}</td><td data-label="Paid">${money(p.paid)}</td><td data-label="Balance">${money(Number(p.total) - Number(p.paid))}</td><td data-label="Status"><span class="status ${paymentStatusClass}">${escapeHtml(p.status)}</span></td><td data-label="Action"><button class="small-btn edit" onclick="editPayment('${b.id}')">Update</button></td></tr>`;
     }).join("");
 }
@@ -1155,16 +1148,12 @@ async function applyBookingStatus(id, newStatus) {
         b.down_payment_amount = verifiedPayment;
         let payment = payments.find(p => String(p.bookingId) === String(id));
         if (!payment) {
-            payment = { bookingId: id, total: Number(b.amount) || 0, paid: verifiedPayment, status: "NO DOWN PAYMENT" };
+            payment = { bookingId: id, total: Number(b.amount) || 0, paid: verifiedPayment, status: "UNPAID" };
             payments.push(payment);
         }
         payment.total = Number(b.amount) || Number(payment.total) || 0;
         payment.paid = verifiedPayment;
-        payment.status = verifiedPayment <= 0
-            ? "NO DOWN PAYMENT"
-            : verifiedPayment >= payment.total
-                ? "FULLY PAID"
-                : "DOWN PAYMENT MADE";
+        payment.status = payment.total > 0 && verifiedPayment >= payment.total ? "FULLY PAID" : "UNPAID";
     }
     save(); renderAll();
     let emailNotice = "";
@@ -1299,10 +1288,11 @@ function editPayment(id) {
                     <input type="hidden" id="paymentStatus" value="">
                     <button type="button" class="payment-status-trigger" id="paymentStatusTrigger" aria-labelledby="paymentStatusLabel paymentStatusTrigger" aria-expanded="false" aria-controls="paymentStatusOptions">Choose status <span aria-hidden="true">▾</span></button>
                     <div class="payment-status-options" id="paymentStatusOptions" role="listbox" aria-labelledby="paymentStatusLabel" hidden>
+                        <button type="button" role="option" data-payment-status="UNPAID">UNPAID</button>
                         <button type="button" role="option" data-payment-status="FULLY PAID">FULLY PAID</button>
                     </div>
                 </div>
-                <small class="field-help">Current status: ${escapeHtml(p.status || "DOWN PAYMENT MADE")}</small>
+                <small class="field-help">Current status: ${p.status === "FULLY PAID" ? "FULLY PAID" : "UNPAID"}</small>
             </div>
         </div>
         <div class="modal-actions"><button class="btn primary" onclick="savePayment('${id}')">Save Payment</button></div>`);
@@ -1329,12 +1319,18 @@ function editPayment(id) {
 async function savePayment(id) {
     const p = payments.find(x => x.bookingId === id); if (!p) return;
     const selected = document.getElementById("paymentStatus").value;
-    if (selected !== "FULLY PAID") {
-        showAdminToast("Choose FULLY PAID to save this payment update.", "error");
+    if (!["UNPAID", "FULLY PAID"].includes(selected)) {
+        showAdminToast("Choose UNPAID or FULLY PAID to save this payment update.", "error");
         return;
     }
-    const paid = Number(p.total);
-    const status = "FULLY PAID";
+    const total = Number(p.total) || 0;
+    const enteredPaid = Number(document.getElementById("paymentPaid").value);
+    if (!Number.isFinite(enteredPaid) || enteredPaid < 0 || enteredPaid > total || (selected === "UNPAID" && enteredPaid >= total)) {
+        showAdminToast(selected === "UNPAID" ? "For UNPAID, the amount paid must be less than the total." : "Enter a valid amount paid.", "error");
+        return;
+    }
+    const paid = selected === "FULLY PAID" ? total : enteredPaid;
+    const status = selected;
     const { error } = await window.supabaseClient.from("bookings").update({ down_payment_amount: paid }).eq("id", id);
     if (error) { showAdminToast(error.message || "Unable to save payment update.", "error"); return; }
     p.paid = paid;
