@@ -76,8 +76,17 @@
         const typing = addMessage("KQ AI is thinking…", "assistant", "kq-ai-typing");
 
         try {
+            // Assistant replies may be longer than the customer's 1,200-character
+            // input limit. Keep a bounded recent context and shorten old replies
+            // only in the request payload so they cannot trigger input validation.
+            const recentMessages = conversation.slice(-8).map(message => ({
+                ...message,
+                content: message.role === "assistant" && message.content.length > 1200
+                    ? `${message.content.slice(0, 1197)}...`
+                    : message.content,
+            }));
             const { data, error } = await supabase.functions.invoke("kq-ai-chat", {
-                body: { messages: conversation.slice(-12) }
+                body: { messages: recentMessages }
             });
             typing.remove();
             if (error) {

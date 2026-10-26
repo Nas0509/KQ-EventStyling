@@ -56,7 +56,13 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: "Please send a valid chat message." }, 400);
       }
       const content = item.content.trim();
-      if (!content || content.length > 1200) return jsonResponse({ error: "Each message must be under 1,200 characters." }, 400);
+      if (!content) return jsonResponse({ error: "Please send a valid chat message." }, 400);
+      if (item.role === "user" && content.length > 1200) {
+        return jsonResponse({ error: "Your message must be under 1,200 characters." }, 400);
+      }
+      if (item.role === "assistant" && content.length > 1200) {
+        return jsonResponse({ error: "Please start a new chat and try again." }, 400);
+      }
       totalCharacters += content.length;
       messages.push({ role: item.role === "assistant" ? "model" : "user", parts: [{ text: content }] });
     }
