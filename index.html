@@ -944,7 +944,7 @@
                             </div>
                             <div class="reservation-payment-entry" id="reservationPaymentEntry" hidden>
                                 <label for="paymentReference">Payment transaction/reference number <span class="required-mark">*</span></label>
-                                <input type="text" id="paymentReference" name="paymentReference" maxlength="40" placeholder="Enter the reference shown by your payment app" autocomplete="off" required disabled>
+                                <input type="text" id="paymentReference" name="paymentReference" maxlength="16" placeholder="Enter up to 16 characters" autocomplete="off" title="Enter up to 16 characters" required disabled>
                                 <small class="field-help">Your reservation fee will remain pending until KQ Event Styling verifies the transfer. Confirm the recipient name in your payment app before sending.</small>
                             </div>
                             <div class="reservation-balance">
@@ -1270,7 +1270,7 @@
     <script src="supabase-config.js?v=20261022-remember-me-session"></script>
 
     <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
-    <script src="user-booking.js?v=20261020-booking-date-selected-color"></script>
+    <script src="user-booking.js?v=20261027-payment-reference-16-characters"></script>
             <script src="user-auth.js?v=20261022-local-auth-session"></script>
     <script src="user-notifications.js?v=20261021-ocular-status-notifications"></script>
     <script src="site-navigation.js?v=20261022-customer-mobile-menu"></script>

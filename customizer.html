@@ -183,7 +183,7 @@
                                 <img src="gcash-qr.png" alt="GCash and InstaPay QR code for ocular inspection fee payment" style="display:block;width:min(100%,260px);height:auto;margin:0 auto 10px;border-radius:10px;">
                                 <strong>Scan to pay the exact inspection fee shown above</strong>
                                 <label for="inspectionPaymentReference" style="display:block;margin-top:12px;text-align:left;">Payment transaction/reference number <span class="required-mark">*</span></label>
-                                <input id="inspectionPaymentReference" type="text" maxlength="40" placeholder="Enter the reference from your payment app" autocomplete="off" required style="width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid #b9cddd;border-radius:10px;">
+                                <input id="inspectionPaymentReference" type="text" maxlength="16" placeholder="Enter up to 16 characters" autocomplete="off" title="Enter up to 16 characters" required style="width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid #b9cddd;border-radius:10px;">
                             </div>
                         </div>
                         <div class="form-group" style="grid-column:1/-1;">
@@ -304,7 +304,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20261022-remember-me-session"></script>
     <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
-    <script src="customizer.js?v=20261023-ocular-terms"></script>
+    <script src="customizer.js?v=20261027-payment-reference-16-characters"></script>
 
 
 </body>

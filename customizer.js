@@ -1212,6 +1212,11 @@ async function requestQuotation() {
             inspectionPaymentReferenceInput?.focus({ preventScroll: true });
             return;
         }
+        if (inspectionPaymentReference.length > 16) {
+            showCustomizerToast("Enter a payment transaction/reference number using up to 16 characters.", "error", "Check payment reference");
+            inspectionPaymentReferenceInput?.focus({ preventScroll: true });
+            return;
+        }
 
         const quotationData = {
             user_id: user.id,

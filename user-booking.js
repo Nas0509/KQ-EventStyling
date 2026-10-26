@@ -1233,6 +1233,9 @@ document.addEventListener("DOMContentLoaded", async function () {
             if (!paymentReference) {
                 throw new Error("Please pay the 30% reservation fee using the QR code and enter the transaction reference number.");
             }
+            if (paymentReference.length > 16) {
+                throw new Error("Enter a payment transaction/reference number using up to 16 characters.");
+            }
 
             // ========================================
             // LOGGED IN USER
