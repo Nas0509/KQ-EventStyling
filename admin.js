@@ -732,13 +732,18 @@ function bookingMessageField(message, fieldName) {
     return match?.[1]?.trim() || "";
 }
 
+function bookingPaymentReference(message) {
+    const match = String(message || "").match(/^Reservation fee payment reference(?:\s*\(pending verification\))?:\s*(.*)$/im);
+    return match?.[1]?.trim() || "";
+}
+
 function bookingClientNotes(message) {
     const text = String(message || "").trim();
     if (!text) return "";
     const requestMatch = text.match(/^Additional requests:\s*([\s\S]*?)(?=\n\s*\n|$)/im);
     if (requestMatch) return requestMatch[1].trim();
     return text.split(/\r?\n/)
-        .filter(line => !/^(Selected package|Venue city|Event venue|Estimated travel expense|Theme|Preferred colors|Reservation fee payment reference):/i.test(line.trim()))
+        .filter(line => !/^(Selected package|Venue city|Event venue|Estimated travel expense|Theme|Preferred colors|Reservation fee payment reference(?: \(pending verification\))?:/i.test(line.trim()))
         .join("\n")
         .trim();
 }
@@ -1252,6 +1257,7 @@ async function viewBooking(id) {
         </dl></section>
         <section class="booking-record-section"><div class="booking-record-section-title"><span>03</span><h4>Package & Payment</h4></div><div class="booking-payment-summary">
             <div><span>Agreed total</span><strong>${money(b.amount)}</strong></div><div><span>Reservation fee (30%)</span><strong>${money(b.required_down_payment)}</strong></div><div><span>Payment received</span><strong>${money(b.down_payment_amount)}</strong></div>
+            <div><span>Client payment reference · pending verification</span><strong>${escapeHtml(bookingPaymentReference(b.message) || "Not provided")}</strong></div>
         </div>${b.ai_estimated_package ? `<p class="booking-record-footnote">AI package suggestion: ${escapeHtml(b.ai_estimated_package)} — ${money(b.ai_estimated_price)}</p>` : ""}</section>
         <section class="booking-record-section"><div class="booking-record-section-title"><span>04</span><h4>Client Notes & Requests</h4><span class="booking-record-readonly-label">Read only</span></div><div class="booking-record-message">${clientNotes ? escapeHtml(clientNotes).replace(/\n/g, "<br>") : "No additional notes were provided by the client."}</div></section>
         ${b.design_image_path ? `<section class="booking-record-section"><div class="booking-record-section-title"><span>05</span><h4>Customer Design Reference</h4></div><p id="adminDesignImageStatus" class="field-help">Loading private design image…</p><img id="adminDesignImage" class="admin-design-preview" alt="Customer-uploaded design reference" hidden></section>` : ""}

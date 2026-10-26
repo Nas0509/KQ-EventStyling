@@ -2749,7 +2749,7 @@ tbody tr:hover {
 .booking-record-field { min-width: 0; padding: 10px 0 11px; border-bottom: 1px solid #edf1f3; }
 .booking-record-field dt { margin-bottom: 4px; color: #7b8991; font-size: .69rem; font-weight: 700; letter-spacing: .035em; }
 .booking-record-field dd { margin: 0; color: #263842; font-size: .91rem; line-height: 1.45; overflow-wrap: anywhere; }
-.booking-payment-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.booking-payment-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .booking-payment-summary > div { padding: 14px 15px; border: 1px solid #e1e8ec; border-radius: 8px; background: #fbfcfd; }
 .booking-payment-summary span { display: block; min-height: 2em; color: #75838c; font-size: .68rem; font-weight: 700; }
 .booking-payment-summary strong { display: block; margin-top: 7px; color: #263c48; font-size: 1.05rem; font-weight: 750; }
@@ -2775,4 +2775,74 @@ tbody tr:hover {
     .booking-payment-summary strong { margin-top: 0; font-size: .98rem; }
     .booking-record-footer { align-items: stretch; flex-direction: column; padding: 17px 20px 22px; }
     .booking-record-footer .btn { width: 100%; }
+}
+
+/* Keep names, emails, and inventory recipes readable in every table layout. */
+.booking-client-cell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 3px;
+    min-width: 0;
+    max-width: 100%;
+}
+.booking-client-cell strong,
+.booking-client-cell small {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+.booking-client-cell small {
+    color: #71838f;
+    line-height: 1.4;
+}
+#adminInventoryTable tbody td:first-child {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+#adminInventoryTable tbody td:first-child > strong,
+#adminInventoryTable tbody td:first-child > small {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+#adminInventoryTable tbody td:first-child > small {
+    margin-top: 5px;
+    color: #71838f;
+    font-size: .78em;
+    line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+    #bookingTableWrap,
+    #paymentTableWrap,
+    #inventoryTableWrap,
+    #ocularTableWrap { width: 100%; max-width: 100%; overflow: visible; }
+    #adminBookingTable,
+    #adminPaymentTable,
+    #adminInventoryTable,
+    #ocularRequestTable {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        table-layout: fixed;
+    }
+    #adminBookingTable tbody td,
+    #adminPaymentTable tbody td,
+    #adminInventoryTable tbody td,
+    #ocularRequestTable tbody td {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+    #adminInventoryTable tbody tr { min-width: 0; }
+    #adminInventoryTable tbody td:first-child { grid-column: 1 / -1; }
 }

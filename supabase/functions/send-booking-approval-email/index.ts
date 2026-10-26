@@ -45,7 +45,7 @@ Deno.serve(async request => {
     const gmailClientSecret = Deno.env.get("GMAIL_CLIENT_SECRET");
     const gmailRefreshToken = Deno.env.get("GMAIL_REFRESH_TOKEN");
     const gmailSender = Deno.env.get("GMAIL_SENDER_EMAIL");
-    const configuredLoginUrl = Deno.env.get("SITE_LOGIN_URL");
+    const configuredLoginUrl = Deno.env.get("SITE_LOGIN_URL") || "https://nas0509.github.io/KQ-EventStyling/login.html";
     if (!authorization?.startsWith("Bearer ")) return jsonResponse({ error: "Please sign in as an administrator." }, 401);
     if (!supabaseUrl || !supabaseKey) return jsonResponse({ error: "Email notifications are not configured yet." }, 503);
     if (!gmailClientId || !gmailClientSecret || !gmailRefreshToken || !gmailSender) {
