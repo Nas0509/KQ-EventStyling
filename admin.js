@@ -358,6 +358,7 @@ async function requireAdmin() {
 }
 
 function showSection(id) {
+    if (!document.getElementById(id)?.classList.contains("page-section")) return;
     document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
     document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.section === id));
     const titles = {
@@ -371,6 +372,7 @@ function showSection(id) {
     };
     document.getElementById("pageTitle").textContent = titles[id] || "Admin Dashboard";
     renderAll();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 const mobileNavToggle = document.getElementById("mobileNavToggle");
