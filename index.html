@@ -925,7 +925,7 @@
                         <textarea id="message" name="message" rows="4" placeholder="Backdrop ideas, special requests, or other details for your event..."></textarea>
                     </div>
 
-                    <section class="reservation-payment" id="reservationPayment" aria-labelledby="reservationPaymentTitle">
+                    <section class="reservation-payment is-guest" id="reservationPayment" aria-labelledby="reservationPaymentTitle">
                         <div class="reservation-payment-details">
                             <span class="badge">SECURE YOUR EVENT DATE</span>
                             <h3 id="reservationPaymentTitle">30% Reservation Fee</h3>
@@ -942,16 +942,22 @@
                                     <strong id="reservationFeeAmount">—</strong>
                                 </div>
                             </div>
-                            <label for="paymentReference">Payment transaction/reference number <span class="required-mark">*</span></label>
-                            <input type="text" id="paymentReference" name="paymentReference" maxlength="40" placeholder="Enter the reference shown by your payment app" autocomplete="off" required disabled>
-                            <small class="field-help">Your reservation fee will remain pending until KQ Event Styling verifies the transfer. Confirm the recipient name in your payment app before sending.</small>
+                            <div class="reservation-payment-entry" id="reservationPaymentEntry" hidden>
+                                <label for="paymentReference">Payment transaction/reference number <span class="required-mark">*</span></label>
+                                <input type="text" id="paymentReference" name="paymentReference" maxlength="40" placeholder="Enter the reference shown by your payment app" autocomplete="off" required disabled>
+                                <small class="field-help">Your reservation fee will remain pending until KQ Event Styling verifies the transfer. Confirm the recipient name in your payment app before sending.</small>
+                            </div>
                             <div class="reservation-balance">
                                 <span>Remaining balance <small>Pay after the event</small></span>
                                 <strong id="remainingBalanceAmount">—</strong>
                             </div>
                         </div>
-                        <div class="reservation-qr-card">
-                            <img src="gcash-qr.png" alt="InstaPay QR code for KQ Event Styling reservation payments">
+                        <div class="reservation-login-notice" id="reservationLoginNotice" role="status">
+                            <strong>Sign in to view payment details</strong>
+                            <span>The payment QR code and reference field are available after you sign in. Your booking form will be saved when you continue to sign in.</span>
+                        </div>
+                        <div class="reservation-qr-card" id="reservationQrCard" hidden>
+                            <img id="reservationQrImage" data-auth-src="gcash-qr.png" alt="InstaPay QR code for KQ Event Styling reservation payments">
                             <strong>Scan to pay</strong>
                             <span>Use your bank or e-wallet app</span>
                         </div>

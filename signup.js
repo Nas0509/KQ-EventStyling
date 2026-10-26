@@ -716,6 +716,8 @@ signupForm.addEventListener(
 
                         options: {
 
+                            emailRedirectTo: "https://nas0509.github.io/KQ-EventStyling/",
+
                             data: {
 
                                 full_name:

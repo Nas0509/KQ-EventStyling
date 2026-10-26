@@ -16,6 +16,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     const timeSection = document.getElementById("timeSection");
     const startTime = document.getElementById("startTime");
     const paymentReferenceInput = document.getElementById("paymentReference");
+    const reservationPayment = document.getElementById("reservationPayment");
+    const reservationPaymentEntry = document.getElementById("reservationPaymentEntry");
+    const reservationLoginNotice = document.getElementById("reservationLoginNotice");
+    const reservationQrCard = document.getElementById("reservationQrCard");
+    const reservationQrImage = document.getElementById("reservationQrImage");
     const bookingPhoneInput = document.getElementById("phone");
     bookingPhoneInput?.addEventListener("input", () => {
         bookingPhoneInput.value = bookingPhoneInput.value.replace(/\D/g, "").slice(0, 11);
@@ -37,9 +42,46 @@ document.addEventListener("DOMContentLoaded", async function () {
     // ========================================
 
     let selectedPackage = sessionStorage.getItem("kqSelectedPackage") || "";
+    let hasAuthenticatedSession = false;
     let bookingTravelFee = null;
     let bookingTravelDistanceKm = null;
     let bookingTravelLocation = null;
+
+    function syncReservationPaymentAccess(session) {
+        hasAuthenticatedSession = Boolean(session?.user);
+        reservationPayment?.classList.toggle("is-guest", !hasAuthenticatedSession);
+        if (reservationPaymentEntry) reservationPaymentEntry.hidden = !hasAuthenticatedSession;
+        if (reservationLoginNotice) reservationLoginNotice.hidden = hasAuthenticatedSession;
+        if (reservationQrCard) reservationQrCard.hidden = !hasAuthenticatedSession;
+
+        if (hasAuthenticatedSession && reservationQrImage?.dataset.authSrc) {
+            reservationQrImage.src = reservationQrImage.dataset.authSrc;
+        } else {
+            reservationQrImage?.removeAttribute("src");
+        }
+
+        const packageTotal = getPackageAmount(selectedPackage);
+        const hasTravelEstimate = Boolean(bookingTravelLocation && Number.isFinite(bookingTravelFee));
+        if (paymentReferenceInput) {
+            paymentReferenceInput.disabled = !hasAuthenticatedSession || !packageTotal || !hasTravelEstimate;
+            paymentReferenceInput.required = hasAuthenticatedSession;
+        }
+    }
+
+    if (window.supabaseClient?.auth) {
+        window.supabaseClient.auth.getSession()
+            .then(({ data, error }) => {
+                if (!error) syncReservationPaymentAccess(data?.session);
+            })
+            .catch(error => console.warn("Unable to check payment QR access:", error));
+
+        window.supabaseClient.auth.onAuthStateChange((_event, session) => {
+            syncReservationPaymentAccess(session);
+            updateReservationPayment();
+        });
+    } else {
+        syncReservationPaymentAccess(null);
+    }
 
     const pesoFormat = new Intl.NumberFormat("en-PH", {
         style: "currency",
@@ -202,7 +244,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (bookingTotalAmount) bookingTotalAmount.textContent = fee ? pesoFormat.format(total) : "Select package and venue city";
         if (reservationFeeText) reservationFeeText.textContent = fee ? pesoFormat.format(fee) : "—";
         if (remainingBalanceText) remainingBalanceText.textContent = fee ? pesoFormat.format(total - fee) : "—";
-        if (paymentReferenceInput) paymentReferenceInput.disabled = !fee;
+        if (paymentReferenceInput) paymentReferenceInput.disabled = !hasAuthenticatedSession || !fee;
 
         return { total: fee ? total : 0, fee };
     }
@@ -1151,10 +1193,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                 throw new Error("Please accept the booking terms and conditions.");
             }
 
-            if (!paymentReference) {
-                throw new Error("Please pay the 30% reservation fee using the QR code and enter the transaction reference number.");
-            }
-
             const designImageFile = window.kqDesignImageFile || null;
             const designEstimate = window.kqDesignEstimate || null;
             if (designImageFile && !designEstimate) {
@@ -1170,6 +1208,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             // ========================================
 
             if (!session) {
+                syncReservationPaymentAccess(null);
                 console.log("👤 User is NOT logged in.");
 
                 const draft = {};
@@ -1187,6 +1226,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
                 showLoginRequiredModal();
                 return;
+            }
+
+            syncReservationPaymentAccess(session);
+
+            if (!paymentReference) {
+                throw new Error("Please pay the 30% reservation fee using the QR code and enter the transaction reference number.");
             }
 
             // ========================================

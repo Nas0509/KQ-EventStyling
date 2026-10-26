@@ -2109,6 +2109,30 @@ body.logout-modal-open {
     background: linear-gradient(135deg, #f1faff, #ffffff);
 }
 
+.reservation-payment.is-guest {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.reservation-login-notice {
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    border: 1px solid #cceaf8;
+    border-radius: 12px;
+    background: #eaf7fd;
+    color: var(--ink-soft);
+    line-height: 1.55;
+}
+
+.reservation-login-notice strong {
+    color: var(--sky-dark);
+}
+
+.reservation-payment-entry[hidden],
+.reservation-login-notice[hidden],
+.reservation-qr-card[hidden] {
+    display: none !important;
+}
 .reservation-payment h3 {
     margin: 8px 0;
     color: var(--ink);
