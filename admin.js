@@ -745,7 +745,7 @@ function bookingClientNotes(message) {
     const requestMatch = text.match(/^Additional requests:\s*([\s\S]*?)(?=\n\s*\n|$)/im);
     if (requestMatch) return requestMatch[1].trim();
     return text.split(/\r?\n/)
-        .filter(line => !/^(Selected package|Venue city|Event venue|Estimated travel expense|Theme|Preferred colors|Reservation fee payment reference(?: \(pending verification\))?:/i.test(line.trim()))
+        .filter(line => !/^(Selected package|Venue city|Event venue|Estimated travel expense|Theme|Preferred colors|Reservation fee payment reference(?: \(pending verification\))?):/i.test(line.trim()))
         .join("\n")
         .trim();
 }
