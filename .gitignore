@@ -7,6 +7,16 @@
 var/*.sqlite
 var/*.cookie
 var/sessions/
+var/uploads/
+var/supabase-export/
+.env
+.env.*
+!.env.example
+deployment/
+!deployment/
+deployment/*
+!deployment/render/
+!deployment/render/**
 *.rsuser
 *.suo
 *.user
@@ -201,6 +211,9 @@ PublishScripts/
 *.snupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
+# KQ PHP site package photography is shipped as static site content.
+!public/assets/packages/
+!public/assets/packages/*.jpg
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed
@@ -364,3 +377,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Project PHP command-line source (not a Visual Studio build directory).
+!/bin/
+!/bin/**

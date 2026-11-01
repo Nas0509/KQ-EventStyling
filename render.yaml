@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: kq-event-styling-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deployment/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api.php?action=bootstrap
+    envVars:
+      - key: KQ_ADMIN_EMAIL
+        sync: false
+      - key: KQ_ADMIN_PASSWORD
+        sync: false

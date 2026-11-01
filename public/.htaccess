@@ -1,0 +1,17 @@
+Options -Indexes
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "same-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\. - [F,L]
+</IfModule>
+
+<FilesMatch "(?i)(^\.|\.(?:bak|conf|dist|ini|log|old|orig|phar|save|sql|sqlite|sqlite3|swp|tmp|ya?ml|zip))$">
+    Require all denied
+</FilesMatch>
