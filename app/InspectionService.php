@@ -7,7 +7,11 @@ final class InspectionService
 
     public static function cities(): array
     {
-        $source = file_get_contents(dirname(__DIR__) . '/location-data.js');
+        $projectRoot = dirname(__DIR__);
+        $sourcePath = is_file($projectRoot . '/location-data.js')
+            ? $projectRoot . '/location-data.js'
+            : $projectRoot . '/public/location-data.js';
+        $source = @file_get_contents($sourcePath);
         if ($source === false || !preg_match('/KQ_LUZON_CITY_COORDINATES\s*=\s*(\[.*?\]);/s', $source, $match)) {
             fail(503, 'Venue distance data is unavailable. Please contact KQ.');
         }
