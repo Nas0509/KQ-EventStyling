@@ -5,7 +5,8 @@ final class Database
 {
     public static function connect(): PDO
     {
-        $path = getenv('KQ_DB_PATH') ?: dirname(__DIR__) . '/var/kq.sqlite';
+        $privateDirectory = rtrim((string)(getenv('KQ_PRIVATE_DIR') ?: dirname(__DIR__) . '/var'), "/\\");
+        $path = getenv('KQ_DB_PATH') ?: $privateDirectory . '/kq.sqlite';
         $db = new PDO('sqlite:' . $path, null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

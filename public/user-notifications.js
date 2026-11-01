@@ -1,0 +1,754 @@
+(() => {
+    const wrapper = document.getElementById("userNotificationWrap");
+    const button = document.getElementById("userNotificationBtn");
+    const panel = document.getElementById("userNotificationPanel");
+    const closeButton = document.getElementById("closeUserNotifications");
+    const count = document.getElementById("userNotificationCount");
+    const list = document.getElementById("userNotificationList");
+    const historyOverlay = document.getElementById("customerBookingHistory");
+    const historyContent = document.getElementById("customerHistoryContent");
+    const closeHistoryButton = document.getElementById("closeCustomerHistory");
+    if (!wrapper || !button || !panel || !list || !window.supabaseClient) return;
+
+    const supabase = window.supabaseClient;
+    let currentUserId = null;
+    let realtimeChannel = null;
+    let refreshTimer = null;
+    let notifications = [];
+    let historyBookings = [];
+    let loading = false;
+    let closeOpenRescheduleClock = null;
+
+    historyContent?.addEventListener("scroll", () => closeOpenRescheduleClock?.(), { passive: true });
+    document.addEventListener("scroll", () => closeOpenRescheduleClock?.(), { capture: true, passive: true });
+    window.addEventListener("resize", () => closeOpenRescheduleClock?.(), { passive: true });
+
+    function setPanelOpen(open) {
+        panel.hidden = !open;
+        button.setAttribute("aria-expanded", String(open));
+        if (open && currentUserId) {
+            void (async () => {
+                await loadNotifications();
+            })();
+        }
+    }
+
+    function render() {
+        const unreadCount = notifications.filter(item => !item.read_at).length;
+        count.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+        count.hidden = unreadCount === 0;
+        button.classList.toggle("has-unread", unreadCount > 0);
+        button.setAttribute("aria-label", unreadCount
+            ? `Notifications, ${unreadCount} unread`
+            : "Notifications");
+
+        if (!notifications.length) {
+            list.innerHTML = '<p class="user-notification-empty">No notifications yet.</p>';
+            return;
+        }
+
+        list.replaceChildren();
+        notifications.forEach(item => {
+            const row = document.createElement("button");
+            row.type = "button";
+            row.className = `user-notification-item${item.read_at ? " is-read" : " is-unread"}`;
+            row.setAttribute("aria-label", `${item.title}. ${item.message}`);
+            const title = document.createElement("strong");
+            title.textContent = item.title;
+            const detail = document.createElement("span");
+            detail.textContent = item.message;
+            const date = document.createElement("small");
+            date.textContent = new Intl.DateTimeFormat(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short"
+            }).format(new Date(item.created_at));
+            row.append(title, detail, date);
+            row.addEventListener("click", () => void (async () => {
+                await markRead(item.id);
+                setPanelOpen(false);
+                if (String(item.type || "").startsWith("OCULAR_INSPECTION_")) {
+                    await showRequestSentDialog(item.message, item.title);
+                    return;
+                }
+                if (item.booking_id) await openBookingHistory(item.booking_id);
+            })());
+            list.appendChild(row);
+        });
+    }
+
+    async function loadNotifications() {
+        if (!currentUserId || loading) return;
+        loading = true;
+        const queryNotifications = () => supabase
+            .from("user_notifications")
+            .select("id,booking_id,type,title,message,created_at,read_at")
+            .eq("user_id", currentUserId)
+            .order("created_at", { ascending: false })
+            .limit(40);
+        try {
+            let { data, error } = await queryNotifications();
+            // Recover once from an expired access token before treating notifications
+            // as unavailable. The app can retain a signed-in UI briefly while the
+            // REST API has already started rejecting that token.
+            if (error?.status === 401) {
+                const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+                if (!refreshError && refreshed?.session) ({ data, error } = await queryNotifications());
+                else if (refreshError) console.warn("Unable to refresh the customer session for notifications.", refreshError);
+            }
+            if (error) {
+                console.warn("Unable to load account notifications.", error);
+                if (!notifications.length) list.innerHTML = '<p class="user-notification-empty">Notifications could not be loaded. Please sign in again or refresh the page.</p>';
+                return;
+            }
+            notifications = data || [];
+            render();
+        } catch (error) {
+            console.warn("Unable to load account notifications.", error);
+            if (!notifications.length) list.innerHTML = '<p class="user-notification-empty">Notifications could not be loaded. Please refresh and try again.</p>';
+        } finally {
+            loading = false;
+        }
+    }
+
+    async function markRead(id) {
+        const item = notifications.find(row => row.id === id);
+        if (!item || item.read_at) return;
+        const readAt = new Date().toISOString();
+        item.read_at = readAt;
+        render();
+        const { error } = await supabase
+            .from("user_notifications")
+            .update({ read_at: readAt })
+            .eq("id", id)
+            .eq("user_id", currentUserId);
+        if (error) {
+            item.read_at = null;
+            render();
+        }
+    }
+
+    const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    const money = value => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(Number(value) || 0);
+    const displayDate = value => value ? new Intl.DateTimeFormat("en-PH", { dateStyle: "long" }).format(new Date(`${String(value).slice(0, 10)}T12:00:00`)) : "Not set";
+    const displayTime = value => value ? new Intl.DateTimeFormat("en-PH", { hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(`2000-01-01T${String(value).slice(0, 5)}:00`)) : "Not set";
+
+    function setupRescheduleClock(form) {
+        const input = form.querySelector('[name="requested_start_time"]');
+        const trigger = form.querySelector("[data-reschedule-clock-toggle]");
+        const label = form.querySelector("[data-reschedule-clock-label]");
+        const picker = form.querySelector("[data-reschedule-clock]");
+        const face = form.querySelector("[data-reschedule-clock-face]");
+        const hourText = form.querySelector("[data-reschedule-clock-hour]");
+        const minuteText = form.querySelector("[data-reschedule-clock-minute]");
+        const periodText = form.querySelector("[data-reschedule-clock-period]");
+        const slotNote = form.querySelector("[data-reschedule-clock-slot-note]");
+        const hourTab = form.querySelector('[data-reschedule-clock-tab="hour"]');
+        const minuteTab = form.querySelector('[data-reschedule-clock-tab="minute"]');
+        const done = form.querySelector("[data-reschedule-clock-done]");
+        const cancel = form.querySelector("[data-reschedule-clock-cancel]");
+        if (!input || !trigger || !label || !picker || !face) return () => {};
+
+        let slot = "";
+        let hour = 9;
+        let minute = 0;
+        let mode = "hour";
+        const period = () => slot === "MORNING" ? "AM" : "PM";
+        const resetDraft = () => {
+            if (input.value) {
+                const [hours, minutes] = input.value.split(":").map(Number);
+                hour = hours % 12 || 12;
+                minute = minutes || 0;
+            } else {
+                hour = slot === "MORNING" ? 6 : slot === "AFTERNOON" ? 12 : slot === "NIGHT" ? 6 : 1;
+                minute = 0;
+            }
+            mode = "hour";
+        };
+        const close = (discardDraft = true) => {
+            if (discardDraft && !picker.hidden) resetDraft();
+            picker.hidden = true;
+            trigger.setAttribute("aria-expanded", "false");
+        };
+        const closeWhenMostlyOutOfView = () => {
+            if (picker.hidden) return;
+            const rect = picker.getBoundingClientRect();
+            const clipRect = historyContent?.getBoundingClientRect();
+            const visibleTop = Math.max(rect.top, 0, clipRect?.top ?? 0);
+            const visibleBottom = Math.min(rect.bottom, window.innerHeight, clipRect?.bottom ?? window.innerHeight);
+            const visibleLeft = Math.max(rect.left, 0, clipRect?.left ?? 0);
+            const visibleRight = Math.min(rect.right, window.innerWidth, clipRect?.right ?? window.innerWidth);
+            const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+            const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+            const totalArea = rect.width * rect.height;
+            if (totalArea > 0 && (visibleHeight * visibleWidth) / totalArea < 0.5) close();
+        };
+        closeOpenRescheduleClock = closeWhenMostlyOutOfView;
+        const to24Hour = () => hour % 12 + (period() === "PM" ? 12 : 0);
+        const render = () => {
+            if (hourText) hourText.textContent = String(hour).padStart(2, "0");
+            if (minuteText) minuteText.textContent = String(minute).padStart(2, "0");
+            if (periodText) periodText.textContent = period();
+            hourTab?.classList.toggle("active", mode === "hour");
+            minuteTab?.classList.toggle("active", mode === "minute");
+            face.replaceChildren();
+            const hand = document.createElement("div");
+            hand.className = "clock-hand";
+            const center = document.createElement("div");
+            center.className = "clock-center";
+            const values = mode === "hour"
+                ? slot === "AFTERNOON" ? [12, 1, 2, 3, 4, 5] : [6, 7, 8, 9, 10, 11]
+                : Array.from({ length: 12 }, (_, index) => index * 5);
+            const activeValue = mode === "hour" ? hour : minute;
+            const angle = values.indexOf(activeValue) * 30 - 180;
+            hand.style.transform = `rotate(${angle}deg)`;
+            face.append(hand);
+            values.forEach((value, index) => {
+                const item = document.createElement("button");
+                item.type = "button";
+                item.className = `clock-number${value === activeValue ? " selected" : ""}`;
+                item.textContent = String(value).padStart(2, "0");
+                const radians = (index * 30 - 90) * Math.PI / 180;
+                item.style.left = `${50 + 40 * Math.cos(radians)}%`;
+                item.style.top = `${50 + 40 * Math.sin(radians)}%`;
+                item.addEventListener("click", () => {
+                    if (mode === "hour") { hour = value; mode = "minute"; }
+                    else minute = value;
+                    render();
+                });
+                face.append(item);
+            });
+            face.append(center);
+        };
+        const setSlot = nextSlot => {
+            slot = nextSlot || "";
+            hour = slot === "MORNING" ? 6 : slot === "AFTERNOON" ? 12 : slot === "NIGHT" ? 6 : 1;
+            minute = 0;
+            mode = "hour";
+            input.value = "";
+            input.dataset.timeSlot = slot;
+            trigger.disabled = !slot;
+            trigger.setAttribute("aria-expanded", "false");
+            label.textContent = slot ? `Choose a time in the ${slot.toLowerCase()} slot` : "Choose a time after selecting a slot";
+            if (slotNote) slotNote.textContent = slot ? `${period()} is set automatically` : "";
+            close();
+            render();
+        };
+
+        trigger.addEventListener("click", () => {
+            if (!slot) return;
+            if (input.value) {
+                const [hours, minutes] = input.value.split(":").map(Number);
+                hour = hours % 12 || 12;
+                minute = minutes;
+            }
+            mode = "hour";
+            picker.hidden = false;
+            trigger.setAttribute("aria-expanded", "true");
+            render();
+        });
+        hourTab?.addEventListener("click", () => { mode = "hour"; render(); });
+        minuteTab?.addEventListener("click", () => { mode = "minute"; render(); });
+        hourText?.addEventListener("click", () => { mode = "hour"; render(); });
+        minuteText?.addEventListener("click", () => { mode = "minute"; render(); });
+        done?.addEventListener("click", () => {
+            const hours = to24Hour();
+            input.value = `${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+            label.textContent = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${period()}`;
+            close(false);
+        });
+        cancel?.addEventListener("click", close);
+        form.addEventListener("click", event => {
+            const path = event.composedPath();
+            if (!picker.hidden && !path.includes(picker) && !path.includes(trigger)) close();
+        });
+        trigger.disabled = true;
+        render();
+        return setSlot;
+    }
+
+    function showHistoryMessage(message, isError = false) {
+        if (historyContent) historyContent.innerHTML = `<p class="customer-history-message${isError ? " is-error" : ""}">${escapeHtml(message)}</p>`;
+    }
+
+    function renderBookingHistory(bookings, requests, focusBookingId) {
+        if (!bookings.length) {
+            showHistoryMessage(focusBookingId
+                ? "This booking could not be found in your account."
+                : "You do not have any bookings yet.");
+            return;
+        }
+        const requestMap = new Map();
+        requests.forEach(request => {
+            if (!requestMap.has(String(request.booking_id))) requestMap.set(String(request.booking_id), []);
+            requestMap.get(String(request.booking_id)).push(request);
+        });
+        historyContent.innerHTML = `<div class="customer-history-policy"><strong>Change and cancellation policy</strong><span>Cancellation requests need admin approval and the reservation fee is non-refundable. Reschedules are automatic only when both the current event date and the requested new date are at least 30 days away. If either date is less than 30 days away, an admin must review the request; the reservation fee is non-refundable even if declined.</span></div>` + bookings.map((booking, index) => {
+            const id = String(booking.id);
+            const status = String(booking.status || "").toUpperCase();
+            const isApproved = status === "APPROVED";
+            const latestRequests = requestMap.get(id) || [];
+            const adminNotes = String(booking.admin_notes || "").trim();
+            const packageDetail = String(booking.message || "").match(/Selected package:\s*([^\n]+)/i)?.[1] || booking.package_type || "Not set";
+            const bookingDetails = String(booking.message || "").trim();
+            const detailsMarkup = bookingDetails ? `<section class="customer-history-notes"><h4>Booking request details</h4><p>${escapeHtml(bookingDetails).replace(/\n/g, "<br>")}</p></section>` : "";
+            const noteMarkup = adminNotes ? `<section class="customer-history-notes"><h4>Admin notes / reminders</h4><p>${escapeHtml(adminNotes).replace(/\n/g, "<br>")}</p></section>` : "";
+            const requestMarkup = latestRequests.length ? `<section class="customer-history-requests"><h4>Request history</h4>${latestRequests.map(request => `<article><div><strong>${request.request_type === "CANCELLATION" ? "Cancellation" : "Reschedule"}</strong><span class="customer-history-status status-${escapeHtml(String(request.status).toLowerCase())}">${escapeHtml(request.status)}</span></div><p>${escapeHtml(request.reason)}</p>${request.request_type === "RESCHEDULE" ? `<small>Requested date: ${escapeHtml(displayDate(request.requested_event_date))} · ${escapeHtml(request.requested_time_slot || "")} ${escapeHtml(displayTime(request.requested_start_time))}</small>` : ""}<small>${request.reservation_fee_nonrefundable ? "Reservation fee is non-refundable." : "No reservation fee penalty."} · ${escapeHtml(new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.created_at)))}</small>${request.admin_note ? `<p class="customer-history-admin-reply"><strong>Admin response:</strong> ${escapeHtml(request.admin_note)}</p>` : ""}</article>`).join("")}</section>` : "";
+            const actions = isApproved && !latestRequests.some(request => request.status === "PENDING") ? `<div class="customer-history-actions"><button type="button" class="customer-history-action" data-customer-action="reschedule" data-booking-id="${escapeHtml(id)}">Request reschedule</button><button type="button" class="customer-history-action is-danger" data-customer-action="cancel" data-booking-id="${escapeHtml(id)}">Request cancellation</button></div>` : latestRequests.some(request => request.status === "PENDING") ? `<p class="customer-history-pending">A change request is awaiting admin review.</p>` : "";
+            return `<article class="customer-booking-card" id="customer-booking-${index}"><header><div><span class="customer-history-eyebrow">BOOKING REFERENCE</span><strong>${escapeHtml(id)}</strong></div><span class="customer-history-status status-${escapeHtml(status.toLowerCase())}">${escapeHtml(status || "UNKNOWN")}</span></header><div class="customer-booking-grid"><div><small>Event</small><strong>${escapeHtml(booking.event_type || "Event")}</strong></div><div><small>Event date</small><strong>${escapeHtml(displayDate(booking.event_date))}</strong></div><div><small>Time</small><strong>${escapeHtml(booking.time_slot || "")} ${escapeHtml(displayTime(booking.start_time))}</strong></div><div><small>Guests</small><strong>${escapeHtml(booking.guests ?? "Not set")}</strong></div><div><small>Package</small><strong>${escapeHtml(packageDetail)}</strong></div><div><small>Total amount</small><strong>${escapeHtml(money(booking.amount))}</strong></div><div><small>Reservation fee</small><strong>${escapeHtml(money(booking.required_down_payment))}</strong></div><div><small>Payment received</small><strong>${escapeHtml(money(booking.down_payment_amount))}</strong></div></div>${detailsMarkup}${noteMarkup}${requestMarkup}${actions}</article>`;
+        }).join("");
+        if (focusBookingId) {
+            const target = bookings.findIndex(booking => String(booking.id) === String(focusBookingId));
+            if (target >= 0) requestAnimationFrame(() => document.getElementById(`customer-booking-${target}`)?.scrollIntoView({ block: "start", behavior: "smooth" }));
+        }
+    }
+
+    async function openBookingHistory(focusBookingId = null) {
+        if (!currentUserId || !historyOverlay || !historyContent) return;
+        historyOverlay.hidden = false;
+        document.body.classList.add("customer-history-open");
+        showHistoryMessage("Loading your bookings…");
+        const [{ data: bookings, error: bookingError }, { data: requests, error: requestError }] = await Promise.all([
+            supabase.from("bookings").select("id,status,event_type,event_date,guests,time_slot,start_time,package_type,travel_distance_km,amount,required_down_payment,down_payment_amount,admin_notes,message,created_at").eq("user_id", currentUserId).order("created_at", { ascending: false }),
+            supabase.from("booking_change_requests").select("id,booking_id,request_type,reason,requested_event_date,requested_start_time,requested_time_slot,status,reservation_fee_nonrefundable,admin_note,created_at").eq("user_id", currentUserId).order("created_at", { ascending: false })
+        ]);
+        if (bookingError || requestError) {
+            showHistoryMessage("Could not load booking history. Make sure the booking history setup has been applied, then refresh.", true);
+            console.warn("Unable to load booking history.", bookingError || requestError);
+            return;
+        }
+        const selectedBookingId = focusBookingId == null ? null : String(focusBookingId);
+        const selectedBookings = (bookings || []).filter(booking =>
+            selectedBookingId === null || String(booking.id) === selectedBookingId);
+        const selectedRequests = (requests || []).filter(request =>
+            selectedBookingId === null || String(request.booking_id) === selectedBookingId);
+        historyBookings = selectedBookings;
+        renderBookingHistory(selectedBookings, selectedRequests, selectedBookingId);
+    }
+
+    function showRequestForm(kind, booking) {
+        if (!booking) return;
+        const openForm = historyContent.querySelector(".customer-change-form");
+        if (openForm) {
+            // Repeated clicks keep the current form in view. Choosing a
+            // different request replaces it so forms never stack.
+            if (openForm.dataset.bookingId === String(booking.id) && openForm.dataset.requestKind === kind) {
+                openForm.scrollIntoView({ block: "center", behavior: "smooth" });
+                return;
+            }
+            openForm.remove();
+        }
+        const isReschedule = kind === "RESCHEDULE";
+        const today = new Date();
+        today.setDate(today.getDate() + 1);
+        const minDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const form = document.createElement("form");
+        form.className = "customer-change-form";
+        form.dataset.requestKind = kind;
+        form.dataset.bookingId = String(booking.id);
+        const rescheduleFields = isReschedule ? `<div class="customer-change-form-row"><label>Event type<input type="text" value="${escapeHtml(booking.event_type || "Event")}" readonly></label><label>Estimated number of guests<input type="text" value="${escapeHtml(booking.guests ?? "Not set")}" readonly></label></div><label><span class="customer-change-label">Event date <span class="required-mark">*</span></span><div class="customer-reschedule-date-control booking-date-picker"><button type="button" class="booking-date-trigger" data-reschedule-date-trigger aria-expanded="false"><span data-reschedule-date-label>Choose event date</span><span class="booking-date-chevron" aria-hidden="true">▾</span></button><input type="hidden" name="requested_event_date"><div class="booking-calendar customer-reschedule-calendar" data-reschedule-calendar role="group" hidden><div class="booking-calendar-header"><button type="button" data-reschedule-month-prev aria-label="Previous month">‹</button><strong data-reschedule-month-label></strong><button type="button" data-reschedule-month-next aria-label="Next month">›</button></div><div class="booking-calendar-grid booking-calendar-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="booking-calendar-grid" data-reschedule-calendar-days role="grid" aria-label="Calendar dates"></div><div class="booking-calendar-legend"><span><i class="available"></i>All slots open</span><span><i class="partial"></i>Some slots taken</span><span><i class="full"></i>Fully booked</span></div><small class="booking-calendar-help" data-reschedule-calendar-help role="status" aria-live="polite">Loading date availability…</small></div></div></label><div class="booking-time-slots customer-reschedule-slots"><p class="time-slot-prompt">Choose an available time slot:</p><div class="time-slot-options"><button type="button" class="time-slot-option is-pending" data-reschedule-slot="MORNING" disabled><strong>Morning</strong><span>6:00 AM–11:55 AM</span><small>Choose a date</small></button><button type="button" class="time-slot-option is-pending" data-reschedule-slot="AFTERNOON" disabled><strong>Afternoon</strong><span>12:00 PM–5:55 PM</span><small>Choose a date</small></button><button type="button" class="time-slot-option is-pending" data-reschedule-slot="NIGHT" disabled><strong>Night</strong><span>6:00 PM–11:55 PM</span><small>Choose a date</small></button></div><small class="booking-time-prompt customer-reschedule-help" role="status" aria-live="polite">Select a date to check availability.</small><input type="hidden" name="requested_time_slot"></div><label><span class="customer-change-label">Event start time <span class="required-mark">*</span></span><div class="clock-picker-wrap customer-reschedule-clock-wrap"><button type="button" class="clock-time-display" data-reschedule-clock-toggle aria-haspopup="dialog" aria-expanded="false" disabled><span data-reschedule-clock-label>Choose a time after selecting a slot</span><span class="clock-icon" aria-hidden="true">◷</span></button><input type="hidden" name="requested_start_time" required><div class="clock-picker customer-reschedule-clock" data-reschedule-clock role="dialog" aria-label="Choose event start time" hidden><div class="clock-picker-header"><div class="clock-current-time"><button type="button" data-reschedule-clock-hour>09</button><span>:</span><button type="button" data-reschedule-clock-minute>00</button><span data-reschedule-clock-period>AM</span></div><div class="clock-tabs"><button type="button" class="active" data-reschedule-clock-tab="hour">Hour</button><button type="button" data-reschedule-clock-tab="minute">Minute</button></div></div><div class="clock-face" data-reschedule-clock-face></div><div class="clock-footer"><span data-reschedule-clock-slot-note></span><button type="button" data-reschedule-clock-cancel>Cancel</button><button type="button" data-reschedule-clock-done>Done</button></div></div></div></label>` : "";
+        form.innerHTML = `<div class="customer-change-form-head"><div><span class="customer-history-eyebrow">BOOKING CHANGE</span><h3>${isReschedule ? "Request a reschedule" : "Request cancellation"}</h3></div><button type="button" data-customer-action="close-form" aria-label="Close request form">×</button></div><p class="customer-history-policy-copy">${isReschedule ? "A reschedule is automatic only when both your current event date and requested new date are at least 30 days away. If either date is less than 30 days away, an admin must approve it; your reservation fee is non-refundable even if declined." : "Cancellation requests must be reviewed by the admin. Your reservation fee is non-refundable."}</p>${rescheduleFields}<label>Reason<textarea name="reason" rows="4" minlength="10" maxlength="1000" required placeholder="Please explain your request (at least 10 characters)."></textarea></label><div class="customer-change-form-actions"><button type="button" class="customer-history-action" data-customer-action="close-form">Back</button><button type="submit" class="customer-history-action is-primary">${isReschedule ? "Submit reschedule request" : "Submit cancellation request"}</button></div>`;
+        historyContent.prepend(form);
+        if (isReschedule) {
+            form._setRescheduleClock = setupRescheduleClock(form);
+            const dateInput = form.querySelector('[name="requested_event_date"]');
+            const dateTrigger = form.querySelector("[data-reschedule-date-trigger]");
+            const dateLabel = form.querySelector("[data-reschedule-date-label]");
+            const calendar = form.querySelector("[data-reschedule-calendar]");
+            const days = form.querySelector("[data-reschedule-calendar-days]");
+            const monthLabel = form.querySelector("[data-reschedule-month-label]");
+            const calendarHelp = form.querySelector("[data-reschedule-calendar-help]");
+            const minDateIso = minDate;
+            const month = new Date();
+            month.setDate(1);
+            const availabilityByDate = new Map();
+            let availabilityMonth = "";
+            let monthLoaded = false;
+            let monthRequestId = 0;
+            const isoDate = (year, monthIndex, day) => `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const renderCalendar = () => {
+                const year = month.getFullYear();
+                const monthIndex = month.getMonth();
+                const monthKey = isoDate(year, monthIndex, 1).slice(0, 7);
+                monthLabel.textContent = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(month);
+                days.innerHTML = "";
+                for (let blank = 0; blank < new Date(year, monthIndex, 1).getDay(); blank++) {
+                    const spacer = document.createElement("span");
+                    spacer.className = "booking-calendar-day outside-month";
+                    spacer.setAttribute("aria-hidden", "true");
+                    days.appendChild(spacer);
+                }
+                const count = new Date(year, monthIndex + 1, 0).getDate();
+                for (let day = 1; day <= count; day++) {
+                    const date = isoDate(year, monthIndex, day);
+                    const availability = availabilityByDate.get(date);
+                    const full = availability && availability.MORNING && availability.AFTERNOON && availability.NIGHT;
+                    const anyTaken = availability && Object.values(availability).some(Boolean);
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "booking-calendar-day";
+                    button.textContent = String(day);
+                    button.setAttribute("role", "gridcell");
+                    button.setAttribute("aria-label", `${new Intl.DateTimeFormat("en", { dateStyle: "full" }).format(new Date(year, monthIndex, day))}${full ? ", fully booked" : anyTaken ? ", some time slots taken" : ", all time slots available"}`);
+                    if (anyTaken && !full) button.classList.add("partial");
+                    if (full) button.classList.add("full");
+                    if (dateInput.value === date) button.classList.add("selected");
+                    button.disabled = date < minDateIso || !monthLoaded || !availability || full;
+                    button.addEventListener("click", () => {
+                        dateInput.value = date;
+                        dateLabel.textContent = displayDate(date);
+                        dateTrigger.classList.add("has-value");
+                        dateTrigger.setAttribute("aria-expanded", "false");
+                        calendar.hidden = true;
+                        renderCalendar();
+                        void loadRescheduleSlots(form, booking, date);
+                    });
+                    days.appendChild(button);
+                }
+                const currentMonth = new Date();
+                currentMonth.setDate(1);
+                const prev = form.querySelector("[data-reschedule-month-prev]");
+                prev.disabled = year === currentMonth.getFullYear() && monthIndex === currentMonth.getMonth();
+                if (availabilityMonth !== monthKey) void loadCalendarAvailability();
+            };
+            const loadCalendarAvailability = async () => {
+                const year = month.getFullYear();
+                const monthIndex = month.getMonth();
+                const monthKey = isoDate(year, monthIndex, 1).slice(0, 7);
+                if (availabilityMonth === monthKey) return;
+                availabilityMonth = monthKey;
+                monthLoaded = false;
+                const requestId = ++monthRequestId;
+                calendarHelp.textContent = "Loading date availability…";
+                renderCalendar();
+                const start = isoDate(year, monthIndex, 1);
+                const end = isoDate(year, monthIndex, new Date(year, monthIndex + 1, 0).getDate());
+                const { data, error } = await supabase.rpc("kq_booking_slot_availability", { p_start_date: start, p_end_date: end });
+                if (requestId !== monthRequestId) return;
+                if (error) {
+                    availabilityMonth = monthKey;
+                    calendarHelp.textContent = "Could not load availability. Please try again.";
+                    renderCalendar();
+                    return;
+                }
+                (data || []).forEach(row => availabilityByDate.set(String(row.event_date).slice(0, 10), {
+                    MORNING: Boolean(row.morning_booked), AFTERNOON: Boolean(row.afternoon_booked), NIGHT: Boolean(row.night_booked)
+                }));
+                monthLoaded = true;
+                calendarHelp.textContent = "Choose an available date. Days show all slots open, some slots taken, or fully booked.";
+                renderCalendar();
+            };
+            dateTrigger.addEventListener("click", () => {
+                calendar.hidden = !calendar.hidden;
+                dateTrigger.setAttribute("aria-expanded", String(!calendar.hidden));
+            });
+            form.querySelector("[data-reschedule-month-prev]").addEventListener("click", () => {
+                if (form.querySelector("[data-reschedule-month-prev]").disabled) return;
+                month.setMonth(month.getMonth() - 1);
+                renderCalendar();
+            });
+            form.querySelector("[data-reschedule-month-next]").addEventListener("click", () => {
+                month.setMonth(month.getMonth() + 1);
+                renderCalendar();
+            });
+            renderCalendar();
+        }
+        form.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+
+    async function loadRescheduleSlots(form, booking, date) {
+        const slotButtons = Array.from(form.querySelectorAll("[data-reschedule-slot]"));
+        const slotInput = form.querySelector('[name="requested_time_slot"]');
+        const timeInput = form.querySelector('[name="requested_start_time"]');
+        const help = form.querySelector(".customer-reschedule-help");
+        if (slotInput) slotInput.value = "";
+        if (timeInput) timeInput.value = "";
+        form._setRescheduleClock?.("");
+        slotButtons.forEach(button => {
+            button.disabled = true;
+            button.classList.remove("selected");
+            button.classList.add("is-pending");
+            const status = button.querySelector("small");
+            if (status) status.textContent = date ? "Checking availability…" : "Choose a date";
+        });
+        form.dataset.availabilityDate = date || "";
+        if (!date) return;
+        const { data, error } = await supabase.rpc("kq_booking_slot_availability", {
+            p_start_date: date,
+            p_end_date: date
+        });
+        if (form.dataset.availabilityDate !== date) return;
+        if (error || !data?.length) {
+            slotButtons.forEach(button => {
+                const status = button.querySelector("small");
+                if (status) status.textContent = "Unavailable to check";
+            });
+            if (help) { help.textContent = "Could not load availability. Please try again."; help.hidden = false; }
+            return;
+        }
+        const availability = {
+            MORNING: Boolean(data[0].morning_booked),
+            AFTERNOON: Boolean(data[0].afternoon_booked),
+            NIGHT: Boolean(data[0].night_booked)
+        };
+        // The availability RPC includes this approved booking itself. Free its current
+        // slot (and travel buffer) so the customer may move their own event on that date.
+        if (String(booking.event_date || "").slice(0, 10) === date) {
+            const currentSlot = String(booking.time_slot || "").toUpperCase();
+            const isLarge = /\bPackage [CDE]\b/i.test(String(booking.message || "")) || String(booking.package_type || "").toUpperCase() === "BIG";
+            const distance = Number(booking.travel_distance_km) || 0;
+            if (isLarge || distance > 30) {
+                availability.MORNING = false;
+                availability.AFTERNOON = false;
+                availability.NIGHT = false;
+            } else if (currentSlot in availability) {
+                availability[currentSlot] = false;
+                if (distance === 30 && currentSlot === "MORNING") availability.AFTERNOON = false;
+                if (distance === 30 && currentSlot === "AFTERNOON") availability.NIGHT = false;
+            }
+        }
+        slotButtons.forEach(button => {
+            const slot = button.dataset.rescheduleSlot;
+            const unavailable = Boolean(availability[slot]);
+            button.classList.remove("is-pending");
+            button.disabled = unavailable;
+            const status = button.querySelector("small");
+            if (status) status.textContent = unavailable ? "Unavailable" : "Available";
+        });
+        if (help) { help.textContent = "Choose a slot to see start times within that period."; help.hidden = false; }
+        slotButtons.forEach(button => button.onclick = () => {
+            if (button.disabled) return;
+            slotButtons.forEach(other => other.classList.toggle("selected", other === button));
+            slotInput.value = button.dataset.rescheduleSlot;
+            form._setRescheduleClock?.(button.dataset.rescheduleSlot);
+            if (help) help.textContent = `Showing ${button.dataset.rescheduleSlot.toLowerCase()} start times only.`;
+        });
+    }
+
+    function confirmChangeRequest(form) {
+        const isReschedule = form.dataset.requestKind === "RESCHEDULE";
+        const dialog = document.createElement("dialog");
+        dialog.className = "customer-change-confirm-dialog";
+        dialog.setAttribute("aria-labelledby", "customerChangeConfirmTitle");
+        dialog.style.cssText = "position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:0;border:1px solid #d8e5eb;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(18,38,49,.28);color:#263f4c";
+        const title = document.createElement("h3");
+        title.id = "customerChangeConfirmTitle";
+        title.textContent = "Are you sure?";
+        title.style.cssText = "margin:0;padding:22px 24px 10px;font-size:21px;line-height:1.3;color:#173b4b";
+        const message = document.createElement("p");
+        message.style.cssText = "margin:0;padding:0 24px 20px;line-height:1.6;color:#536872";
+        message.textContent = `Do you want to submit this ${isReschedule ? "reschedule" : "cancellation"} request?`;
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;padding:16px 24px 22px;border-top:1px solid #e3ebef";
+        const cancelButton = document.createElement("button");
+        cancelButton.type = "button";
+        cancelButton.textContent = "Go back";
+        cancelButton.style.cssText = "flex:0 0 auto;white-space:nowrap;padding:10px 16px;border:1px solid #cbdce5;border-radius:9px;background:#fff;color:#315364;font-weight:700;cursor:pointer";
+        const confirmButton = document.createElement("button");
+        confirmButton.type = "button";
+        confirmButton.textContent = "Yes";
+        confirmButton.style.cssText = "flex:0 0 auto;white-space:nowrap;min-width:82px;padding:10px 18px;border:0;border-radius:9px;background:#1688b4;color:#fff;font-weight:700;cursor:pointer";
+        actions.append(cancelButton, confirmButton);
+        dialog.append(title, message, actions);
+        document.body.appendChild(dialog);
+        return new Promise(resolve => {
+            const finish = confirmed => {
+                if (dialog.open) dialog.close();
+                dialog.remove();
+                resolve(confirmed);
+            };
+            cancelButton.addEventListener("click", () => finish(false), { once: true });
+            confirmButton.addEventListener("click", () => finish(true), { once: true });
+            dialog.addEventListener("cancel", event => { event.preventDefault(); finish(false); }, { once: true });
+            dialog.addEventListener("click", event => { if (event.target === dialog) finish(false); });
+            dialog.showModal();
+            cancelButton.focus();
+        });
+    }
+
+    function showRequestSentDialog(message, heading = "Request sent") {
+        const dialog = document.createElement("dialog");
+        dialog.setAttribute("aria-labelledby", "customerRequestSentTitle");
+        dialog.style.cssText = "position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:0;border:1px solid #d8e5eb;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(18,38,49,.28);color:#263f4c";
+        const title = document.createElement("h3");
+        title.id = "customerRequestSentTitle";
+        title.textContent = heading;
+        title.style.cssText = "margin:0;padding:22px 24px 10px;font-size:21px;line-height:1.3;color:#173b4b";
+        const detail = document.createElement("p");
+        detail.textContent = message;
+        detail.style.cssText = "margin:0;padding:0 24px 22px;line-height:1.6;color:#536872";
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;justify-content:flex-end;padding:16px 24px 22px;border-top:1px solid #e3ebef";
+        const okButton = document.createElement("button");
+        okButton.type = "button";
+        okButton.textContent = "Okay";
+        okButton.style.cssText = "min-width:82px;padding:10px 18px;border:0;border-radius:9px;background:#1688b4;color:#fff;font-weight:700;cursor:pointer";
+        actions.appendChild(okButton);
+        dialog.append(title, detail, actions);
+        document.body.appendChild(dialog);
+        return new Promise(resolve => {
+            const finish = () => {
+                if (dialog.open) dialog.close();
+                dialog.remove();
+                resolve();
+            };
+            okButton.addEventListener("click", finish, { once: true });
+            dialog.addEventListener("cancel", event => { event.preventDefault(); finish(); }, { once: true });
+            dialog.showModal();
+            okButton.focus();
+        });
+    }
+
+    async function submitChangeRequest(form) {
+        if (form.dataset.submitting === "true" || form.dataset.confirming === "true") return;
+        const submitButton = form.querySelector('button[type="submit"]');
+        const formData = new FormData(form);
+        const isReschedule = form.dataset.requestKind === "RESCHEDULE";
+        const reason = String(formData.get("reason") || "").trim();
+        if (reason.length < 10) {
+            form.querySelector('[name="reason"]')?.focus();
+            return;
+        }
+        if (isReschedule && (!formData.get("requested_event_date") || !formData.get("requested_time_slot") || !formData.get("requested_start_time"))) {
+            form.querySelector(".customer-change-error")?.remove();
+            const errorMessage = document.createElement("p");
+            errorMessage.className = "customer-history-message is-error customer-change-error";
+            errorMessage.textContent = "Choose an available date, time slot, and start time before submitting.";
+            form.prepend(errorMessage);
+            return;
+        }
+        form.dataset.confirming = "true";
+        const confirmed = await confirmChangeRequest(form);
+        form.dataset.confirming = "false";
+        if (!confirmed) return;
+        const args = {
+            p_booking_id: form.dataset.bookingId,
+            p_request_type: form.dataset.requestKind,
+            p_reason: reason,
+            p_requested_event_date: isReschedule ? formData.get("requested_event_date") : null,
+            p_requested_start_time: isReschedule ? formData.get("requested_start_time") : null,
+            p_requested_time_slot: isReschedule ? formData.get("requested_time_slot") : null
+        };
+        form.dataset.submitting = "true";
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting…";
+        let timeoutId;
+        const requestTimeout = new Promise(resolve => {
+            timeoutId = window.setTimeout(() => resolve({
+                data: null,
+                error: new Error("This is taking longer than expected. Your request may still be processing. Close and reopen Booking history to check its status before trying again.")
+            }), 20000);
+        });
+        const rpcRequest = (async () => {
+            try {
+                return await supabase.rpc("kq_request_booking_change", args);
+            } catch (rpcError) {
+                return { data: null, error: rpcError };
+            }
+        })();
+        const requestResult = await Promise.race([rpcRequest, requestTimeout])
+            .finally(() => window.clearTimeout(timeoutId));
+        const { data, error } = requestResult;
+        if (error) {
+            form.querySelector(".customer-change-error")?.remove();
+            const errorMessage = document.createElement("p");
+            errorMessage.className = "customer-history-message is-error customer-change-error";
+            errorMessage.textContent = error.message || "Your request could not be submitted. Please try again.";
+            form.prepend(errorMessage);
+            form.dataset.submitting = "false";
+            submitButton.disabled = false;
+            submitButton.textContent = isReschedule ? "Submit reschedule request" : "Submit cancellation request";
+            return;
+        }
+        const result = Array.isArray(data) ? data[0] : data;
+        const message = result?.status === "ACCEPTED"
+            ? "Your reschedule is confirmed. It qualified for automatic processing, so no admin decision was needed."
+            : "Your request has been sent to the admin. Please wait for an email once it has been approved or declined.";
+        form.dataset.submitting = "false";
+        await showRequestSentDialog(message, result?.status === "ACCEPTED" ? "Reschedule confirmed" : "Request sent");
+        // Refresh after the user acknowledges the sent confirmation so a slow history
+        // query cannot delay or hide the successful submission message.
+        void openBookingHistory(args.p_booking_id).catch(historyError => {
+                console.warn("Booking request was submitted, but history refresh failed.", historyError);
+                if (historyContent) historyContent.innerHTML = `<p class="customer-history-message is-success">${escapeHtml(message)} Close and reopen Booking history to refresh it.</p>`;
+        });
+    }
+
+    async function setSessionUser(user) {
+        const nextUserId = user?.id || null;
+        if (nextUserId === currentUserId) return;
+        if (realtimeChannel) {
+            await supabase.removeChannel(realtimeChannel);
+            realtimeChannel = null;
+        }
+        if (refreshTimer) {
+            window.clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+        currentUserId = nextUserId;
+        notifications = [];
+        wrapper.hidden = !currentUserId;
+        setPanelOpen(false);
+        render();
+        if (!currentUserId) return;
+
+        await loadNotifications();
+        realtimeChannel = supabase
+            .channel(`user-notifications-${currentUserId}`)
+            .on("postgres_changes", {
+                event: "*",
+                schema: "public",
+                table: "user_notifications",
+                filter: `user_id=eq.${currentUserId}`
+            }, () => void loadNotifications())
+            .subscribe();
+        // Realtime normally updates the bell immediately. Poll as a fallback in case
+        // the Supabase Realtime publication is not enabled on the project yet.
+        refreshTimer = window.setInterval(() => {
+            if (document.visibilityState === "visible") void loadNotifications();
+        }, 15000);
+    }
+
+    button.addEventListener("click", () => setPanelOpen(panel.hidden));
+    closeButton?.addEventListener("click", () => setPanelOpen(false));
+    closeHistoryButton?.addEventListener("click", closeBookingHistory);
+    historyOverlay?.addEventListener("click", event => { if (event.target === historyOverlay) closeBookingHistory(); });
+    historyContent?.addEventListener("click", event => {
+        const action = event.target.closest("[data-customer-action]");
+        if (!action) return;
+        const type = action.dataset.customerAction;
+        const booking = historyBookings.find(item => String(item.id) === String(action.dataset.bookingId));
+        if (type === "cancel") showRequestForm("CANCELLATION", booking);
+        if (type === "reschedule") showRequestForm("RESCHEDULE", booking);
+        if (type === "close-form") action.closest(".customer-change-form")?.remove();
+    });
+    historyContent?.addEventListener("submit", event => {
+        if (!event.target.matches(".customer-change-form")) return;
+        event.preventDefault();
+        void submitChangeRequest(event.target);
+    });
+    document.addEventListener("click", event => {
+        if (!panel.hidden && !wrapper.contains(event.target)) setPanelOpen(false);
+    });
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && currentUserId) void loadNotifications();
+    });
+    window.addEventListener("focus", () => {
+        if (currentUserId) void loadNotifications();
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !panel.hidden) {
+            setPanelOpen(false);
+            button.focus();
+        }
+        if (event.key === "Escape" && historyOverlay && !historyOverlay.hidden) closeBookingHistory();
+    });
+
+    supabase.auth.getSession().then(({ data }) => setSessionUser(data?.session?.user));
+    supabase.auth.onAuthStateChange((_event, session) => setSessionUser(session?.user));
+
+    function closeBookingHistory() {
+        if (!historyOverlay) return;
+        historyOverlay.hidden = true;
+        document.body.classList.remove("customer-history-open");
+    }
+})();

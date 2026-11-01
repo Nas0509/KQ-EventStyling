@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>KQ Event Styling</title>
+
+    <meta name="description"
+          content="KQ Event Styling provides elegant and personalized event styling and decoration services in Caloocan">
+
+    <link rel="stylesheet"
+          href="css/kqstyling.css?v=20261102-system-fix-1">
+
+    <style>
+
+        /* Hide time options until a date is selected */
+        #timeSection {
+            display: none;
+            margin-top: 15px;
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+
+    <header class="site-header">
+
+        <div class="wrap header-content">
+
+                <a href="index.html"
+                   class="brand"
+                   aria-label="KQ Event Styling Home">
+
+                    <img src="kqlogo.png"
+                         alt="KQ Event Styling Logo"
+                         class="brand-logo">
+
+                    <div class="brand-text">
+
+                        <strong>KQ</strong>
+
+                        <span>EVENT STYLING</span>
+
+                    </div>
+
+                </a>
+
+
+            <nav class="nav-links"
+                 id="customerNavigation"
+                 aria-label="Main Navigation">
+
+                <a href="#home">
+                    Home
+                </a>
+
+                <a href="#about">
+                    About
+                </a>
+
+                <a href="#packages">
+                    Packages
+                </a>
+
+                <a href="#services">
+                    Services
+                </a>
+
+                <a href="#booking">
+                    Booking
+                </a>
+
+                <a href="customizer.html">
+                    Ocular Inspection
+                </a>
+
+                <a href="#contact">
+                    Contact
+                </a>
+
+            </nav>
+
+
+            <div class="header-actions">
+
+                <a href="customizer.html"
+                   id="customizeEventBtn"
+                   class="btn btn-primary header-button">
+                    For Ocular Inspection
+                </a>
+
+                <div class="account-menu-wrap" id="accountMenuWrap">
+                    <button type="button" id="authNavBtn" class="logout-btn" aria-label="Sign in" aria-expanded="false" aria-controls="accountMenu">
+                        Sign In
+                    </button>
+                    <div class="account-menu" id="accountMenu" hidden>
+                        <div class="account-menu-heading">Your account</div>
+                        <div class="account-menu-identity">
+                            <span class="account-menu-avatar" id="accountMenuAvatar" aria-hidden="true">K</span>
+                            <div><strong id="accountMenuName">Customer</strong><span id="accountMenuEmail"></span></div>
+                        </div>
+                        <div class="account-menu-details" id="accountMenuDetails"></div>
+                        <button type="button" class="account-menu-logout" id="accountMenuLogout">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
+                            Log out
+                        </button>
+                    </div>
+                </div>
+
+                <button type="button" class="mobile-nav-toggle" id="customerNavToggle" aria-label="Open menu" aria-expanded="false" aria-controls="customerNavigation">
+                    <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+                </button>
+
+            </div>
+
+        </div>
+
+    </header>
+
+    <div id="userNotificationWrap" class="user-notification-wrap" hidden>
+        <button type="button" id="userNotificationBtn" class="user-notification-bell" aria-label="Notifications" aria-expanded="false" aria-controls="userNotificationPanel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+            <span id="userNotificationCount" class="user-notification-count" hidden>0</span>
+        </button>
+        <div id="userNotificationPanel" class="user-notification-panel" role="dialog" aria-label="Notifications" hidden>
+            <div class="user-notification-heading"><strong>Notifications</strong><button type="button" id="closeUserNotifications" aria-label="Close notifications">×</button></div>
+            <div id="userNotificationList" class="user-notification-list" aria-live="polite"><p class="user-notification-empty">No notifications yet.</p></div>
+        </div>
+    </div>
+
+    <div id="customerBookingHistory" class="customer-history-overlay" hidden>
+        <section class="customer-history-dialog" role="dialog" aria-modal="true" aria-labelledby="customerHistoryTitle">
+            <header class="customer-history-header">
+                <div><span class="customer-history-eyebrow">YOUR ACCOUNT</span><h2 id="customerHistoryTitle">Booking history</h2></div>
+                <button type="button" id="closeCustomerHistory" class="customer-history-close" aria-label="Close booking history">×</button>
+            </header>
+            <div id="customerHistoryContent" class="customer-history-content" aria-live="polite"><p class="user-notification-empty">Loading your bookings…</p></div>
+        </section>
+    </div>
+
+
+
+    <!-- =========================
+         HERO
+    ========================== -->
+
+    <section class="hero"
+             id="home">
+
+        <div class="wrap hero-content">
+
+
+            <!-- HERO TEXT -->
+
+            <div class="hero-text">
+
+                <span class="badge">
+                    ✨ EVENT STYLING & DECORATION
+                </span>
+
+
+                <h1>
+
+                    Making Your
+
+                    <span>
+                        Special Moments
+                    </span>
+
+                    Beautiful.
+
+                </h1>
+
+
+                <p>
+
+                    We create elegant, memorable, and personalized
+                    event decorations for birthdays, weddings,
+                    debuts, and other special occasions.
+
+                </p>
+
+
+                <div class="hero-buttons">
+
+                    <a href="#packages"
+                       class="btn btn-primary">
+
+                        View Packages
+
+                    </a>
+
+
+                    <a href="#contact"
+                       class="btn btn-outline">
+
+                        Contact Us
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =========================
+                 HERO IMAGE SLIDESHOW
+            ========================== -->
+
+            <div class="hero-image">
+
+                <div class="hero-slideshow">
+
+
+                    <img src="1.jpg"
+                         alt="KQ Event Styling Event 1">
+
+
+                    <img src="2.jpg"
+                         alt="KQ Event Styling Event 2">
+
+
+                    <img src="3.jpg"
+                         alt="KQ Event Styling Event 3">
+
+
+                    <img src="4.jpg"
+                         alt="KQ Event Styling Event 4">
+
+
+                    <img src="5.jpg"
+                         alt="KQ Event Styling Event 5">
+
+
+                    <img src="6.jpg"
+                         alt="KQ Event Styling Event 6">
+
+
+                    <img src="7.jpg"
+                         alt="KQ Event Styling Event 7">
+
+
+                    <img src="8.jpg"
+                         alt="KQ Event Styling Event 8">
+
+
+                    <img src="9.jpg"
+                         alt="KQ Event Styling Event 9">
+
+
+                    <img src="10.jpg"
+                         alt="KQ Event Styling Event 10">
+
+
+                    <img src="11.jpg"
+                         alt="KQ Event Styling Event 11">
+
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         ABOUT
+    ========================== -->
+
+    <section class="section"
+             id="about">
+
+        <div class="wrap">
+
+
+            <div class="section-heading">
+
+                <span class="badge">
+                    ABOUT US
+                </span>
+
+
+                <h2>
+
+                    We Make Every Event
+
+                    <span>
+                        Extra Special.
+                    </span>
+
+                </h2>
+
+
+                <p>
+
+                    KQ Event Styling provides creative and elegant
+                    event styling services designed to make your
+                    celebrations unforgettable.
+
+                </p>
+
+            </div>
+
+
+
+            <div class="review-grid">
+
+
+                <div class="form-card feature-card">
+
+                    <div class="feature-icon">
+                        🎨
+                    </div>
+
+
+                    <h3>
+                        Creative Designs
+                    </h3>
+
+
+                    <p>
+
+                        We create unique event setups based on
+                        your theme, style, and preferences.
+
+                    </p>
+
+                </div>
+
+
+
+                <div class="form-card feature-card">
+
+                    <div class="feature-icon">
+                        💙
+                    </div>
+
+
+                    <h3>
+                        Personalized Service
+                    </h3>
+
+
+                    <p>
+
+                        Every event is planned carefully to match
+                        your special occasion.
+
+                    </p>
+
+                </div>
+
+
+
+                <div class="form-card feature-card">
+
+                    <div class="feature-icon">
+                        ✨
+                    </div>
+
+
+                    <h3>
+                        Beautiful Memories
+                    </h3>
+
+
+                    <p>
+
+                        Our goal is to make your celebration
+                        beautiful and memorable.
+
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         PACKAGES
+    ========================== -->
+
+    <section class="section packages-section"
+             id="packages">
+
+        <div class="wrap">
+
+
+            <div class="section-heading">
+
+                <span class="badge">
+                    OUR PACKAGES
+                </span>
+
+
+                <h2>
+
+                    Choose Your
+
+                    <span>
+                        Perfect Package.
+                    </span>
+
+                </h2>
+
+
+                <p>
+                    Select the package that best fits your event.
+                </p>
+
+            </div>
+
+
+
+            <div class="package-grid">
+
+                <div class="package-card">
+                    <div class="package-gallery" aria-label="Simple Styling event photo gallery">
+                        <img class="package-gallery-cover" src="SIMPLE STYLING/1ST PIC.jpg" alt="Pastel balloon arch for a gender reveal celebration" loading="eager">
+                        <div class="package-gallery-thumbs">
+                            <img src="SIMPLE STYLING/0ba2152d-b949-4a21-938e-c84ace2c9c75.jpg" alt="Red, white, and gold balloon entrance arch" loading="lazy"><img src="SIMPLE STYLING/6.jpg" alt="Red and gold birthday backdrop with balloon decor" loading="lazy"><img src="SIMPLE STYLING/89e32ebd-e559-46c1-b2df-8ab2aa405fd9 (1).jpg" alt="Gold and burgundy balloon entrance styling" loading="lazy"><img src="SIMPLE STYLING/2566a1d9-d678-46e1-8a18-15252cff84c3.jpg" alt="Red and white balloon arch at a storefront" loading="lazy"><img src="SIMPLE STYLING/Anniversary 1.jpg" alt="Colorful balloon decor for an anniversary" loading="lazy"><img src="SIMPLE STYLING/qqq.jpg" alt="Bright multicolor balloon entrance arch" loading="lazy">
+                        </div>
+                        <span class="gallery-count">7 event photos</span>
+                    </div>
+                    <div class="package-content">
+                        <span class="badge">SIMPLE STYLING</span>
+                        <h3>Simple Styling</h3>
+                        <h4>₱6,500</h4>
+                        <ul>
+                            <li>Venue styling with thematic backdrop</li>
+                            <li>7×8ft backdrop</li>
+                            <li>Thematic balloon garland and props</li>
+                            <li>Celebrant name styro cut</li>
+                            <li>Grass mat and basic backdrop lights</li>
+                        </ul>
+                        <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Simple Styling - ₱6,500" data-package-category="simple">Book This Package</a>
+                    </div>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-gallery" aria-label="Package A event photo gallery">
+                        <img class="package-gallery-cover" src="PACKAGE A/1st pic.jpg" alt="Pink floral birthday backdrop with balloon arch" loading="eager">
+                        <div class="package-gallery-thumbs">
+                            <img src="PACKAGE A/5 (2).jpg" alt="Pink and black balloon entrance styling" loading="lazy"><img src="PACKAGE A/6 (2).jpg" alt="Peach balloon backdrop for a birthday celebration" loading="lazy"><img src="PACKAGE A/839158509_1832543941494300_4757137165319031505_n.jpg" alt="White and gold floral event backdrop" loading="lazy"><img src="PACKAGE A/839618237_1089475294056541_2541584662171238192_n.jpg" alt="White draped backdrop with floral arrangements" loading="lazy"><img src="PACKAGE A/841533063_2198178244091703_161338197359831827_n.jpg" alt="Reception table styling with pink flowers" loading="lazy">
+                        </div><span class="gallery-count">6 event photos</span>
+                    </div>
+                    <div class="package-content">
+                        <span class="badge">VENUE STYLING</span>
+                        <h3>Package A</h3>
+                        <h4>₱7,900</h4>
+                        <ul>
+                            <li>Venue styling with thematic backdrop</li>
+                            <li>8×12ft customized backdrop, 3 panels</li>
+                            <li>Thematic balloon garland, character standee, and props</li>
+                            <li>Celebrant name styro cut</li>
+                            <li>Grass mat and basic backdrop floor lights</li>
+                            <li>Souvenir rack, cake pedestal, and wooden bench chair</li>
+                            <li>Number lighted standee</li>
+                        </ul>
+                        <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Package A - ₱7,900" data-package-category="venue">Book This Package</a>
+                    </div>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-gallery" aria-label="Package B event photo gallery">
+                        <img class="package-gallery-cover" src="PACKAGE B/1ST PIC.jpg" alt="Lavender and peach balloon backdrop with illuminated number display" loading="eager">
+                        <div class="package-gallery-thumbs">
+                            <img src="PACKAGE B/2.jpg" alt="Disco night party backdrop with colorful balloons" loading="lazy"><img src="PACKAGE B/8.jpg" alt="Pink celebration stage with hanging lantern decor" loading="lazy"><img src="PACKAGE B/9.jpg" alt="Gold and white birthday stage with illuminated number" loading="lazy"><img src="PACKAGE B/11.jpg" alt="Construction themed balloon backdrop" loading="lazy"><img src="PACKAGE B/18.jpg" alt="Colorful rainbow and cartoon themed birthday setup" loading="lazy"><img src="PACKAGE B/20.jpg" alt="Red and blue superhero themed stage" loading="lazy"><img src="PACKAGE B/792840978_1590634636102444_5211012576971934269_n.jpg" alt="Aviation themed balloon backdrop" loading="lazy"><img src="PACKAGE B/792990644_2023005458357725_3605850478657949735_n.jpg" alt="Blue and white aviation themed balloon ceiling" loading="lazy"><img src="PACKAGE B/Gillian 18.3.jpg" alt="Purple and red eighteenth birthday stage" loading="lazy"><img src="PACKAGE B/Krislyn 18.1.jpg" alt="Pink and purple butterfly birthday stage" loading="lazy"><img src="PACKAGE B/Rahya 18.jpg" alt="Red and gold eighteenth birthday setup" loading="lazy">
+                        </div><span class="gallery-count">12 event photos</span>
+                    </div>
+                    <div class="package-content">
+                        <span class="badge">VENUE STYLING</span>
+                        <h3>Package B</h3>
+                        <h4>₱15,500</h4>
+                        <ul>
+                            <li>All Package A inclusions</li>
+                            <li>Thematic ceiling treatment: 100 balloon drops and 10 cluster balloons</li>
+                            <li>Thematic balloon entrance arch</li>
+                        </ul>
+                        <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Package B - ₱15,500" data-package-category="venue">Book This Package</a>
+                    </div>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-gallery" aria-label="Package C event photo gallery">
+                        <img class="package-gallery-cover" src="PACKAGE C/1ST PIC.jpg" alt="Colorful basketball themed birthday backdrop" loading="eager">
+                        <div class="package-gallery-thumbs">
+                            <img src="PACKAGE C/3 (1).jpg" alt="Superhero themed balloon entrance" loading="lazy"><img src="PACKAGE C/12.jpg" alt="Rainbow and cartoon themed celebration setup" loading="lazy"><img src="PACKAGE C/13.jpg" alt="Blue and white balloon arch with gold accents" loading="lazy"><img src="PACKAGE C/25 (1).jpg" alt="Blue and pink puppy themed birthday backdrop" loading="lazy"><img src="PACKAGE C/27.jpg" alt="Green pixel game themed birthday stage" loading="lazy"><img src="PACKAGE C/38.jpg" alt="Racing themed balloon stage" loading="lazy"><img src="PACKAGE C/957348cd-dc6a-44f1-b9bb-0804856135d7.jpg" alt="Purple balloon arch for a school moving up ceremony" loading="lazy"><img src="PACKAGE C/ef9c79ed-d02d-4268-ad3b-4dc23afbe4d7.jpg" alt="Graduation celebration stage with warm balloon decor" loading="lazy">
+                        </div><span class="gallery-count">9 event photos</span>
+                    </div>
+                    <div class="package-content">
+                        <span class="badge">FULL VENUE STYLING</span>
+                        <h3>Package C</h3>
+                        <h4>₱19,500</h4>
+                        <ul>
+                            <li>8×16ft customized backdrop, 4 panels</li>
+                            <li>Thematic ceiling with 6 panels of swag, 200 balloon drops, 10 cluster balloons, and 10 hanging decals</li>
+                            <li>5 balloon table centerpieces</li>
+                            <li>Character standee, thematic props, and celebrant name styro cut</li>
+                            <li>Grass mat, basic backdrop lights, souvenir rack, cake pedestal, and wooden bench chair</li>
+                            <li>Number lighted standee</li>
+                            <li>Lighted entrance arch with balloons and character standee; “Party is here!” sign</li>
+                        </ul>
+                        <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Package C - ₱19,500" data-package-category="full">Book This Package</a>
+                    </div>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-gallery" aria-label="Package D event photo gallery">
+                        <img class="package-gallery-cover" src="PACKAGE D/1ST PIC.jpg" alt="Pastel balloon ceiling and themed celebration backdrop" loading="eager">
+                        <div class="package-gallery-thumbs">
+                            <img src="PACKAGE D/7 (3).jpg" alt="Pastel cartoon character birthday backdrop" loading="lazy"><img src="PACKAGE D/8fd993ae-cf8f-484b-b9f6-3cdc775103ae.jpg" alt="Pink fashion themed balloon stage" loading="lazy"><img src="PACKAGE D/11 (1).jpg" alt="Colorful cartoon themed party stage" loading="lazy"><img src="PACKAGE D/14 (1).jpg" alt="Pink and white balloon arch with illuminated number" loading="lazy"><img src="PACKAGE D/15 (1).jpg" alt="Blue and aqua themed birthday setup" loading="lazy"><img src="PACKAGE D/17 (1).jpg" alt="Vibrant balloon arch and sequin backdrop" loading="lazy">
+                        </div><span class="gallery-count">7 event photos</span>
+                    </div>
+                    <div class="package-content">
+                        <span class="badge">FULL VENUE STYLING</span>
+                        <h3>Package D</h3>
+                        <h4>₱29,500</h4>
+                        <ul>
+                            <li>8×20ft customized backdrop, 5 panels</li>
+                            <li>Thematic ceiling with full panels of swag, 300 balloon drops, 20 cluster balloons, and 20 hanging mylar decals</li>
+                            <li>10 balloon table centerpieces</li>
+                            <li>Character standee, thematic props, and celebrant name styro cut</li>
+                            <li>Grass mat, basic backdrop lights, souvenir rack, cake pedestal, and wooden bench chair</li>
+                            <li>Number lighted standee</li>
+                            <li>Lighted entrance arch with balloons and character standee; “Party is here!” sign</li>
+                        </ul>
+                        <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Package D - ₱29,500" data-package-category="full">Book This Package</a>
+                    </div>
+                </div>
+
+                <div class="package-card">
+                    <div class="package-gallery" aria-label="Package E event photo gallery">
+                        <img class="package-gallery-cover" src="PACKAGE E/1ST PIC.jpg" alt="Elegant white reception styling with hanging ceiling decor" loading="eager">
+                        <div class="package-gallery-thumbs">
+                            <img src="PACKAGE E/Anniversary 4.2.jpg" alt="Lavender wedding reception and floral stage decor" loading="lazy"><img src="PACKAGE E/Anniversary 6.3.jpg" alt="Wedding reception with pink ceiling draping and lights" loading="lazy">
+                        </div><span class="gallery-count">3 event photos</span>
+                    </div>
+                    <div class="package-content">
+                        <span class="badge">FULL VENUE STYLING</span>
+                        <h3>Package E</h3>
+                        <h4>₱35,000</h4>
+                        <ul>
+                            <li>8×20ft customized backdrop, 5 panels</li>
+                            <li>Thematic ceiling with full panels of swag, 600 balloon drops, 30 cluster balloons, and 20 hanging decals</li>
+                            <li>10 balloon table centerpieces</li>
+                            <li>Character standee, thematic props, and celebrant name styro cut</li>
+                            <li>Grass mat, basic backdrop lights, souvenir rack, and wooden bench chair</li>
+                            <li>Number lighted standee</li>
+                            <li>Lighted entrance arch with character standee and thematic balloons; “Party is here!” sign</li>
+                        </ul>
+                        <p class="field-help">Crew meal and transportation are not included. Price may vary by venue; ocular inspection is required.</p>
+                        <a href="#booking" class="btn btn-primary package-button" data-package="Package E - ₱35,000" data-package-category="full">Book This Package</a>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         SERVICES
+    ========================== -->
+
+    <section class="section"
+             id="services">
+
+        <div class="wrap">
+
+
+            <div class="section-heading">
+
+                <span class="badge">
+                    OUR SERVICES
+                </span>
+
+
+                <h2>
+
+                    What We
+
+                    <span>
+                        Offer.
+                    </span>
+
+                </h2>
+
+
+                <p>
+                    Professional event styling for every occasion.
+                </p>
+
+            </div>
+
+
+
+            <div class="review-grid">
+
+
+                <div class="form-card service-card">
+
+                    <div class="feature-icon">
+                        🎂
+                    </div>
+
+
+                    <h3>
+                        Birthday Events
+                    </h3>
+
+
+                    <p>
+                        Fun and personalized decorations for birthday celebrations.
+                    </p>
+
+                </div>
+
+
+
+                <div class="form-card service-card">
+
+                    <div class="feature-icon">
+                        💍
+                    </div>
+
+
+                    <h3>
+                        Weddings
+                    </h3>
+
+
+                    <p>
+                        Elegant styling and decorations for your special day.
+                    </p>
+
+                </div>
+
+
+
+                <div class="form-card service-card">
+
+                    <div class="feature-icon">
+                        👑
+                    </div>
+
+
+                    <h3>
+                        Debut
+                    </h3>
+
+
+                    <p>
+                        Beautiful and stylish setups for unforgettable debuts.
+                    </p>
+
+                </div>
+
+
+
+                <div class="form-card service-card">
+
+                    <div class="feature-icon">
+                        🎉
+                    </div>
+
+
+                    <h3>
+                        Corporate Events
+                    </h3>
+
+
+                    <p>
+                        Professional event styling for meetings and company celebrations.
+                    </p>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         BOOKING
+    ========================== -->
+
+    <section class="section booking-section" id="booking">
+        <div class="wrap">
+            <div class="section-heading">
+                <span class="badge">BOOK YOUR EVENT</span>
+                <h2>Let's Plan Your <span>Perfect Event.</span></h2>
+                <p>Share your event details below. Our team will review your request and confirm availability.</p>
+            </div>
+
+            <div class="form-card booking-card">
+                <form id="bookingForm">
+                    <div class="booking-step-heading">
+                        <span class="booking-step-number">01</span>
+                        <div>
+                            <h3>Contact Information</h3>
+                            <p>Tell us how we can reach you.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="fullName">Full Name <span class="required-mark">*</span></label>
+                            <input type="text" id="fullName" name="fullName" placeholder="Enter your full name" autocomplete="name" required>
+                        </div>
+                        <div class="field">
+                            <label for="email">Email Address <span class="required-mark">*</span></label>
+                            <input type="email" id="email" name="email" placeholder="Enter your email" autocomplete="email" required>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="phone">Contact Number <span class="required-mark">*</span></label>
+                        <input type="tel" id="phone" name="phone" placeholder="09XXXXXXXXX" autocomplete="tel" inputmode="numeric" minlength="11" maxlength="11" pattern="09[0-9]{9}" title="Enter exactly 11 digits, starting with 09." required>
+                    </div>
+
+                    <div class="booking-divider"></div>
+
+                    <div class="booking-step-heading">
+                        <span class="booking-step-number">02</span>
+                        <div>
+                            <h3>Event Details</h3>
+                            <p>Help us understand the size and schedule of your celebration.</p>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="eventType">Event Type <span class="required-mark">*</span></label>
+                        <select id="eventType" name="eventType" required>
+                            <option value="">Select event type</option>
+                            <option value="Birthday">Birthday</option>
+                            <option value="Wedding">Wedding</option>
+                            <option value="Debut">Debut</option>
+                            <option value="Corporate Event">Corporate Event</option>
+                            <option value="Christening">Christening</option>
+                            <option value="Anniversary">Anniversary</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field">
+                            <label id="eventDateLabel" for="eventDateTrigger">Event Date <span class="required-mark">*</span></label>
+                            <div class="booking-date-picker" id="bookingDatePicker">
+                                <input type="hidden" id="eventDate" name="eventDate">
+                                <button type="button" class="booking-date-trigger" id="eventDateTrigger" aria-expanded="false" aria-controls="bookingCalendar">
+                                    <span id="eventDateTriggerText">Choose event date</span><span class="booking-date-chevron" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="booking-calendar" id="bookingCalendar" role="group" aria-labelledby="eventDateLabel" hidden>
+                                <div class="booking-calendar-header">
+                                    <button type="button" id="calendarPrevious" aria-label="Previous month">‹</button>
+                                    <strong id="calendarMonthLabel" aria-live="polite"></strong>
+                                    <button type="button" id="calendarNext" aria-label="Next month">›</button>
+                                </div>
+                                <div class="booking-calendar-grid booking-calendar-weekdays" aria-hidden="true">
+                                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                                </div>
+                                <div class="booking-calendar-grid" id="calendarDays" role="grid" aria-label="Calendar dates"></div>
+                                <div class="booking-calendar-legend" aria-label="Availability legend">
+                                    <span><i class="available"></i> All slots open</span>
+                                    <span><i class="partial"></i> Some slots taken</span>
+                                    <span><i class="full"></i> Fully booked</span>
+                                </div>
+                                <p class="calendar-help" id="calendarHelp" aria-live="polite">Approved event bookings and accepted ocular inspections reserve a time slot. Pending requests do not hold it.</p>
+                                </div>
+                            </div>
+                            <small class="booking-date-prompt" id="bookingDatePrompt" role="status" hidden></small>
+                            <div class="booking-time-slots" id="bookingTimeSlots" hidden>
+                                <p class="time-slot-prompt" id="timeSlotPrompt">Choose an available time slot:</p>
+                                <div class="time-slot-options">
+                                    <button type="button" class="time-slot-option" data-slot="MORNING">
+                                        <strong>Morning</strong><span>6:00 AM–11:55 AM</span><small></small>
+                                    </button>
+                                    <button type="button" class="time-slot-option" data-slot="AFTERNOON">
+                                        <strong>Afternoon</strong><span>12:00 PM–5:55 PM</span><small></small>
+                                    </button>
+                                    <button type="button" class="time-slot-option" data-slot="NIGHT">
+                                        <strong>Night</strong><span>6:00 PM–11:55 PM</span><small></small>
+                                    </button>
+                                </div>
+                                <small class="booking-time-prompt" id="bookingTimePrompt" role="status" hidden></small>
+                                <input type="hidden" id="timeSlot" name="timeSlot">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label for="guests">Estimated Number of Guests <span class="required-mark">*</span></label>
+                            <input type="number" id="guests" name="guests" min="1" step="1" placeholder="e.g. 50" required>
+                        </div>
+                    </div>
+
+
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="startTimeDisplay">
+                                Event Start Time <span class="required-mark">*</span>
+                            </label>
+
+                            <div class="clock-picker-wrap">
+                                <button type="button"
+                                        id="startTimeDisplay"
+                                        class="clock-time-display"
+                                        aria-haspopup="dialog"
+                                        aria-expanded="false">
+                                    <span id="selectedTimeText">Choose event time</span>
+                                    <span class="clock-icon">◷</span>
+                                </button>
+
+                                <input type="hidden"
+                                       id="startTime"
+                                       name="startTime"
+                                       required>
+
+                                <div id="clockPicker" class="clock-picker" hidden>
+                                    <div class="clock-picker-header">
+                                        <div class="clock-current-time">
+                                            <button type="button" id="clockHourText">12</button>
+                                            <span>:</span>
+                                            <button type="button" id="clockMinuteText">00</button>
+                                            <span id="clockPeriodText">PM</span>
+                                        </div>
+
+                                        <div class="clock-tabs">
+                                            <button type="button" id="clockHoursTab" class="active">Hour</button>
+                                            <button type="button" id="clockMinutesTab">Minute</button>
+                                        </div>
+                                    </div>
+
+                                    <div id="clockFace" class="clock-face"></div>
+
+                                    <div class="clock-footer">
+                                        <button type="button" id="clockCancel">Cancel</button>
+                                        <button type="button" id="clockDone">Done</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="booking-time-prompt" id="clockTimePrompt" role="status" hidden></small>
+                        </div>
+                    </div>
+
+
+                    <div class="field venue-city-field">
+                        <label for="bookingVenueCity">Venue City / Municipality <span class="required-mark">*</span></label>
+                        <input type="text" id="bookingVenueCity" name="venueCity" placeholder="Type or choose a Luzon city or municipality" autocomplete="off" aria-haspopup="listbox" aria-expanded="false" aria-controls="bookingVenueCityList" required>
+                        <div class="booking-travel-fee" id="bookingTravelFeeHelp" aria-live="polite">Choose your venue city to calculate the travel expense from North Caloocan at ₱20/km.</div>
+                    </div>
+
+                    <div class="field">
+                        <label for="location">Event Venue / Complete Address <span class="required-mark">*</span></label>
+                        <input type="text" id="location" name="location" placeholder="House number, street, barangay, city" autocomplete="off" autocorrect="off" spellcheck="false" required>
+                        <small class="field-help">Enter the venue where the event styling and setup will take place.</small>
+                    </div>
+
+                    <div class="booking-divider"></div>
+
+                    <div class="booking-step-heading">
+                        <span class="booking-step-number">03</span>
+                        <div>
+                            <h3>Package & Styling Preferences</h3>
+                            <p>Choose one of our Simple, Venue, or Full Venue Styling packages above.</p>
+                        </div>
+                    </div>
+
+                    <div class="booking-selected-package" id="bookingSelectedPackage">
+                        <span class="selected-package-icon" aria-hidden="true">🎁</span>
+                        <div>
+                            <strong>Package selection</strong>
+                            <p>Choose your package from the Packages section above.</p>
+                        </div>
+                        <a href="#packages" class="selected-package-link">View packages</a>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field">
+                            <label for="eventTheme">Preferred Theme</label>
+                            <input type="text" id="eventTheme" name="eventTheme" maxlength="120" placeholder="e.g. princess, safari, minimalist" autocomplete="off" autocorrect="off" spellcheck="false">
+                        </div>
+                        <div class="field">
+                            <label for="eventColors">Preferred Colors</label>
+                            <input type="text" id="eventColors" name="eventColors" maxlength="120" placeholder="e.g. blush pink and gold" autocomplete="off" autocorrect="off" spellcheck="false">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="message">Additional Styling Requests</label>
+                        <textarea id="message" name="message" rows="4" placeholder="Backdrop ideas, special requests, or other details for your event..."></textarea>
+                    </div>
+
+                    <section class="reservation-payment is-guest" id="reservationPayment" aria-labelledby="reservationPaymentTitle">
+                        <div class="reservation-payment-details">
+                            <span class="badge">SECURE YOUR EVENT DATE</span>
+                            <h3 id="reservationPaymentTitle">30% Reservation Fee</h3>
+                            <p>Scan the InstaPay QR with your bank or e-wallet, then enter the transaction reference number below.</p>
+                            <dl class="reservation-totals">
+                                <div><dt>Package price</dt><dd id="packageAmount">Select a package</dd></div>
+                                <div><dt>Travel expense</dt><dd id="bookingTravelFeeAmount">Select venue city</dd></div>
+                                <div><dt>Total price</dt><dd id="bookingTotalAmount">—</dd></div>
+                            </dl>
+                            <div class="reservation-fee-callout" aria-live="polite">
+                                <span class="reservation-fee-kicker">PAY THIS FIRST TO RESERVE YOUR DATE</span>
+                                <div class="reservation-fee-row">
+                                    <strong>Reservation fee <span>(30%)</span></strong>
+                                    <strong id="reservationFeeAmount">—</strong>
+                                </div>
+                            </div>
+                            <div class="reservation-payment-entry" id="reservationPaymentEntry" hidden>
+                                <label for="paymentReference">Payment transaction/reference number <span class="required-mark">*</span></label>
+                                <input type="text" id="paymentReference" name="paymentReference" maxlength="16" placeholder="Enter reference number" autocomplete="off" title="Enter reference number" required disabled>
+                                <small class="field-help">Your reservation fee will remain pending until KQ Event Styling verifies the transfer. Confirm the recipient name in your payment app before sending.</small>
+                            </div>
+                            <div class="reservation-balance">
+                                <span>Remaining balance <small>Pay after the event</small></span>
+                                <strong id="remainingBalanceAmount">—</strong>
+                            </div>
+                        </div>
+                        <div class="reservation-login-notice" id="reservationLoginNotice" role="status">
+                            <strong>Sign in to view payment details</strong>
+                            <span>The payment QR code and reference field are available after you sign in. Your booking form will be saved when you continue to sign in.</span>
+                        </div>
+                        <div class="reservation-qr-card" id="reservationQrCard" hidden>
+                            <img id="reservationQrImage" data-auth-src="gcash-qr.png" alt="InstaPay QR code for KQ Event Styling reservation payments">
+                            <strong>Scan to pay</strong>
+                            <span>Use your bank or e-wallet app</span>
+                        </div>
+                    </section>
+
+                    <div class="booking-note">
+                        <strong>Before you submit</strong>
+                        <p>Your request and reservation payment will be reviewed by KQ Event Styling. A QR transfer is not confirmed automatically; your event date is reserved only after the team verifies the payment and approves availability.</p>
+                    </div>
+
+                    <label class="terms-check" for="termsAccepted">
+                        <input type="checkbox" id="termsAccepted" name="termsAccepted" required>
+                        <span>I have read and agree to the <a href="terms.html">Booking Terms and Conditions</a>. <span class="required-mark">*</span></span>
+                    </label>
+
+                    <button type="submit" class="btn btn-primary submit-button">Submit Booking Request</button>
+                    <p class="form-required-note"><span class="required-mark">*</span> Required fields</p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+
+    <section class="section"
+             id="contact">
+
+        <div class="wrap">
+
+
+            <div class="section-heading">
+
+                <span class="badge">
+                    CONTACT US
+                </span>
+
+
+                <h2>
+
+                    Let's Create Something
+
+                    <span>
+                        Beautiful.
+                    </span>
+
+                </h2>
+
+
+                <p>
+                    Have questions? Feel free to contact KQ Event Styling.
+                </p>
+
+            </div>
+
+
+
+            <div class="review-grid">
+
+
+                <div class="form-card contact-card">
+
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M7 3.8h10A1.8 1.8 0 0 1 18.8 5.6v12.8a1.8 1.8 0 0 1-1.8 1.8H7a1.8 1.8 0 0 1-1.8-1.8V5.6A1.8 1.8 0 0 1 7 3.8Z"></path><path d="M9 6.8h6M10.5 17.2h3"></path></svg>
+                    </div>
+
+                    <h3>
+                        Contact Number
+                    </h3>
+
+                    <a class="contact-value" href="tel:+639611370355">0961 137 0355</a>
+                    <span class="contact-note">Call or text for event inquiries</span>
+
+                </div>
+
+
+
+                <div class="form-card contact-card">
+
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="m4.5 7 7.5 6 7.5-6"></path></svg>
+                    </div>
+
+                    <h3>
+                        Email
+                    </h3>
+
+                    <a class="contact-value" href="mailto:kqeventstyling@gmail.com">kqeventstyling@gmail.com</a>
+                    <span class="contact-note">Send us your event details</span>
+
+                </div>
+
+
+
+                <div class="form-card contact-card">
+
+                    <div class="feature-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false"><path d="M19 10.2c0 5-7 10.3-7 10.3S5 15.2 5 10.2a7 7 0 1 1 14 0Z"></path><circle cx="12" cy="10" r="2.4"></circle></svg>
+                    </div>
+
+                    <h3>
+                        Location
+                    </h3>
+
+                    <span class="contact-value">North Caloocan City</span>
+                    <span class="contact-note">Metro Manila, Philippines</span>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================
+         FOOTER
+    ========================== -->
+
+    <footer class="site-footer">
+
+
+        <div class="wrap footer-content">
+
+
+            <div>
+
+                <strong>
+                    KQ Event Styling
+                </strong>
+
+
+                <p>
+                    Making your special moments beautiful.
+                </p>
+
+            </div>
+
+
+
+            <nav class="footer-links"
+                 aria-label="Footer Navigation">
+
+                <a href="#home">
+                    Home
+                </a>
+
+                <a href="#about">
+                    About
+                </a>
+
+                <a href="#packages">
+                    Packages
+                </a>
+
+                <a href="#booking">
+                    Booking
+                </a>
+
+            </nav>
+
+
+        </div>
+
+
+
+        <div class="footer-bottom">
+
+            © 2026 KQ Event Styling.
+            All Rights Reserved.
+
+        </div>
+
+
+    </footer>
+
+
+
+    <!-- ========================================
+         LOGOUT CONFIRMATION MODAL
+    ======================================== -->
+
+    <div id="logoutModal" class="logout-modal">
+
+        <div class="logout-modal-overlay"></div>
+
+        <div class="logout-modal-card">
+
+            <div class="logout-modal-icon">
+                ↪
+            </div>
+
+            <h3>
+                Logout
+            </h3>
+
+            <p>
+                Are you sure you want to logout
+                from your KQ Event Styling account?
+            </p>
+
+            <div class="logout-modal-actions">
+
+                <button type="button"
+                        id="cancelLogout"
+                        class="logout-cancel-btn">
+                    Cancel
+                </button>
+
+                <button type="button"
+                        id="confirmLogout"
+                        class="logout-confirm-btn">
+                    Logout
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================
+         LOGIN REQUIRED MODAL
+    ======================================== -->
+
+    <div id="loginRequiredModal"
+         class="login-required-modal"
+         aria-hidden="true">
+
+        <div class="login-required-overlay"></div>
+
+        <div class="login-required-card">
+
+            <div class="login-required-icon">
+                🔐
+            </div>
+
+            <h3>
+                Login Required
+            </h3>
+
+            <p>
+                You need to login first to continue.
+            </p>
+
+            <p class="login-required-subtext">
+                Please login to your KQ Event Styling account
+                before submitting your booking or ocular inspection request.
+            </p>
+
+            <div class="login-required-actions">
+
+                <button type="button"
+                        id="notNowBtn"
+                        class="login-not-now-btn">
+                    Not Now
+                </button>
+
+                <button type="button"
+                        id="loginRequiredBtn"
+                        class="login-required-btn">
+                    Login Now
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="kq-ai-chat" id="kqAiChat">
+        <section class="kq-ai-panel" id="kqAiPanel" aria-label="KQ AI Chat" aria-hidden="true" hidden>
+            <header class="kq-ai-header">
+                <div class="kq-ai-heading">
+                    <span class="kq-ai-mark" aria-hidden="true">KQ</span>
+                    <div><strong>KQ AI</strong><small>Event ideas and styling help</small></div>
+                </div>
+                <div class="kq-ai-header-actions">
+                    <button class="kq-ai-icon-button" id="kqAiNewChat" type="button" aria-label="Start a new chat" title="New chat">↻</button>
+                    <button class="kq-ai-icon-button" id="kqAiClose" type="button" aria-label="Close chat" title="Close">×</button>
+                </div>
+            </header>
+            <div class="kq-ai-messages" id="kqAiMessages" role="log" aria-live="polite" aria-relevant="additions text">
+                <div class="kq-ai-message kq-ai-message-assistant">Hi! I’m KQ AI. I can help with packages, event styling, booking and payment steps, ocular inspections, and cancellation or reschedule requests. What would you like to know?</div>
+            </div>
+            <form class="kq-ai-form" id="kqAiForm">
+                <label class="sr-only" for="kqAiInput">Message KQ AI</label>
+                <textarea id="kqAiInput" rows="1" placeholder="Ask about your event..."></textarea>
+                <button id="kqAiSend" type="submit" aria-label="Send message" title="Send message">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7" /></svg>
+                </button>
+                <p>Temporary chat. Messages disappear when you refresh or leave this page.</p>
+            </form>
+        </section>
+        <button class="kq-ai-launcher" id="kqAiLauncher" type="button" aria-expanded="false" aria-controls="kqAiPanel">
+            <span class="kq-ai-launcher-label"><span class="kq-ai-mark" aria-hidden="true">KQ</span><span>KQ AI</span></span>
+            <svg class="kq-ai-launcher-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7" /></svg>
+        </button>
+    </div>
+
+    <!-- =========================
+         JAVASCRIPT
+    ========================== -->
+
+    <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
+    <script src="site-navigation.js?v=20261022-customer-mobile-menu"></script>
+    <script src="package-gallery.js?v=20261023-gallery-load-queue"></script>
+    <script src="php-home.js?v=20261102-system-fix-1"></script>
+
+</body>
+</html>

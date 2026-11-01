@@ -1,0 +1,11 @@
+# KQ Event Styling
+
+KQ Event Styling is an event-styling booking website built as an IT305W school project.
+
+- Home page: /
+- Customer login: /login.html
+- Customer registration: /signup.html
+- PHP JSON API: /api.php
+- The site stores application records in SQLite outside the public document root.
+
+Use fictional information for demonstrations. Do not submit real payment-card details or private customer records.

@@ -1,22 +1,32 @@
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
  id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+ phone TEXT NOT NULL DEFAULT '',
  password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN ('customer','admin')),
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS packages (
  id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, price_cents INTEGER NOT NULL CHECK(price_cents > 0),
- full_day INTEGER NOT NULL DEFAULT 0 CHECK(full_day IN (0,1))
+ full_day INTEGER NOT NULL DEFAULT 0 CHECK(full_day IN (0,1)), description TEXT NOT NULL DEFAULT ''
 );
-INSERT OR IGNORE INTO packages VALUES
- (1,'Simple Styling',650000,0),(2,'Package A',790000,0),(3,'Package B',1550000,0),
- (4,'Package C',1950000,1),(5,'Package D',2950000,1),(6,'Package E',3500000,1);
+INSERT OR IGNORE INTO packages(id,name,price_cents,full_day,description) VALUES
+ (1,'Simple Styling',650000,0,'Thematic venue styling with a 7x8 ft backdrop, balloon garland and props, celebrant name styro cut, grass mat, and basic backdrop lights.'),
+ (2,'Package A',790000,0,'Thematic venue styling with customized 3-panel 8x12 ft backdrop, balloon garland, character standee and props, name cut, grass mat, lights, souvenir rack, cake pedestal, wooden bench, and number lighted standee.'),
+ (3,'Package B',1550000,0,'Package A inclusions plus thematic ceiling treatment with 100 balloon drops and 10 clusters, and a balloon entrance arch.'),
+ (4,'Package C',1950000,1,'4-panel 8x16 ft backdrop, ceiling swag with 200 balloon drops, 10 clusters and 10 hanging decals, 5 balloon centerpieces, character standee, props, name cut, grass mat, lights, souvenir rack, cake pedestal, bench, number light, and lighted entrance arch.'),
+ (5,'Package D',2950000,1,'5-panel 8x20 ft backdrop, ceiling swag with 300 balloon drops, 20 clusters and 20 hanging mylar decals, 10 balloon centerpieces, character standee, props, name cut, grass mat, lights, souvenir rack, cake pedestal, bench, number light, and lighted entrance arch.'),
+ (6,'Package E',3500000,1,'5-panel 8x20 ft backdrop, ceiling swag with 600 balloon drops, 30 clusters and 20 hanging decals, 10 balloon centerpieces, character standee, props, name cut, grass mat, lights, souvenir rack, bench, number light, and lighted entrance arch with character standee.') ;
 CREATE TABLE IF NOT EXISTS bookings (
  id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
  package_id INTEGER NOT NULL REFERENCES packages(id), event_date TEXT NOT NULL,
  slot TEXT NOT NULL CHECK(slot IN ('MORNING','AFTERNOON','NIGHT')),
+ event_type TEXT NOT NULL DEFAULT '', event_time TEXT NOT NULL DEFAULT '', venue_city TEXT NOT NULL DEFAULT '', venue_address TEXT NOT NULL DEFAULT '',
+ theme TEXT NOT NULL DEFAULT '', colors TEXT NOT NULL DEFAULT '', design_reference_path TEXT,
+ ai_estimated_package TEXT NOT NULL DEFAULT '', ai_estimated_price_cents INTEGER,
+ ai_estimate_explanation TEXT NOT NULL DEFAULT '', ai_detected_features_json TEXT NOT NULL DEFAULT '[]',
  venue TEXT NOT NULL, phone TEXT NOT NULL, guests INTEGER NOT NULL CHECK(guests BETWEEN 1 AND 5000),
- distance_km INTEGER NOT NULL CHECK(distance_km BETWEEN 0 AND 1000), notes TEXT NOT NULL DEFAULT '',
+ distance_km REAL NOT NULL CHECK(distance_km BETWEEN 0 AND 1000), notes TEXT NOT NULL DEFAULT '',
+ package_label TEXT NOT NULL DEFAULT '', unpriced INTEGER NOT NULL DEFAULT 0 CHECK(unpriced IN (0,1)),
  total_cents INTEGER NOT NULL CHECK(total_cents > 0), deposit_cents INTEGER NOT NULL,
  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','cancelled','completed')),
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -36,17 +46,46 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE TABLE IF NOT EXISTS change_requests (
  id INTEGER PRIMARY KEY, booking_id INTEGER NOT NULL REFERENCES bookings(id),
  type TEXT NOT NULL CHECK(type IN ('cancel','reschedule')), reason TEXT NOT NULL,
- event_date TEXT, slot TEXT, status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
+ event_date TEXT, event_time TEXT, slot TEXT, reservation_fee_nonrefundable INTEGER NOT NULL DEFAULT 0,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS one_pending_change ON change_requests(booking_id) WHERE status='pending';
 CREATE TABLE IF NOT EXISTS inventory (
  id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, quantity INTEGER NOT NULL CHECK(quantity >= 0),
- unit TEXT NOT NULL, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+ unit TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'General', unit_cost_cents INTEGER NOT NULL DEFAULT 0 CHECK(unit_cost_cents >= 0),
+ reorder INTEGER NOT NULL DEFAULT 0 CHECK(reorder >= 0), updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS expenses (
  id INTEGER PRIMARY KEY, description TEXT NOT NULL, amount_cents INTEGER NOT NULL CHECK(amount_cents > 0),
- expense_date TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+ expense_date TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'General', archived_at TEXT,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS ocular_inspections (
+ id INTEGER PRIMARY KEY, request_code TEXT NOT NULL UNIQUE,
+ user_id INTEGER NOT NULL REFERENCES users(id), contact_name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT NOT NULL,
+ venue_name TEXT NOT NULL DEFAULT '', venue_address TEXT NOT NULL, venue_city TEXT NOT NULL, event_date TEXT NOT NULL,
+ inspection_date TEXT NOT NULL, inspection_time TEXT NOT NULL, distance_km REAL NOT NULL DEFAULT 0,
+ fee_cents INTEGER NOT NULL DEFAULT 0, payment_reference TEXT NOT NULL DEFAULT '',
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','declined','cancelled','completed')),
+ admin_notes TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ocular_inspections_owner ON ocular_inspections(user_id,created_at);
+CREATE INDEX IF NOT EXISTS ocular_inspections_date ON ocular_inspections(inspection_date,status);
+CREATE TABLE IF NOT EXISTS notifications (
+ id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), kind TEXT NOT NULL,
+ title TEXT NOT NULL, message TEXT NOT NULL, related_id INTEGER, read_at TEXT,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications(user_id,created_at DESC);
+CREATE TABLE IF NOT EXISTS design_estimates (
+ id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), image_path TEXT NOT NULL,
+ package_name TEXT NOT NULL, price_cents INTEGER NOT NULL, features_json TEXT NOT NULL DEFAULT '[]',
+ explanation TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS inventory_movements (
+ id INTEGER PRIMARY KEY, inventory_id INTEGER NOT NULL REFERENCES inventory(id), booking_id INTEGER REFERENCES bookings(id),
+ change_quantity INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS audit_log (
  id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id), action TEXT NOT NULL,
@@ -55,3 +94,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE TABLE IF NOT EXISTS login_attempts (
  attempt_key TEXT PRIMARY KEY, failures INTEGER NOT NULL, last_attempt INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+ id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL, used_at TEXT,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS password_reset_owner ON password_reset_tokens(user_id,expires_at);

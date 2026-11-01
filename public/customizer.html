@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>For Ocular Inspection | KQ Event Styling</title>
+
+    <link rel="stylesheet"
+          href="customizer.css?v=20261102-system-fix-1">
+
+</head>
+
+
+<body>
+
+
+    <!-- ========================================
+         HEADER
+    ======================================== -->
+
+    <header class="customizer-header">
+
+        <a href="index.html"
+           class="brand">
+
+            <img src="kqlogo.png"
+                 alt="KQ Event Styling Logo">
+
+            <div class="brand-text">
+
+                <strong>KQ</strong>
+
+                <span>
+                    EVENT STYLING
+                </span>
+
+            </div>
+
+        </a>
+
+
+        <a href="index.html"
+           class="back-link">
+
+            ← Back to Website
+
+        </a>
+
+    </header>
+
+
+
+    <!-- ========================================
+         PAGE
+    ======================================== -->
+
+    <main class="customizer-page">
+
+
+        <!-- PAGE INTRO -->
+
+        <section class="page-intro">
+
+            <span class="eyebrow">
+                KQ EVENT STYLING
+            </span>
+
+            <h1>
+                For Ocular Inspection
+            </h1>
+
+            <p>Request an ocular inspection by sharing your contact details and venue location. Package selection and event booking are handled separately on the Book Now page.</p>
+
+        </section>
+
+
+
+        <!-- ========================================
+             OCULAR INSPECTION REQUEST
+        ======================================== -->
+
+        <section class="customizer-layout ocular-only" style="display:block;max-width:760px;margin:0 auto;">
+            <div class="customizer-form">
+                <div class="customizer-card">
+                    <div class="section-heading">
+                        <span class="step-number">01</span>
+                        <div>
+                            <h2>Ocular Inspection Request</h2>
+                            <p>Share your contact and venue details to request an inspection. Travel/service fee depends on the distance from North Caloocan.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="ocularName">Name <span class="required-mark">*</span></label>
+                            <input id="ocularName" type="text" placeholder="Enter your full name" autocomplete="off" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="ocularEmail">Email <span class="required-mark">*</span></label>
+                            <input id="ocularEmail" type="email" placeholder="Enter your email" autocomplete="off" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="ocularPhone">Contact Number <span class="required-mark">*</span></label>
+                            <input id="ocularPhone" type="tel" placeholder="09XXXXXXXXX" autocomplete="off" required>
+                        </div>
+                        <div class="form-group ocular-date-picker" id="inspectionDatePickerWrapper">
+                            <label id="inspectionDateLabel" for="inspectionDatePicker">Preferred Ocular Date <span class="required-mark">*</span></label>
+                            <input id="inspectionDate" type="hidden">
+                            <button id="inspectionDatePicker" class="ocular-date-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="inspectionCalendar">
+                                <span id="inspectionDateDisplay">Choose an inspection date</span><span aria-hidden="true">▾</span>
+                            </button>
+                            <div class="booking-calendar ocular-calendar ocular-calendar-popup" id="inspectionCalendar" role="dialog" aria-labelledby="inspectionDateLabel" hidden>
+                                <div class="booking-calendar-header">
+                                    <button type="button" id="inspectionCalendarPrevious" aria-label="Previous month">‹</button>
+                                    <strong id="inspectionCalendarMonth" aria-live="polite"></strong>
+                                    <button type="button" id="inspectionCalendarNext" aria-label="Next month">›</button>
+                                </div>
+                                <div class="booking-calendar-grid booking-calendar-weekdays" aria-hidden="true">
+                                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                                </div>
+                                <div class="booking-calendar-grid" id="inspectionCalendarDays" role="grid" aria-label="Ocular appointment dates"></div>
+                                <div class="booking-calendar-legend" aria-label="Availability legend">
+                                    <span><i class="available"></i> All slots open</span>
+                                    <span><i class="partial"></i> Some slots taken</span>
+                                    <span><i class="full"></i> Fully booked</span>
+                                </div>
+                                <p class="calendar-help" id="inspectionCalendarHelp" aria-live="polite">Loading availability…</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inspectionTime">Preferred Ocular Time <span class="required-mark">*</span></label>
+                            <div class="clock-picker-wrap ocular-time-picker-wrap">
+                                <button type="button" id="inspectionTimeDisplay" class="clock-time-display" aria-haspopup="dialog" aria-expanded="false">
+                                    <span id="inspectionTimeDisplayText">Choose an inspection time</span>
+                                    <span class="clock-icon" aria-hidden="true">◷</span>
+                                </button>
+                                <input id="inspectionTime" type="hidden" required>
+                                <div id="inspectionClockPicker" class="clock-picker" role="dialog" aria-label="Choose preferred ocular time" hidden>
+                                    <div class="clock-picker-header">
+                                        <div class="clock-current-time">
+                                            <button type="button" id="inspectionClockHour">01</button>
+                                            <span>:</span>
+                                            <button type="button" id="inspectionClockMinute">00</button>
+                                            <span id="inspectionClockPeriodText">AM</span>
+                                        </div>
+                                        <div class="clock-tabs">
+                                            <button type="button" id="inspectionClockHoursTab" class="active">Hour</button>
+                                            <button type="button" id="inspectionClockMinutesTab">Minute</button>
+                                        </div>
+                                    </div>
+                                    <div id="inspectionClockFace" class="clock-face"></div>
+                                    <div class="clock-footer">
+                                        <div class="clock-periods" aria-label="AM or PM">
+                                            <button type="button" id="inspectionClockAm" class="active" aria-pressed="true">AM</button>
+                                            <button type="button" id="inspectionClockPm" aria-pressed="false">PM</button>
+                                        </div>
+                                        <button type="button" id="inspectionClockCancel">Cancel</button>
+                                        <button type="button" id="inspectionClockDone">Done</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <small id="inspectionTimeHelp" class="field-help">Choose a time from an available morning (6 AM–12 PM), afternoon (12 PM–6 PM), or night (6 PM–12 AM) slot.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="venueName">Venue Name <span class="required-mark">*</span></label>
+                            <input id="venueName" type="text" placeholder="Venue or establishment name" required>
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;padding:18px;border:1px solid #fda4af;border-left:5px solid #e11d48;border-radius:16px;background:#fff1f2;">
+                            <label for="inspectionCity" style="color:#be123c;">💡 INSPECTION FEE <span class="required-mark">*</span></label>
+                            <p style="margin:4px 0 10px;color:#68778a;font-size:14px;">Choose your venue city or municipality in Luzon to calculate the exact fee. The payment QR appears after the selected date and time pass the availability and travel-time check.</p>
+                            <div class="ocular-city-field">
+                                <input id="inspectionCity" type="text" placeholder="Type or choose a Luzon city or municipality" autocomplete="off" aria-describedby="inspectionFeeHelp" aria-haspopup="listbox" aria-expanded="false" aria-controls="inspectionCityList" required>
+                                <div id="inspectionCityList" class="ocular-city-dropdown" role="listbox" hidden></div>
+                            </div>
+                            <div id="inspectionFeeAmount" aria-live="polite" style="margin-top:12px;padding:15px;border-radius:12px;background:#e9f8ef;color:#087443;font-weight:700;">Choose a Luzon city or municipality to see the inspection fee.</div>
+                            <small id="inspectionFeeHelp" class="field-help"></small>
+                            <div id="inspectionPaymentBlock" hidden style="margin-top:14px;padding:16px;border:1px solid #b9dfef;border-radius:14px;background:#f3faff;text-align:center;">
+                                <img src="gcash-qr.png" alt="GCash and InstaPay QR code for ocular inspection fee payment" style="display:block;width:min(100%,260px);height:auto;margin:0 auto 10px;border-radius:10px;">
+                                <strong>Scan to pay the exact inspection fee shown above</strong>
+                                <label for="inspectionPaymentReference" style="display:block;margin-top:12px;text-align:left;">Payment transaction/reference number <span class="required-mark">*</span></label>
+                                <input id="inspectionPaymentReference" type="text" maxlength="16" placeholder="Enter reference number" autocomplete="off" title="Enter reference number" required style="width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid #b9cddd;border-radius:10px;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label for="inspectionAddress">Street Address / Barangay <span class="required-mark">*</span></label>
+                            <input id="inspectionAddress" type="text" placeholder="House number, street, barangay, subdivision or landmark" autocomplete="street-address" required>
+                        </div>
+                    </div>
+
+                    <div class="ocular-terms" aria-label="Terms and Conditions agreement">
+                        <input type="checkbox" id="ocularTermsAccepted" required aria-required="true">
+                        <span>I have read and agree to the
+                            <a href="terms.html">Terms and Conditions</a>.
+                            <span class="required-mark">*</span>
+                        </span>
+                    </div>
+
+                    <div class="form-actions" style="margin-top:22px;">
+                        <button type="button" id="requestQuotation" class="quotation-button">Request Ocular Inspection</button>
+                        <button type="button" id="resetCustomizer" class="reset-button">Clear Form</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+
+    <!-- ========================================
+         SUCCESS MODAL
+    ======================================== -->
+
+    <div id="quotationModal"
+         class="quotation-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="quotationModalTitle"
+         aria-hidden="true">
+
+        <div class="quotation-modal-card">
+
+            <div class="success-icon">
+                ✓
+            </div>
+
+            <h2 id="quotationModalTitle">
+                Ocular Inspection Request Saved
+            </h2>
+
+            <p>
+                Your ocular inspection request is saved. KQ will verify your payment reference and contact you about the appointment.
+            </p>
+
+            <button type="button"
+                    id="closeQuotationModal">
+
+                Done
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================
+         LOGIN REQUIRED MODAL
+    ========================================= -->
+
+    <div id="loginRequiredModal"
+         class="login-required-modal"
+         aria-hidden="true">
+
+        <div class="login-required-overlay"></div>
+
+        <div class="login-required-card">
+
+            <div class="login-required-icon">
+                🔐
+            </div>
+
+            <h3>
+                Login Required
+            </h3>
+
+            <p>
+                You need to login first to continue.
+            </p>
+
+            <p class="login-required-subtext">
+                Please login to your KQ Event Styling account
+                before submitting your booking or ocular inspection request.
+            </p>
+
+            <div class="login-required-actions">
+
+                <button type="button"
+                        id="notNowBtn"
+                        class="login-not-now-btn">
+
+                    Not Now
+
+                </button>
+
+                <button type="button"
+                        id="loginRequiredBtn"
+                        class="login-required-btn">
+
+                    Login Now
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
+    <script src="ocular-php.js?v=20261102-system-fix-1"></script>
+
+
+</body>
+
+</html>

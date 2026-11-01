@@ -5,12 +5,32 @@ date_default_timezone_set('Asia/Manila');
 ini_set('display_errors', '0');
 ini_set('session.use_strict_mode', '1');
 session_name('kq_session');
-// Keep session files outside the public web root and avoid relying on a machine-wide PHP temp directory.
-$sessionDirectory = dirname(__DIR__) . '/var/sessions';
-if (!is_dir($sessionDirectory)) mkdir($sessionDirectory, 0700, true);
+function ensurePrivateDirectoryWritable(string $path): bool
+{
+    if ((!is_dir($path) && !@mkdir($path, 0700, true)) || !is_dir($path)) return false;
+    $probe = rtrim($path, "/\\") . DIRECTORY_SEPARATOR . '.write-check-' . bin2hex(random_bytes(8));
+    $handle = @fopen($probe, 'x');
+    if ($handle === false) return false;
+    fclose($handle);
+    return @unlink($probe);
+}
+
+// Keep private data on persistent storage outside the public document root.
+$privateDirectory = rtrim((string)(getenv('KQ_PRIVATE_DIR') ?: dirname(__DIR__) . '/var'), "/\\");
+$GLOBALS['KQ_PRIVATE_DIR'] = $privateDirectory;
+$sessionDirectory = rtrim((string)(getenv('KQ_SESSION_PATH') ?: $privateDirectory . '/sessions'), "/\\");
+if (!ensurePrivateDirectoryWritable($sessionDirectory)) {
+    http_response_code(503);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['data' => null, 'error' => ['message' => 'Private application storage is unavailable. Contact the site administrator.']]);
+    exit;
+}
+@chmod($sessionDirectory, 0700);
 session_save_path($sessionDirectory);
+$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+    || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 session_set_cookie_params([
-    'httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    'httponly' => true, 'secure' => $isHttps,
     'samesite' => 'Lax', 'path' => '/',
 ]);
 session_start();
@@ -74,7 +94,7 @@ function slot(array $data): string
 }
 function currentUser(PDO $db, bool $required = true): ?array
 {
-    $user = query($db, 'SELECT id,name,email,role FROM users WHERE id=?', [$_SESSION['user_id'] ?? 0])->fetch();
+    $user = query($db, 'SELECT id,name,email,phone,role FROM users WHERE id=?', [$_SESSION['user_id'] ?? 0])->fetch();
     if (!$user && $required) fail(401, 'Please sign in.');
     return $user ?: null;
 }
@@ -82,6 +102,25 @@ function admin(array $user): void { if ($user['role'] !== 'admin') fail(403, 'Ad
 function audit(PDO $db, int $userId, string $action, array $details): void
 {
     query($db, 'INSERT INTO audit_log(user_id,action,details_json) VALUES(?,?,?)', [$userId,$action,json_encode($details, JSON_THROW_ON_ERROR)]);
+}
+function notifyUser(PDO $db, int $userId, string $kind, string $title, string $message, ?int $relatedId = null): void
+{
+    query($db, 'INSERT INTO notifications(user_id,kind,title,message,related_id) VALUES(?,?,?,?,?)', [$userId,$kind,$title,$message,$relatedId]);
+}
+function postJson(string $url, array $headers, array $payload, int $timeout = 55): array
+{
+    $headerLines = array_merge(['Content-Type: application/json'], $headers);
+    $context = stream_context_create(['http'=>[
+        'method'=>'POST', 'header'=>implode("\r\n",$headerLines),
+        'content'=>json_encode($payload,JSON_THROW_ON_ERROR), 'timeout'=>$timeout, 'ignore_errors'=>true,
+    ]]);
+    $response = @file_get_contents($url,false,$context);
+    $status = 0;
+    foreach ($http_response_header ?? [] as $line) if (preg_match('/^HTTP\/\S+\s+(\d+)/',$line,$match)) $status=(int)$match[1];
+    if ($response === false) throw new RuntimeException('External AI request failed.');
+    $decoded = json_decode($response,true);
+    if (!is_array($decoded)) throw new RuntimeException('External AI returned an unreadable response.');
+    return ['status'=>$status,'body'=>$decoded];
 }
 /** IMMEDIATE serializes availability checks and writes; unique slot locks provide a second safeguard. */
 function transaction(PDO $db, callable $operation): mixed

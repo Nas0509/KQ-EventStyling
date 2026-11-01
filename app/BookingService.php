@@ -17,7 +17,7 @@ final class BookingService
         $slots = ['MORNING','AFTERNOON','NIGHT'];
         if ($booking['full_day'] || $booking['distance_km'] > 30) return $slots;
         $index = array_search($booking['slot'], $slots, true);
-        return $booking['distance_km'] === 30 ? array_slice($slots, $index, 2) : [$booking['slot']];
+        return (float)$booking['distance_km'] === 30.0 ? array_slice($slots, $index, 2) : [$booking['slot']];
     }
 
     private function checkSchedule(array $booking): void
@@ -44,20 +44,38 @@ final class BookingService
         if (!$package) fail(422, 'Unknown package.');
         $date = eventDate($data);
         $slot = slot($data);
-        $venue = text($data, 'venue', 3, 300);
+        $eventType = text($data + ['event_type'=>'Celebration'], 'event_type', 2, 80);
+        $eventTime = trim((string)($data['event_time'] ?? ''));
+        if ($eventTime !== '' && !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $eventTime)) fail(422, 'Choose a valid event start time.');
+        if ($eventTime !== '') {
+            $hour=(int)substr($eventTime,0,2);
+            if (($slot==='MORNING' && ($hour<6 || $hour>=12)) || ($slot==='AFTERNOON' && ($hour<12 || $hour>=18)) || ($slot==='NIGHT' && ($hour<18 || $hour>=24))) fail(422,'Choose an event start time within the selected time slot.');
+        }
+        $venueCity = trim((string)($data['venue_city'] ?? ''));
+        if (mb_strlen($venueCity) > 120) fail(422, 'Venue city is too long.');
+        $distance = $venueCity !== ''
+            ? round(InspectionService::travelDistanceTenths(InspectionService::cityCoordinates($venueCity)) / 10,1)
+            : number($data, 'distance_km', 0, 1000);
+        $venueAddress = trim((string)($data['venue_address'] ?? ''));
+        if ($venueAddress !== '' && (mb_strlen($venueAddress) < 3 || mb_strlen($venueAddress) > 300)) fail(422, 'Venue address must contain 3 to 300 characters.');
+        $venue = text($data + ['venue'=>trim($venueAddress . ($venueCity !== '' ? ', ' . $venueCity : ''))], 'venue', 3, 300);
         $phone = text($data, 'phone', 11, 11);
         if (!preg_match('/^09[0-9]{9}$/D', $phone)) fail(422, 'Use an 11-digit Philippine mobile number starting with 09.');
         $guests = number($data, 'guests', 1, 5000);
-        $distance = number($data, 'distance_km', 0, 1000);
         $notes = text($data + ['notes'=>''], 'notes', 0, 2000);
+        $theme = text($data + ['theme'=>''], 'theme', 0, 120);
+        $colors = text($data + ['colors'=>''], 'colors', 0, 120);
+        $paymentReference = text($data, 'payment_reference', 1, 16);
         // Existing pricing: PHP20/km, rounded up to PHP100, plus a 30% deposit.
         $travelCents = (int)ceil(($distance * 20) / 100) * 100 * 100;
         $total = $package['price_cents'] + $travelCents;
-        return transaction($this->db, function () use ($user,$package,$packageId,$date,$slot,$venue,$phone,$guests,$distance,$notes,$total) {
+        return transaction($this->db, function () use ($user,$package,$packageId,$date,$slot,$eventType,$eventTime,$venueCity,$venueAddress,$venue,$phone,$guests,$distance,$notes,$theme,$colors,$paymentReference,$total) {
             $this->checkSchedule(['event_date'=>$date,'slot'=>$slot,'distance_km'=>$distance,'full_day'=>$package['full_day']]);
-            query($this->db, 'INSERT INTO bookings(user_id,package_id,event_date,slot,venue,phone,guests,distance_km,notes,total_cents,deposit_cents) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-                [$user['id'],$packageId,$date,$slot,$venue,$phone,$guests,$distance,$notes,$total,(int)round($total * 0.3)]);
+            query($this->db, 'INSERT INTO bookings(user_id,package_id,event_date,slot,event_type,event_time,venue_city,venue_address,theme,colors,venue,phone,guests,distance_km,notes,total_cents,deposit_cents) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                [$user['id'],$packageId,$date,$slot,$eventType,$eventTime,$venueCity,$venueAddress,$theme,$colors,$venue,$phone,$guests,$distance,$notes,$total,(int)round($total * 0.3)]);
             $id = (int)$this->db->lastInsertId();
+            try { query($this->db, 'INSERT INTO payments(booking_id,reference,amount_cents) VALUES(?,?,?)', [$id,$paymentReference,(int)round($total * 0.3)]); }
+            catch (PDOException) { fail(409, 'This payment reference was already submitted.'); }
             audit($this->db, $user['id'], 'booking.created', ['booking_id'=>$id]);
             return $this->owned($id, $user);
         });
@@ -81,6 +99,8 @@ final class BookingService
             }
             query($this->db, 'UPDATE bookings SET status=? WHERE id=?', [$status,$id]);
             query($this->db, "UPDATE change_requests SET status='rejected' WHERE booking_id=? AND status='pending'", [$id]);
+            $title = $status === 'approved' ? 'Booking request approved' : 'Booking request updated';
+            notifyUser($this->db, (int)$booking['user_id'], 'booking.' . $status, $title, 'Your booking request #' . $id . ' is now ' . $status . '.', $id);
             audit($this->db, $user['id'], 'booking.' . $status, ['booking_id'=>$id]);
         });
     }
@@ -90,15 +110,37 @@ final class BookingService
         $id = number($data, 'booking_id', 1, PHP_INT_MAX);
         $type = text($data, 'type');
         if (!in_array($type, ['cancel','reschedule'], true)) fail(422, 'Invalid request type.');
-        $reason = text($data, 'reason', 5, 1000);
+        $reason = text($data, 'reason', 10, 1000);
         $date = $type === 'reschedule' ? eventDate($data) : null;
         $slot = $type === 'reschedule' ? slot($data) : null;
-        transaction($this->db, function () use ($id,$type,$reason,$date,$slot,$user) {
+        $eventTime = $type === 'reschedule' ? text($data, 'event_time', 5, 5) : null;
+        if ($eventTime !== null) {
+            if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $eventTime)) fail(422, 'Choose a valid replacement event time.');
+            $hour=(int)substr($eventTime,0,2);
+            if (($slot==='MORNING' && ($hour<6 || $hour>=12)) || ($slot==='AFTERNOON' && ($hour<12 || $hour>=18)) || ($slot==='NIGHT' && ($hour<18 || $hour>=24))) fail(422, 'Choose an event time within the selected time slot.');
+        }
+        transaction($this->db, function () use ($id,$type,$reason,$date,$slot,$eventTime,$user) {
             $booking = $this->owned($id,$user);
-            if (!in_array($booking['status'], ['pending','approved'], true)) fail(409, 'This booking cannot be changed.');
+            if ($booking['status'] !== 'approved') fail(409, 'Only approved bookings can be changed.');
             if (query($this->db, "SELECT 1 FROM change_requests WHERE booking_id=? AND status='pending'", [$id])->fetchColumn()) fail(409, 'A change request is already pending.');
-            query($this->db, 'INSERT INTO change_requests(booking_id,type,reason,event_date,slot) VALUES(?,?,?,?,?)', [$id,$type,$reason,$date,$slot]);
-            audit($this->db,$user['id'],'change.requested',['booking_id'=>$id,'type'=>$type]);
+            $nonrefundable = $type==='cancel';
+            if ($type==='reschedule') {
+                $today=new DateTimeImmutable('today');
+                $oldDays=(int)$today->diff(new DateTimeImmutable($booking['event_date']))->format('%r%a');
+                $newDays=(int)$today->diff(new DateTimeImmutable((string)$date))->format('%r%a');
+                $nonrefundable=min($oldDays,$newDays)<30;
+            }
+            $status='pending';
+            if ($type==='reschedule' && !$nonrefundable) {
+                $booking['event_date']=$date; $booking['slot']=$slot;
+                $this->checkSchedule($booking);
+                $this->lockSchedule($booking);
+                query($this->db,'UPDATE bookings SET event_date=?,event_time=?,slot=? WHERE id=?',[$date,$eventTime,$slot,$id]);
+                $status='approved';
+            }
+            query($this->db, 'INSERT INTO change_requests(booking_id,type,reason,event_date,event_time,slot,reservation_fee_nonrefundable,status) VALUES(?,?,?,?,?,?,?,?)', [$id,$type,$reason,$date,$eventTime,$slot,(int)$nonrefundable,$status]);
+            notifyUser($this->db,(int)$user['id'],'change.'.$status,'Booking change request '.$status,$status==='approved'?'Your booking was automatically rescheduled to '.$date.' at '.$eventTime.'.':'Your '.$type.' request was sent to KQ for review.'.($nonrefundable?' The reservation fee is non-refundable.':''),$id);
+            audit($this->db,$user['id'],'change.requested',['booking_id'=>$id,'type'=>$type,'status'=>$status,'reservation_fee_nonrefundable'=>$nonrefundable]);
         });
     }
 
@@ -110,7 +152,7 @@ final class BookingService
             if (!$request) fail(404, 'Request not found.');
             if ($request['status'] !== 'pending') fail(409, 'Request has already been reviewed.');
             $booking = $this->owned($request['booking_id'],$user);
-            if (!in_array($booking['status'], ['pending','approved'], true)) fail(409, 'Booking is no longer active.');
+            if ($booking['status'] !== 'approved') fail(409, 'Booking is no longer active.');
             if ($approve && $request['type'] === 'cancel') {
                 query($this->db, "UPDATE bookings SET status='cancelled' WHERE id=?", [$booking['id']]);
                 query($this->db, 'DELETE FROM schedule_locks WHERE booking_id=?', [$booking['id']]);
@@ -120,9 +162,10 @@ final class BookingService
                 $booking['slot'] = $request['slot'];
                 $this->checkSchedule($booking);
                 if ($booking['status'] === 'approved') $this->lockSchedule($booking);
-                query($this->db, 'UPDATE bookings SET event_date=?,slot=? WHERE id=?', [$booking['event_date'],$booking['slot'],$booking['id']]);
+                query($this->db, 'UPDATE bookings SET event_date=?,event_time=?,slot=? WHERE id=?', [$booking['event_date'],$request['event_time'],$booking['slot'],$booking['id']]);
             }
             query($this->db, 'UPDATE change_requests SET status=? WHERE id=?', [$approve ? 'approved' : 'rejected',$id]);
+            notifyUser($this->db, (int)$booking['user_id'], 'change.' . ($approve?'approved':'rejected'), 'Booking change request reviewed', 'Your ' . $request['type'] . ' request for booking #' . $booking['id'] . ' was ' . ($approve?'approved':'declined') . '.' . ((int)$request['reservation_fee_nonrefundable']===1?' The reservation fee is non-refundable.':''), (int)$booking['id']);
             audit($this->db,$user['id'],'change.reviewed',['request_id'=>$id,'approved'=>$approve]);
         });
     }

@@ -1,0 +1,10 @@
+.git/
+node_modules/
+tests/
+var/
+*.sqlite
+*.csv
+*.zip
+deployment/*
+!deployment/render/
+!deployment/render/**
