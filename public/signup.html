@@ -473,7 +473,7 @@
 
                     <!-- RULES -->
 
-                    <div class="password-rules">
+                    <div class="password-rules" aria-live="polite">
 
                         <p>
                             Your password must contain:
@@ -481,23 +481,23 @@
 
                         <ul>
 
-                            <li id="ruleLength">
+                            <li id="ruleLength" role="checkbox" aria-checked="false">
                                 At least 8 characters
                             </li>
 
-                            <li id="ruleUppercase">
+                            <li id="ruleUppercase" role="checkbox" aria-checked="false">
                                 One uppercase letter
                             </li>
 
-                            <li id="ruleLowercase">
+                            <li id="ruleLowercase" role="checkbox" aria-checked="false">
                                 One lowercase letter
                             </li>
 
-                            <li id="ruleNumber">
+                            <li id="ruleNumber" role="checkbox" aria-checked="false">
                                 One number
                             </li>
 
-                            <li id="ruleSpecial">
+                            <li id="ruleSpecial" role="checkbox" aria-checked="false">
                                 One special character
                             </li>
 
