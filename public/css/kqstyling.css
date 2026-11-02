@@ -1982,12 +1982,7 @@ body.logout-modal-open {
 .booking-travel-fee { margin-top: 8px; color: var(--ink-soft); font-size: .82rem; line-height: 1.45; }
 
 .venue-city-field > #bookingVenueCity {
-    cursor: pointer;
-    padding-right: 42px;
-    background-image: linear-gradient(45deg, transparent 50%, #263946 50%), linear-gradient(135deg, #263946 50%, transparent 50%);
-    background-position: calc(100% - 19px) 50%, calc(100% - 14px) 50%;
-    background-size: 5px 5px, 5px 5px;
-    background-repeat: no-repeat;
+    cursor: text;
 }.booking-city-dropdown {
     max-height: 220px;
     margin-top: 4px;
