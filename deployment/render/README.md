@@ -1,23 +1,22 @@
-# Render free PHP demo
+# Render PHP school project
 
-This deploys KQ Event Styling as a PHP Docker web service for a school presentation. Render supports PHP through Docker. The service is configured on the free plan and does not require adding a payment method, but free services sleep after 15 minutes without traffic and start again on the next visit.
+This deploys the KQ Event Styling PHP app as a Docker web service on Render's Free plan. The service sleeps after 15 minutes without traffic and may take about a minute to wake.
 
-## Important data limitation
+## Persistent database setup
 
-Render's free web service has an ephemeral filesystem. This project stores its SQLite database, sessions, and image uploads in `/tmp/kqstyling`, so **all demo accounts, bookings, sessions, and uploads reset whenever Render spins down, restarts, or redeploys the service**. The startup script recreates the schema and administrator from private environment settings. Only use fake presentation data. This is not suitable for actual customers or business bookings.
+The PHP app supports the existing Supabase PostgreSQL project using a private Render environment variable. It creates its own `kq_php` schema and does not modify the existing Supabase tables. The original Supabase Auth accounts and records are not automatically shared with PHP; PHP customers need to sign up on the PHP site unless records are deliberately migrated.
 
-Render's free service also blocks outbound email ports (25, 465, 587), so password-reset emails will not send from this deployment. AI features need their API secrets and remain unavailable without them.
+1. In Render, create/update the Blueprint from this repository and select branch `codex/render-free-demo`. Confirm the service uses the Free plan.
+2. In Supabase, open **Project Settings → Database → Connection string**, choose **Session pooler**, and copy the URI.
+3. In Render service **Environment**, add `KQ_DATABASE_URL` and paste the URI as its value. Keep it private. Never put the URI in GitHub or send it in chat.
+4. Set `KQ_ADMIN_EMAIL` and a new unique `KQ_ADMIN_PASSWORD` in Render's private environment settings. Use a new password that was not exposed in a screenshot.
+5. Save changes and deploy. The service installs the tables in the separate `kq_php` schema and creates the administrator if none exists.
+6. After the deployment shows **Live**, open the site, create a customer account, sign in, and try a sample booking and admin review.
 
-## Setup
+## Free-plan limitations
 
-1. Push this project to a GitHub repository that Render can read. Do not add `var/`, `.env` files, CSV exports, credentials, or local SQLite databases. The `.gitignore` excludes these local files.
-2. In Render, choose **New → Blueprint**, connect the repository, and select the `render.yaml` file. Confirm `kq-event-styling-demo` is on the **Free** plan. Do not choose a paid plan or add a payment method.
-3. When prompted for the environment values, set `KQ_ADMIN_EMAIL` to the admin email and `KQ_ADMIN_PASSWORD` to a unique password with 12+ characters, uppercase and lowercase letters, and a number. Enter the values in Render's private settings only; never put them in GitHub or this file.
-4. Start the deployment. Render builds the Docker image, runs `bin/init-db.php`, creates the first admin from the private settings, and starts the PHP site. The startup script removes those credentials from the environment passed to the website.
-5. Open the public `onrender.com` URL, sign in, create a fake customer account, and make a sample booking. If it has been idle, the first visit may take about a minute while Render wakes it.
-
-## Demonstration caveats
-
-- After an idle sleep, restart, or new deploy, start again with an empty database and sign in again. Any sample records you entered are gone.
-- On the free tier, outbound SMTP ports are blocked, so the forgot-password email workflow cannot be demonstrated.
-- For a live business system with persistent records, use hosting with a persistent database/storage and working email. Render's free instance is a temporary class demo only.
+- Render's free web service has temporary local files. The database is stored in Supabase, but PHP sessions and uploaded design-estimate images may be lost on restart.
+- Supabase Free may pause after a week of low activity. Its data is kept while paused, but the project must be restored to resume the app.
+- Render Free blocks outbound SMTP ports, so password-reset email needs an HTTPS email service integration before that feature can send mail.
+- The KQ AI features need their optional API keys.
+- This is suitable for a class project demonstration, not live customer/business records without stronger hosting, backups, and verified email delivery.

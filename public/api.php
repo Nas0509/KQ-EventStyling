@@ -34,7 +34,7 @@ try {
             if ($phone !== '' && !preg_match('/^09[0-9]{9}$/D', $phone)) fail(422, 'Use an 11-digit Philippine mobile number starting with 09.');
             try { query($db, 'INSERT INTO users(name,email,phone,password_hash) VALUES(?,?,?,?)', [$name,strtolower($email),$phone,password_hash($password,PASSWORD_DEFAULT)]); }
             catch (PDOException $e) { fail(409, 'That email is already registered.'); }
-            session_regenerate_id(true); $_SESSION['user_id']=(int)$db->lastInsertId(); audit($db,$_SESSION['user_id'],'auth.registered',[]); respond(['user'=>currentUser($db)],201);
+            session_regenerate_id(true); $_SESSION['user_id']=lastInsertId($db); audit($db,$_SESSION['user_id'],'auth.registered',[]); respond(['user'=>currentUser($db)],201);
         case 'login':
             if ($method !== 'POST') fail(405, 'POST required.');
             $email = strtolower(text($input,'email',5,254)); $password = $input['password'] ?? '';
@@ -132,7 +132,7 @@ try {
             if ($method === 'PATCH') {
                 $id=number($input,'notification_id',1,PHP_INT_MAX);
                 query($db,'UPDATE notifications SET read_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?',[$id,$user['id']]);
-                if (!$db->query('SELECT changes()')->fetchColumn()) fail(404,'Notification not found.');
+                if (!lastMutationCount()) fail(404,'Notification not found.');
                 respond(['updated'=>true]);
             }
             fail(405,'Method not allowed.');
@@ -244,11 +244,11 @@ try {
             audit($db,$user['id'],'payment.recorded',['booking_id'=>$bookingId,'amount_cents'=>$amount]);
             respond(['recorded'=>true],201);
         case 'payment-status':
-            if ($method !== 'PATCH' || !$user) fail(405,'PATCH required.'); admin($user); $id=number($input,'payment_id',1,PHP_INT_MAX); $status=text($input,'status'); if (!in_array($status,['verified','rejected'],true)) fail(422,'Invalid payment status.'); query($db,"UPDATE payments SET status=? WHERE id=? AND status='pending'",[$status,$id]); if (!$db->query('SELECT changes()')->fetchColumn()) fail(409,'Payment was already reviewed.'); $payment=query($db,'SELECT p.booking_id,b.user_id FROM payments p JOIN bookings b ON b.id=p.booking_id WHERE p.id=?',[$id])->fetch(); notifyUser($db,(int)$payment['user_id'],'payment.'.$status,'Reservation payment '.($status==='verified'?'verified':'update'),'Your reservation payment for booking #'.$payment['booking_id'].' was '.$status.'.',(int)$payment['booking_id']); audit($db,$user['id'],'payment.'.$status,['payment_id'=>$id]); respond(['updated'=>true]);
+            if ($method !== 'PATCH' || !$user) fail(405,'PATCH required.'); admin($user); $id=number($input,'payment_id',1,PHP_INT_MAX); $status=text($input,'status'); if (!in_array($status,['verified','rejected'],true)) fail(422,'Invalid payment status.'); query($db,"UPDATE payments SET status=? WHERE id=? AND status='pending'",[$status,$id]); if (!lastMutationCount()) fail(409,'Payment was already reviewed.'); $payment=query($db,'SELECT p.booking_id,b.user_id FROM payments p JOIN bookings b ON b.id=p.booking_id WHERE p.id=?',[$id])->fetch(); notifyUser($db,(int)$payment['user_id'],'payment.'.$status,'Reservation payment '.($status==='verified'?'verified':'update'),'Your reservation payment for booking #'.$payment['booking_id'].' was '.$status.'.',(int)$payment['booking_id']); audit($db,$user['id'],'payment.'.$status,['payment_id'=>$id]); respond(['updated'=>true]);
         case 'changes':
             if (!$user) fail(401,'Please sign in.'); if ($method==='POST') { $booking->requestChange($input,$user); respond(['requested'=>true],201); }
             if ($method==='GET') {
-                if ($user['role']==='admin') respond(query($db,'SELECT c.*,b.event_date booking_date,u.name customer_name FROM change_requests c JOIN bookings b ON b.id=c.booking_id JOIN users u ON u.id=b.user_id WHERE c.status="pending" ORDER BY c.created_at')->fetchAll());
+                if ($user['role']==='admin') respond(query($db,"SELECT c.*,b.event_date booking_date,u.name customer_name FROM change_requests c JOIN bookings b ON b.id=c.booking_id JOIN users u ON u.id=b.user_id WHERE c.status='pending' ORDER BY c.created_at")->fetchAll());
                 respond(query($db,'SELECT c.*,b.event_date booking_date FROM change_requests c JOIN bookings b ON b.id=c.booking_id WHERE b.user_id=? ORDER BY c.created_at DESC',[$user['id']])->fetchAll());
             }
             fail(405,'Method not allowed.');
@@ -261,8 +261,8 @@ try {
             $year = substr($month,0,4);
             $monthlyIncome = array_fill(1,12,0);
             $monthlyExpenses = array_fill(1,12,0);
-            foreach (query($db,"SELECT CAST(strftime('%m',b.event_date) AS INTEGER) month,coalesce(sum(p.amount_cents),0) amount FROM bookings b JOIN payments p ON p.booking_id=b.id WHERE b.status='approved' AND p.status='verified' AND strftime('%Y',b.event_date)=? GROUP BY month",[$year])->fetchAll() as $row) $monthlyIncome[(int)$row['month']] = (int)$row['amount'];
-            foreach (query($db,"SELECT CAST(strftime('%m',expense_date) AS INTEGER) month,coalesce(sum(amount_cents),0) amount FROM expenses WHERE strftime('%Y',expense_date)=? GROUP BY month",[$year])->fetchAll() as $row) $monthlyExpenses[(int)$row['month']] = (int)$row['amount'];
+            foreach (query($db,"SELECT EXTRACT(MONTH FROM b.event_date::date)::integer AS month,coalesce(sum(p.amount_cents),0) amount FROM bookings b JOIN payments p ON p.booking_id=b.id WHERE b.status='approved' AND p.status='verified' AND EXTRACT(YEAR FROM b.event_date::date)=CAST(? AS INTEGER) GROUP BY month",[$year])->fetchAll() as $row) $monthlyIncome[(int)$row['month']] = (int)$row['amount'];
+            foreach (query($db,"SELECT EXTRACT(MONTH FROM expense_date::date)::integer AS month,coalesce(sum(amount_cents),0) amount FROM expenses WHERE EXTRACT(YEAR FROM expense_date::date)=CAST(? AS INTEGER) GROUP BY month",[$year])->fetchAll() as $row) $monthlyExpenses[(int)$row['month']] = (int)$row['amount'];
             $monthNumber=(int)substr($month,5,2);
             respond(['pending_bookings'=>(int)query($db,"SELECT count(*) FROM bookings WHERE status='pending'")->fetchColumn(),'pending_payments'=>(int)query($db,"SELECT count(*) FROM payments WHERE status='pending'")->fetchColumn(),'pending_changes'=>(int)query($db,"SELECT count(*) FROM change_requests WHERE status='pending'")->fetchColumn(),'pending_inspections'=>(int)query($db,"SELECT count(*) FROM ocular_inspections WHERE status='pending'")->fetchColumn(),'revenue_cents'=>(int)query($db,"SELECT coalesce(sum(amount_cents),0) FROM payments WHERE status='verified'")->fetchColumn(),'expenses_cents'=>(int)query($db,'SELECT coalesce(sum(amount_cents),0) FROM expenses')->fetchColumn(),'inventory_items'=>(int)query($db,'SELECT count(*) FROM inventory')->fetchColumn(),'report_month'=>$month,'month_income_cents'=>$monthlyIncome[$monthNumber],'month_expenses_cents'=>$monthlyExpenses[$monthNumber],'month_net_cents'=>$monthlyIncome[$monthNumber]-$monthlyExpenses[$monthNumber],'monthly_finance'=>array_map(static fn($i)=>['month'=>$i,'income_cents'=>$monthlyIncome[$i],'expenses_cents'=>$monthlyExpenses[$i],'net_cents'=>$monthlyIncome[$i]-$monthlyExpenses[$i]],range(1,12))]);
         case 'inventory':
@@ -274,18 +274,18 @@ try {
                 $category=text($input+['category'=>'General'],'category',2,80); $unitCost=number($input+['unit_cost_cents'=>0],'unit_cost_cents',0,100000000);
                 try { query($db,'INSERT INTO inventory(name,quantity,unit,reorder,category,unit_cost_cents) VALUES(?,?,?,?,?,?)',[$name,$quantity,$unit,$reorder,$category,$unitCost]); }
                 catch (PDOException) { fail(409,'An inventory item with that name already exists.'); }
-                $id=(int)$db->lastInsertId(); audit($db,$user['id'],'inventory.created',['inventory_id'=>$id]); respond(['id'=>$id],201);
+                $id=lastInsertId($db); audit($db,$user['id'],'inventory.created',['inventory_id'=>$id]); respond(['id'=>$id],201);
             }
             if ($method === 'PATCH') {
                 $id=number($input,'inventory_id',1,PHP_INT_MAX); $name=text($input,'name',2,120); $unit=text($input,'unit',1,40); $quantity=number($input,'quantity',0,1000000); $reorder=number($input,'reorder',0,1000000);
                 $category=text($input+['category'=>'General'],'category',2,80); $unitCost=number($input+['unit_cost_cents'=>0],'unit_cost_cents',0,100000000);
                 query($db,'UPDATE inventory SET name=?,quantity=?,unit=?,reorder=?,category=?,unit_cost_cents=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',[$name,$quantity,$unit,$reorder,$category,$unitCost,$id]);
-                if (!$db->query('SELECT changes()')->fetchColumn()) fail(404,'Inventory item not found.');
+                if (!lastMutationCount()) fail(404,'Inventory item not found.');
                 audit($db,$user['id'],'inventory.updated',['inventory_id'=>$id]); respond(['updated'=>true]);
             }
             if ($method === 'DELETE') {
                 $id=number($input,'inventory_id',1,PHP_INT_MAX); query($db,'DELETE FROM inventory WHERE id=?',[$id]);
-                if (!$db->query('SELECT changes()')->fetchColumn()) fail(404,'Inventory item not found.');
+                if (!lastMutationCount()) fail(404,'Inventory item not found.');
                 audit($db,$user['id'],'inventory.deleted',['inventory_id'=>$id]); respond(['deleted'=>true]);
             }
             fail(405,'Method not allowed.');
@@ -295,17 +295,17 @@ try {
             if ($method === 'POST') {
                 $description=text($input,'description',3,240); $amount=number($input,'amount_cents',1,1000000000); $date=eventDate($input,'expense_date',false); $category=text($input+['category'=>'General'],'category',2,80);
                 query($db,'INSERT INTO expenses(description,amount_cents,expense_date,category) VALUES(?,?,?,?)',[$description,$amount,$date,$category]);
-                $id=(int)$db->lastInsertId(); audit($db,$user['id'],'expense.created',['expense_id'=>$id]); respond(['id'=>$id],201);
+                $id=lastInsertId($db); audit($db,$user['id'],'expense.created',['expense_id'=>$id]); respond(['id'=>$id],201);
             }
             if ($method === 'PATCH') {
                 $id=number($input,'expense_id',1,PHP_INT_MAX); $description=text($input,'description',3,240); $amount=number($input,'amount_cents',1,1000000000); $date=eventDate($input,'expense_date',false); $category=text($input+['category'=>'General'],'category',2,80);
                 query($db,'UPDATE expenses SET description=?,amount_cents=?,expense_date=?,category=? WHERE id=?',[$description,$amount,$date,$category,$id]);
-                if (!$db->query('SELECT changes()')->fetchColumn()) fail(404,'Expense not found.');
+                if (!lastMutationCount()) fail(404,'Expense not found.');
                 audit($db,$user['id'],'expense.updated',['expense_id'=>$id]); respond(['updated'=>true]);
             }
             if ($method === 'DELETE') {
                 $id=number($input,'expense_id',1,PHP_INT_MAX); query($db,'DELETE FROM expenses WHERE id=?',[$id]);
-                if (!$db->query('SELECT changes()')->fetchColumn()) fail(404,'Expense not found.');
+                if (!lastMutationCount()) fail(404,'Expense not found.');
                 audit($db,$user['id'],'expense.deleted',['expense_id'=>$id]); respond(['deleted'=>true]);
             }
             fail(405,'Method not allowed.');
@@ -314,7 +314,7 @@ try {
             if ($method !== 'PATCH') fail(405,'PATCH required.');
             $id=number($input,'expense_id',1,PHP_INT_MAX); $archived=($input['archived']??false)===true;
             query($db,'UPDATE expenses SET archived_at=? WHERE id=?',[$archived?date('Y-m-d H:i:s'):null,$id]);
-            if (!$db->query('SELECT changes()')->fetchColumn()) fail(404,'Expense not found.');
+            if (!lastMutationCount()) fail(404,'Expense not found.');
             audit($db,$user['id'],$archived?'expense.archived':'expense.restored',['expense_id'=>$id]); respond(['updated'=>true]);
         case 'archived-expenses':
             if (!$user) fail(401,'Please sign in.'); admin($user);

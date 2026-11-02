@@ -73,7 +73,7 @@ final class BookingService
             $this->checkSchedule(['event_date'=>$date,'slot'=>$slot,'distance_km'=>$distance,'full_day'=>$package['full_day']]);
             query($this->db, 'INSERT INTO bookings(user_id,package_id,event_date,slot,event_type,event_time,venue_city,venue_address,theme,colors,venue,phone,guests,distance_km,notes,total_cents,deposit_cents) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 [$user['id'],$packageId,$date,$slot,$eventType,$eventTime,$venueCity,$venueAddress,$theme,$colors,$venue,$phone,$guests,$distance,$notes,$total,(int)round($total * 0.3)]);
-            $id = (int)$this->db->lastInsertId();
+            $id = lastInsertId($this->db);
             try { query($this->db, 'INSERT INTO payments(booking_id,reference,amount_cents) VALUES(?,?,?)', [$id,$paymentReference,(int)round($total * 0.3)]); }
             catch (PDOException) { fail(409, 'This payment reference was already submitted.'); }
             audit($this->db, $user['id'], 'booking.created', ['booking_id'=>$id]);

@@ -74,7 +74,7 @@ final class InspectionService
             $requestCode = 'OI-' . str_pad((string)$nextId, 4, '0', STR_PAD_LEFT);
             query($this->db, 'INSERT INTO ocular_inspections(request_code,user_id,contact_name,email,phone,venue_name,venue_address,venue_city,event_date,inspection_date,inspection_time,distance_km,fee_cents,payment_reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 [$requestCode,$user['id'],$name,strtolower($email),$phone,$venueName,$address,$cityLabel,$inspectionDate,$inspectionDate,$inspectionTime,round($distanceTenths/10,1),$feeCents,$paymentReference]);
-            $id = (int)$this->db->lastInsertId();
+            $id = lastInsertId($this->db);
             audit($this->db, $user['id'], 'inspection.requested', ['inspection_id'=>$id,'request_code'=>$requestCode]);
             return query($this->db, 'SELECT * FROM ocular_inspections WHERE id=?', [$id])->fetch();
         });

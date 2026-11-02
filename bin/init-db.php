@@ -2,6 +2,26 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
+$databaseUrl = trim((string)(getenv('KQ_DATABASE_URL') ?: ''));
+if ($databaseUrl !== '') {
+    if (!extension_loaded('pdo_pgsql')) {
+        fwrite(STDERR, "PHP extension pdo_pgsql is required for the hosted database.\n");
+        exit(1);
+    }
+    try {
+        require_once $root . '/app/Database.php';
+        $db = Database::connect();
+        $schema = file_get_contents($root . '/database/schema.postgres.sql');
+        if ($schema === false) throw new RuntimeException('PostgreSQL schema file is missing.');
+        $db->exec($schema);
+        fwrite(STDOUT, "Hosted database schema is ready.\n");
+    } catch (Throwable $error) {
+        fwrite(STDERR, "Hosted database setup failed. Check the private KQ_DATABASE_URL setting and Supabase SQL access.\n");
+        error_log($error->getMessage());
+        exit(1);
+    }
+    exit(0);
+}
 $directory = rtrim((string)(getenv('KQ_PRIVATE_DIR') ?: $root . DIRECTORY_SEPARATOR . 'var'), "/\\");
 $path = getenv('KQ_DB_PATH') ?: $directory . DIRECTORY_SEPARATOR . 'kq.sqlite';
 $databaseDirectory = dirname($path);

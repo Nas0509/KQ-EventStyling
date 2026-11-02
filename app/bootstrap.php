@@ -62,7 +62,15 @@ function query(PDO $db, string $sql, array $values = []): PDOStatement
 {
     $statement = $db->prepare($sql);
     $statement->execute($values);
+    $GLOBALS['kq_last_mutation_count'] = $statement->rowCount();
     return $statement;
+}
+function lastMutationCount(): int { return (int)($GLOBALS['kq_last_mutation_count'] ?? 0); }
+function lastInsertId(PDO $db): int
+{
+    return (int)($db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql'
+        ? $db->query('SELECT lastval()')->fetchColumn()
+        : $db->lastInsertId());
 }
 function text(array $data, string $key, int $min = 1, int $max = 200): string
 {
@@ -122,10 +130,10 @@ function postJson(string $url, array $headers, array $payload, int $timeout = 55
     if (!is_array($decoded)) throw new RuntimeException('External AI returned an unreadable response.');
     return ['status'=>$status,'body'=>$decoded];
 }
-/** IMMEDIATE serializes availability checks and writes; unique slot locks provide a second safeguard. */
+/** Transactions and unique slot locks protect schedule writes on both supported databases. */
 function transaction(PDO $db, callable $operation): mixed
 {
-    $db->exec('BEGIN IMMEDIATE');
-    try { $result = $operation(); $db->exec('COMMIT'); return $result; }
-    catch (Throwable $e) { $db->exec('ROLLBACK'); throw $e; }
+    $db->beginTransaction();
+    try { $result = $operation(); $db->commit(); return $result; }
+    catch (Throwable $e) { if ($db->inTransaction()) $db->rollBack(); throw $e; }
 }

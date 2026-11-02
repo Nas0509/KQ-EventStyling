@@ -3,6 +3,10 @@ set -euo pipefail
 
 export KQ_PRIVATE_DIR="${KQ_PRIVATE_DIR:-/tmp/kqstyling}"
 export KQ_DB_PATH="$KQ_PRIVATE_DIR/kq.sqlite"
+if [[ -z "${KQ_DATABASE_URL:-}" ]]; then
+    echo "KQ_DATABASE_URL is required. Add the private Supabase Session pooler URI in Render Environment settings."
+    exit 1
+fi
 mkdir -p "$KQ_PRIVATE_DIR/sessions" "$KQ_PRIVATE_DIR/uploads"
 
 php bin/init-db.php

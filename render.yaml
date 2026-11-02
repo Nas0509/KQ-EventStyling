@@ -11,3 +11,5 @@ services:
         sync: false
       - key: KQ_ADMIN_PASSWORD
         sync: false
+      - key: KQ_DATABASE_URL
+        sync: false
