@@ -190,6 +190,21 @@
             font-weight: 600;
         }
 
+        .message.toast {
+            position: fixed;
+            z-index: 10000;
+            top: 22px;
+            left: 50%;
+            width: min(420px, calc(100vw - 32px));
+            margin: 0;
+            padding: 14px 20px;
+            transform: translateX(-50%);
+            border-radius: 12px;
+            background: #198754;
+            color: #fff;
+            box-shadow: 0 12px 32px rgba(18, 68, 45, .24);
+        }
+
             .message.error {
                 color: #d9534f;
             }
