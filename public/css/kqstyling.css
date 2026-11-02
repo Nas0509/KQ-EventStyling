@@ -3050,6 +3050,8 @@ body.logout-modal-open {
 .account-menu-details > div { display: flex; justify-content: space-between; gap: 10px; font-size: .75rem; }
 .account-menu-details span { color: #819099; }
 .account-menu-details strong { color: #4c616c; font-weight: 650; text-align: right; }
+.account-menu-details > button { display: inline-flex; min-height: 36px; align-items: center; padding: 0 11px; border: 1px solid #d5e2e8; border-radius: 7px; background: #f7fbfd; color: #315466; font: inherit; font-size: .82rem; font-weight: 650; cursor: pointer; }
+.account-menu-details > button:hover { border-color: #a9d1e0; background: #edf8fb; color: #126e92; }
 .account-menu-logout { display: flex; width: 100%; min-height: 40px; align-items: center; gap: 9px; padding: 0 10px; border: 1px solid #f0dede; border-radius: 8px; background: #fff8f8; color: #a84040; font-size: .82rem; font-weight: 700; cursor: pointer; }
 .account-menu-logout:hover { border-color: #e8caca; background: #fff1f1; }
 .account-menu-logout svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
