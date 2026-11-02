@@ -11,11 +11,13 @@ query($db, 'INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)', [
 query($db, 'INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)', ['Admin','admin@test.local',password_hash('StrongPass123', PASSWORD_DEFAULT),'admin']);
 $customer=['id'=>1,'role'=>'customer']; $admin=['id'=>2,'role'=>'admin'];
 $service = new BookingService($db);
-$booking = $service->create(['package_id'=>1,'event_date'=>date('Y-m-d',strtotime('+7 days')),'slot'=>'MORNING','venue'=>'Quezon City','phone'=>'09171234567','guests'=>20,'distance_km'=>15,'notes'=>'Test'], $customer);
+$booking = $service->create(['package_id'=>1,'event_date'=>date('Y-m-d',strtotime('+7 days')),'slot'=>'MORNING','event_type'=>'Celebration','event_time'=>'09:00','venue'=>'Quezon City','phone'=>'09171234567','guests'=>20,'distance_km'=>15,'notes'=>'Test','payment_reference'=>'TEST-001'], $customer);
 if ((int)$booking['total_cents'] !== 680000 || (int)$booking['deposit_cents'] !== 204000) throw new RuntimeException('Server pricing calculation failed.');
-query($db, "INSERT INTO payments(booking_id,reference,amount_cents,status) VALUES(?,?,?, 'verified')", [$booking['id'],'TEST-001',$booking['deposit_cents']]);
+query($db, "UPDATE payments SET status='verified' WHERE booking_id=?", [$booking['id']]);
 $service->review((int)$booking['id'], 'approved', $admin);
 if ((int)query($db,'SELECT count(*) FROM schedule_locks WHERE booking_id=?',[$booking['id']])->fetchColumn() !== 1) throw new RuntimeException('Schedule lock was not created.');
-try { $service->create(['package_id'=>1,'event_date'=>$booking['event_date'],'slot'=>'MORNING','venue'=>'Quezon City','phone'=>'09171234568','guests'=>20,'distance_km'=>10,'notes'=>'Conflict'], $customer); throw new RuntimeException('Conflict was incorrectly accepted.'); }
+try { $service->create(['package_id'=>1,'event_date'=>$booking['event_date'],'slot'=>'MORNING','event_type'=>'Celebration','event_time'=>'09:00','venue'=>'Quezon City','phone'=>'09171234568','guests'=>20,'distance_km'=>10,'notes'=>'Conflict','payment_reference'=>'TEST-009'], $customer); throw new RuntimeException('Conflict was incorrectly accepted.'); }
 catch (ApiError $error) { if ($error->status !== 409) throw $error; }
+try { $service->create(['package_id'=>1,'event_date'=>date('Y-m-d',strtotime('+8 days')),'slot'=>'AFTERNOON','event_type'=>'Celebration','event_time'=>'22:00','venue'=>'Quezon City','phone'=>'09171234569','guests'=>20,'distance_km'=>10,'notes'=>'Bad time','payment_reference'=>'TEST-002'], $customer); throw new RuntimeException('Out-of-slot event time was incorrectly accepted.'); }
+catch (ApiError $error) { if ($error->status !== 422 || !str_contains($error->getMessage(), '12:00 PM - 5:55 PM')) throw $error; }
 echo "Service rules passed: price, payment-gated approval, schedule lock, and conflict rejection.\n";

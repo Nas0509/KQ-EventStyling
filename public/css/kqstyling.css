@@ -1990,7 +1990,6 @@ body.logout-modal-open {
     background-repeat: no-repeat;
 }.booking-city-dropdown {
     max-height: 220px;
-    margin-top: 4px;
     overflow-y: auto;
     overscroll-behavior: contain;
     border: 1px solid #d6e1e7;
@@ -2014,6 +2013,7 @@ body.logout-modal-open {
 }
 .booking-city-dropdown-option:hover,
 .booking-city-dropdown-option:focus-visible { background: #edf8fd; outline: none; }
+.booking-city-dropdown-option[aria-selected="true"] { background: #e6f6fd; color: #0879af; font-weight: 700; }
 .booking-city-dropdown-empty { padding: 12px 14px; color: var(--ink-soft); }
 .booking-time-prompt { display: block; margin-top: 9px; color: #a65300; font-size: .82rem; line-height: 1.4; }
 .booking-time-prompt[hidden] { display: none; }

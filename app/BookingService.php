@@ -20,6 +20,15 @@ final class BookingService
         return (float)$booking['distance_km'] === 30.0 ? array_slice($slots, $index, 2) : [$booking['slot']];
     }
 
+    private static function validateSlotTime(string $slot, string $time, string $invalidMessage): void
+    {
+        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $time)) fail(422, $invalidMessage);
+        $minutes = ((int)substr($time, 0, 2)) * 60 + (int)substr($time, 3, 2);
+        $ranges = ['MORNING'=>[360,715,'6:00 AM - 11:55 AM'], 'AFTERNOON'=>[720,1075,'12:00 PM - 5:55 PM'], 'NIGHT'=>[1080,1435,'6:00 PM - 11:55 PM']];
+        [$first,$last,$label] = $ranges[$slot];
+        if ($minutes % 5 !== 0 || $minutes < $first || $minutes > $last) fail(422, "Please choose a time between $label for the " . ucfirst(strtolower($slot)) . ' slot.');
+    }
+
     private function checkSchedule(array $booking): void
     {
         foreach (self::occupiedSlots($booking) as $slot) {
@@ -46,11 +55,8 @@ final class BookingService
         $slot = slot($data);
         $eventType = text($data + ['event_type'=>'Celebration'], 'event_type', 2, 80);
         $eventTime = trim((string)($data['event_time'] ?? ''));
-        if ($eventTime !== '' && !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $eventTime)) fail(422, 'Choose a valid event start time.');
-        if ($eventTime !== '') {
-            $hour=(int)substr($eventTime,0,2);
-            if (($slot==='MORNING' && ($hour<6 || $hour>=12)) || ($slot==='AFTERNOON' && ($hour<12 || $hour>=18)) || ($slot==='NIGHT' && ($hour<18 || $hour>=24))) fail(422,'Choose an event start time within the selected time slot.');
-        }
+        if ($eventTime === '') fail(422, 'Choose an event start time.');
+        self::validateSlotTime($slot, $eventTime, 'Choose a valid event start time.');
         $venueCity = trim((string)($data['venue_city'] ?? ''));
         if (mb_strlen($venueCity) > 120) fail(422, 'Venue city is too long.');
         $distance = $venueCity !== ''
@@ -114,11 +120,7 @@ final class BookingService
         $date = $type === 'reschedule' ? eventDate($data) : null;
         $slot = $type === 'reschedule' ? slot($data) : null;
         $eventTime = $type === 'reschedule' ? text($data, 'event_time', 5, 5) : null;
-        if ($eventTime !== null) {
-            if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $eventTime)) fail(422, 'Choose a valid replacement event time.');
-            $hour=(int)substr($eventTime,0,2);
-            if (($slot==='MORNING' && ($hour<6 || $hour>=12)) || ($slot==='AFTERNOON' && ($hour<12 || $hour>=18)) || ($slot==='NIGHT' && ($hour<18 || $hour>=24))) fail(422, 'Choose an event time within the selected time slot.');
-        }
+        if ($eventTime !== null) self::validateSlotTime($slot, $eventTime, 'Choose a valid replacement event time.');
         transaction($this->db, function () use ($id,$type,$reason,$date,$slot,$eventTime,$user) {
             $booking = $this->owned($id,$user);
             if ($booking['status'] !== 'approved') fail(409, 'Only approved bookings can be changed.');
