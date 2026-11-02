@@ -103,6 +103,29 @@ final class BookingService
             notifyUser($this->db, (int)$booking['user_id'], 'booking.' . $status, $title, 'Your booking request #' . $id . ' is now ' . $status . '.', $id);
             audit($this->db, $user['id'], 'booking.' . $status, ['booking_id'=>$id]);
         });
+        if (in_array($status, ['approved','rejected'], true)) {
+            $customer = query($this->db, 'SELECT u.name,u.email,b.event_type,b.event_date,b.slot,b.event_time FROM bookings b JOIN users u ON u.id=b.user_id WHERE b.id=?', [$id])->fetch();
+            if ($customer) {
+                $approved = $status === 'approved';
+                $subject = $approved ? 'Your KQ Event Styling booking is approved' : 'Update on your KQ Event Styling booking';
+                $greeting = trim((string)$customer['name']);
+                $schedule = $customer['event_date'] . ' · ' . $customer['slot'] . ($customer['event_time'] ? ' · ' . $customer['event_time'] : '');
+                $body = "Hello {$greeting},\n\n"
+                    . ($approved
+                        ? "Your booking request #{$id} has been approved. Your event date is now reserved.\n"
+                        : "We’re sorry, but your booking request #{$id} was not approved. The requested date and time have not been reserved.\n")
+                    . "\nEvent: {$customer['event_type']}\nSchedule: {$schedule}\n\n"
+                    . ($approved
+                        ? "Thank you for choosing KQ Event Styling. We look forward to helping with your event.\n"
+                        : "If you already sent a reservation payment, please contact KQ Event Styling about it.\n")
+                    . "\nKQ Event Styling";
+                try {
+                    Mailer::send((string)$customer['email'], $subject, $body);
+                } catch (Throwable $mailError) {
+                    error_log('Booking decision email failed for booking #' . $id . ': ' . $mailError->getMessage());
+                }
+            }
+        }
     }
 
     public function requestChange(array $data, array $user): void
