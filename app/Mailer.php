@@ -8,7 +8,8 @@ final class Mailer
     {
         $host = trim((string)(getenv('SMTP_HOST') ?: ''));
         $username = (string)(getenv('SMTP_USERNAME') ?: '');
-        $password = (string)(getenv('SMTP_PASSWORD') ?: '');
+        // Google displays App Passwords in groups for readability; SMTP needs the unspaced value.
+        $password = preg_replace('/\s+/', '', (string)(getenv('SMTP_PASSWORD') ?: '')) ?? '';
         $from = trim((string)(getenv('KQ_MAIL_FROM') ?: ''));
         $port = (int)(getenv('SMTP_PORT') ?: 587);
         $encryption = strtolower(trim((string)(getenv('SMTP_ENCRYPTION') ?: 'tls')));
