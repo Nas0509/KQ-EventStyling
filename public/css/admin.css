@@ -614,6 +614,29 @@ table {
     min-width: 800px;
 }
 
+/* Give payment columns predictable room so long references cannot squeeze the client name. */
+#adminPaymentTable {
+    table-layout: fixed;
+    min-width: 1120px;
+}
+#adminPaymentTable th:nth-child(1), #adminPaymentTable td:nth-child(1) { width: 17%; }
+#adminPaymentTable th:nth-child(2), #adminPaymentTable td:nth-child(2) { width: 9%; }
+#adminPaymentTable th:nth-child(3), #adminPaymentTable td:nth-child(3) { width: 10%; }
+#adminPaymentTable th:nth-child(4), #adminPaymentTable td:nth-child(4) { width: 9%; }
+#adminPaymentTable th:nth-child(5), #adminPaymentTable td:nth-child(5) { width: 27%; }
+#adminPaymentTable th:nth-child(6), #adminPaymentTable td:nth-child(6) { width: 9%; }
+#adminPaymentTable th:nth-child(7), #adminPaymentTable td:nth-child(7) { width: 9%; }
+#adminPaymentTable th:nth-child(8), #adminPaymentTable td:nth-child(8) { width: 10%; }
+#adminPaymentTable .payment-history-detail {
+    display: block;
+    margin-top: 4px;
+    color: var(--ink-soft);
+    font-size: .76rem;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 th,
 td {
     text-align: left;
@@ -2482,6 +2505,8 @@ tbody tr:hover {
         border-collapse: separate;
         border-spacing: 0;
     }
+    #adminPaymentTable th,
+    #adminPaymentTable td { width: auto; }
     #adminPaymentTable thead { display: none; }
     #adminPaymentTable tbody { display: grid; gap: 10px; }
     #adminPaymentTable tbody tr {
