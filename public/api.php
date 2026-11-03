@@ -50,6 +50,8 @@ try {
     switch ($action) {
         case 'bootstrap':
             respond(['csrf'=>$_SESSION['csrf'], 'user'=>$user, 'packages'=>query($db, 'SELECT id,name,price_cents,full_day,description FROM packages ORDER BY id')->fetchAll(), 'cities'=>InspectionService::cities()]);
+        case 'session':
+            respond(['csrf'=>$_SESSION['csrf'], 'user'=>$user]);
         case 'register':
             if ($method !== 'POST') fail(405, 'POST required.');
             $name = text($input, 'name', 2, 80);
