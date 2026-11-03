@@ -1760,6 +1760,8 @@ tbody tr:hover {
     .sidebar .brand-logo { width: 44px; height: 44px; }
     .mobile-admin-notifications { display: block; grid-column: 2; grid-row: 1; justify-self: end; }
     .mobile-admin-notifications .admin-notification-btn { width: 40px; height: 40px; }
+    .mobile-admin-notifications { position: static; }
+    .mobile-admin-notifications .admin-notification-panel { top: calc(100% + 8px); right: 12px; left: 12px; width: auto; }
     .topbar .admin-header-actions { display: none; }
     .topbar .admin-user { display: none; }
     .sidebar > .admin-header-actions { grid-column: 2; grid-row: 1; width: auto; min-width: 0; min-height: 44px; justify-content: flex-end; gap: 8px; }
