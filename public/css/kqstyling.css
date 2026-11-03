@@ -3028,6 +3028,22 @@ body.logout-modal-open {
     color: #263946;
 }
 
+.header-actions #adminDashboardNavBtn {
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid #c7e3ed;
+    border-radius: 999px;
+    background: #eff9fc;
+    color: #147da4;
+    font-size: .82rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: none;
+}
+.header-actions #adminDashboardNavBtn:hover { border-color: #1688b4; background: #e2f4fa; color: #126e92; }
+#adminDashboardNavBtn[hidden] { display: none !important; }
+
 .account-menu-wrap { position: relative; flex: 0 0 auto; }
 .account-menu-wrap #authNavBtn.logged-in { display: grid; width: 46px; min-width: 46px; height: 46px; min-height: 46px; padding: 0; place-items: center; border: 1px solid #c8dce5; border-radius: 50%; background: #f2f9fc; color: #167da5; }
 .account-menu-wrap #authNavBtn.logged-in:hover, .account-menu-wrap #authNavBtn.logged-in[aria-expanded="true"] { border-color: #1688b4; background: #e6f5fa; color: #126e92; }
@@ -3288,6 +3304,10 @@ body.logout-modal-open {
     }
     .nav-links a::after { display: none; }
     .nav-links a.active { background: #eaf6fb; }
+}
+
+@media (max-width: 560px) {
+    .header-actions #adminDashboardNavBtn { min-height: 38px; padding: 0 10px; font-size: .72rem; }
 }
 
 @media (max-width: 800px) {
