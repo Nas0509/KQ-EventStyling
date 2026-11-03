@@ -3107,9 +3107,10 @@ body.logout-modal-open {
 .user-notification-heading button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #71828d; font-size: 1.4rem; cursor: pointer; }
 .user-notification-heading button:hover { background: #f2f7f9; color: #243d4b; }
 .user-notification-list { overflow-y: auto; overscroll-behavior: contain; }
-.user-notification-item { display: grid; width: 100%; gap: 5px; padding: 14px 17px; border: 0; border-bottom: 1px solid #edf1f4; background: #fff; color: #344b59; text-align: left; cursor: pointer; }
+.user-notification-item { display: grid; width: 100%; gap: 5px; padding: 14px 17px; border: 0; border-bottom: 1px solid #edf1f4; background: #fff; color: #344b59; font: inherit; text-align: left; cursor: pointer; }
 .user-notification-item:hover { background: #f5fafc; }
 .user-notification-item.is-unread { background: #f1f9fc; }
+.user-notification-item:focus-visible { position: relative; z-index: 1; outline: 3px solid #1596c5; outline-offset: -3px; }
 .user-notification-item strong { color: #203a49; font-size: .89rem; font-weight: 700; }
 .user-notification-item span { color: #546b78; font-size: .85rem; line-height: 1.45; white-space: normal; }
 .user-notification-item small { color: #82919a; font-size: .75rem; }
