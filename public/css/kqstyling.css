@@ -3307,7 +3307,14 @@ body.logout-modal-open {
 }
 
 @media (max-width: 560px) {
-    .header-actions #adminDashboardNavBtn { min-height: 38px; padding: 0 10px; font-size: .72rem; }
+    .header-content { gap: 6px; }
+    .brand { gap: 6px; }
+    .brand-logo { width: 48px; height: 48px; }
+    .brand-text strong { font-size: 1.05rem; }
+    .header-actions { gap: 6px; }
+    body.is-admin-user .header-actions #customizeEventBtn { display: none; }
+    body.is-admin-user .header-actions #adminDashboardNavBtn { display: inline-flex; width: 68px; min-width: 68px; min-height: 38px; justify-content: center; padding: 0 7px; font-size: 0; }
+    body.is-admin-user .header-actions #adminDashboardNavBtn::after { content: "Admin"; font-size: .72rem; }
 }
 
 @media (max-width: 800px) {
