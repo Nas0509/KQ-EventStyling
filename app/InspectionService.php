@@ -106,8 +106,7 @@ final class InspectionService
         $minute = ((int)substr($time, 0, 2)) * 60 + (int)substr($time, 3, 2);
         if ($minute < 360 || $minute >= 1440) fail(422, 'Choose an ocular appointment time between 6:00 AM and midnight.');
         $slot = $minute < 720 ? 'MORNING' : ($minute < 1080 ? 'AFTERNOON' : 'NIGHT');
-        $booking = query($this->db, 'SELECT 1 FROM schedule_locks WHERE event_date=? AND slot=? LIMIT 1', [$date,$slot])->fetchColumn();
-        if ($booking) fail(409, 'This time slot is already reserved for an event booking.');
+        if (in_array($slot, BookingService::occupiedSlotsForDate($this->db, $date), true)) fail(409, 'This time slot is already reserved for an event booking.');
         $others = query($this->db, "SELECT inspection_time,distance_km FROM ocular_inspections WHERE inspection_date=? AND status='approved' AND id<>?", [$date,$excludeId ?? 0])->fetchAll();
         foreach ($others as $other) {
             $otherMinute = ((int)substr($other['inspection_time'],0,2))*60 + (int)substr($other['inspection_time'],3,2);

@@ -20,20 +20,44 @@ final class BookingService
         return (float)$booking['distance_km'] === 30.0 ? array_slice($slots, $index, 2) : [$booking['slot']];
     }
 
+    /** Build availability from approved bookings, not the derived lock cache. */
+    public static function occupiedSlotsForDate(PDO $db, string $date, ?int $excludeBookingId = null): array
+    {
+        return self::occupiedSlotsForRange($db, $date, $date, $excludeBookingId)[$date] ?? [];
+    }
+
+    public static function occupiedSlotsForRange(PDO $db, string $start, string $end, ?int $excludeBookingId = null): array
+    {
+        $sql = "SELECT b.id,b.event_date,b.slot,b.distance_km,p.full_day FROM bookings b JOIN packages p ON p.id=b.package_id WHERE b.status='approved' AND b.event_date BETWEEN ? AND ?";
+        $params = [$start, $end];
+        if ($excludeBookingId !== null) { $sql .= ' AND b.id<>?'; $params[] = $excludeBookingId; }
+        $occupied = [];
+        foreach (query($db, $sql, $params)->fetchAll() as $booking) {
+            foreach (self::occupiedSlots($booking) as $slot) $occupied[$booking['event_date']][$slot] = true;
+        }
+        foreach ($occupied as $date => $slots) $occupied[$date] = array_keys($slots);
+        return $occupied;
+    }
+
     private function checkSchedule(array $booking): void
     {
-        foreach (self::occupiedSlots($booking) as $slot) {
-            if (query($this->db, 'SELECT 1 FROM schedule_locks WHERE event_date=? AND slot=? AND booking_id<>?',
-                [$booking['event_date'],$slot,$booking['id'] ?? 0])->fetchColumn()) fail(409, 'This schedule is already reserved. Choose another slot.');
-        }
+        $occupied = self::occupiedSlotsForDate($this->db, (string)$booking['event_date'], isset($booking['id']) ? (int)$booking['id'] : null);
+        if (array_intersect(self::occupiedSlots($booking), $occupied)) fail(409, 'This schedule is already reserved. Choose another slot.');
     }
 
     private function lockSchedule(array $booking): void
     {
         $this->checkSchedule($booking);
-        query($this->db, 'DELETE FROM schedule_locks WHERE booking_id=?', [$booking['id']]);
+        // Rebuild this date's derived locks so legacy/imported slots cannot persist.
+        query($this->db, 'DELETE FROM schedule_locks WHERE booking_id=? OR event_date=?', [$booking['id'],$booking['event_date']]);
+        $existing = query($this->db, "SELECT b.id,b.event_date,b.slot,b.distance_km,p.full_day FROM bookings b JOIN packages p ON p.id=b.package_id WHERE b.status='approved' AND b.event_date=? AND b.id<>?", [$booking['event_date'],$booking['id']])->fetchAll();
+        foreach ($existing as $approved) {
+            foreach (self::occupiedSlots($approved) as $slot) {
+                query($this->db, 'INSERT INTO schedule_locks(event_date,slot,booking_id) VALUES(?,?,?) ON CONFLICT(event_date,slot) DO NOTHING', [$approved['event_date'],$slot,$approved['id']]);
+            }
+        }
         foreach (self::occupiedSlots($booking) as $slot) {
-            query($this->db, 'INSERT INTO schedule_locks VALUES(?,?,?)', [$booking['event_date'],$slot,$booking['id']]);
+            query($this->db, 'INSERT INTO schedule_locks(event_date,slot,booking_id) VALUES(?,?,?) ON CONFLICT(event_date,slot) DO NOTHING', [$booking['event_date'],$slot,$booking['id']]);
         }
     }
 

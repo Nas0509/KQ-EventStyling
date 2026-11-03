@@ -119,18 +119,15 @@ try {
                 $start=text($_GET,'start_date',10,10); $end=text($_GET,'end_date',10,10);
                 $startDate=DateTimeImmutable::createFromFormat('!Y-m-d',$start); $endDate=DateTimeImmutable::createFromFormat('!Y-m-d',$end); $today=new DateTimeImmutable('today');
                 if (!$startDate || !$endDate || $startDate->format('Y-m-d')!==$start || $endDate->format('Y-m-d')!==$end || $startDate>$endDate || $endDate>$today->modify('+2 years')) fail(422,'Choose a valid booking calendar range.');
-                $occupied=[];
-                $locksSql = 'SELECT event_date,slot FROM schedule_locks WHERE event_date BETWEEN ? AND ?' . ($excludeBookingId !== null ? ' AND booking_id<>?' : '');
-                $locksParams = [$start,$end]; if ($excludeBookingId !== null) $locksParams[] = $excludeBookingId;
-                foreach(query($db,$locksSql,$locksParams)->fetchAll() as $item) $occupied[$item['event_date']][]=$item['slot'];
+                // Recompute from current approved bookings and package rules. The lock
+                // table is only a cache and can contain overbroad legacy/imported slots.
+                $occupied=BookingService::occupiedSlotsForRange($db,$start,$end,$excludeBookingId);
                 foreach(query($db,"SELECT inspection_date,inspection_time FROM ocular_inspections WHERE inspection_date BETWEEN ? AND ? AND status='approved'",[$start,$end])->fetchAll() as $item) { $hour=(int)substr($item['inspection_time'],0,2); $occupied[$item['inspection_date']][]=$hour<12?'MORNING':($hour<18?'AFTERNOON':'NIGHT'); }
                 $rows=[]; for($day=$startDate;$day<=$endDate;$day=$day->modify('+1 day')) { $date=$day->format('Y-m-d'); $rows[]=['event_date'=>$date,'available_slots'=>array_values(array_diff(['MORNING','AFTERNOON','NIGHT'],$occupied[$date]??[]))]; }
                 respond($rows);
             }
             $date = eventDate($_GET); $slots=['MORNING','AFTERNOON','NIGHT'];
-            $locksSql = 'SELECT slot FROM schedule_locks WHERE event_date=?' . ($excludeBookingId !== null ? ' AND booking_id<>?' : '');
-            $locksParams = [$date]; if ($excludeBookingId !== null) $locksParams[] = $excludeBookingId;
-            $taken = query($db,$locksSql,$locksParams)->fetchAll(PDO::FETCH_COLUMN);
+            $taken = BookingService::occupiedSlotsForDate($db,$date,$excludeBookingId);
             $inspectionTimes=query($db,"SELECT inspection_time FROM ocular_inspections WHERE inspection_date=? AND status='approved'",[$date])->fetchAll(PDO::FETCH_COLUMN);
             foreach ($inspectionTimes as $inspectionTime) {
                 $hour=(int)substr((string)$inspectionTime,0,2);
