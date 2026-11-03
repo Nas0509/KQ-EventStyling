@@ -3307,14 +3307,29 @@ body.logout-modal-open {
 }
 
 @media (max-width: 560px) {
-    .header-content { gap: 6px; }
-    .brand { gap: 6px; }
-    .brand-logo { width: 48px; height: 48px; }
-    .brand-text strong { font-size: 1.05rem; }
-    .header-actions { gap: 6px; }
+    .header-content {
+        width: calc(100% - 24px);
+        max-width: none;
+        gap: 4px;
+        padding: 8px 0;
+    }
+    .brand { flex: 0 1 auto; min-width: 0; gap: 5px; }
+    .brand-logo { flex: 0 0 40px; width: 40px; height: 40px; }
+    .brand-text { min-width: 0; }
+    .brand-text strong { font-size: 1rem; }
+    .brand-text span { font-size: .48rem; letter-spacing: .08em; white-space: nowrap; }
+    .header-actions { flex: 0 0 auto; gap: 4px; }
     body.is-admin-user .header-actions #customizeEventBtn { display: none; }
-    body.is-admin-user .header-actions #adminDashboardNavBtn { display: inline-flex; width: 68px; min-width: 68px; min-height: 38px; justify-content: center; padding: 0 7px; font-size: 0; }
-    body.is-admin-user .header-actions #adminDashboardNavBtn::after { content: "Admin"; font-size: .72rem; }
+    body.is-admin-user .header-actions #adminDashboardNavBtn { display: inline-flex; flex: 0 0 48px; width: 48px; min-width: 48px; min-height: 38px; justify-content: center; padding: 0 4px; font-size: 0; }
+    body.is-admin-user .header-actions #adminDashboardNavBtn::after { content: "Admin"; font-size: .66rem; }
+    .header-actions #authNavBtn { flex: 0 0 38px; width: 38px; min-width: 38px; height: 38px; min-height: 38px; padding: 0; }
+    .header-actions .mobile-nav-toggle { flex: 0 0 38px; width: 38px; height: 38px; }
+    .hero-content { grid-template-columns: minmax(0, 1fr); width: calc(100% - 32px); min-width: 0; gap: 24px; padding: 42px 0; }
+    .hero-text { width: 100%; min-width: 0; }
+    .hero-text h1 { max-width: 100%; font-size: clamp(2.25rem, 11vw, 3rem); overflow-wrap: anywhere; }
+    .hero-text p { width: 100%; max-width: 100%; overflow-wrap: anywhere; }
+    .hero-buttons { width: 100%; min-width: 0; }
+    .hero-buttons .btn { width: 100%; max-width: 100%; box-sizing: border-box; }
 }
 
 @media (max-width: 800px) {
