@@ -16,63 +16,23 @@ function ensurePrivateDirectoryWritable(string $path): bool
     return @unlink($probe);
 }
 
-// Keep private uploads outside the public document root. Sessions live in the
-// database so a Render instance restart does not sign every user out.
+// Keep private uploads and PHP sessions outside the public document root.
 $privateDirectory = rtrim((string)(getenv('KQ_PRIVATE_DIR') ?: dirname(__DIR__) . '/var'), "/\\");
 $GLOBALS['KQ_PRIVATE_DIR'] = $privateDirectory;
-$GLOBALS['KQ_DB'] = null;
-try {
-    $GLOBALS['KQ_DB'] = Database::connect();
-} catch (Throwable $error) {
-    error_log('KQ database connection failed: ' . $error->getMessage());
+$sessionDirectory = (string)(getenv('KQ_SESSION_PATH') ?: $privateDirectory . '/sessions');
+if (!ensurePrivateDirectoryWritable($sessionDirectory)) {
     http_response_code(503);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['data' => null, 'error' => ['message' => 'The database is waking up. Please refresh in a moment.']]);
+    echo json_encode(['data' => null, 'error' => ['message' => 'Session storage is unavailable. Please try again shortly.']]);
     exit;
 }
-
-final class KQDatabaseSessionHandler implements SessionUpdateTimestampHandlerInterface
-{
-    public function __construct(private PDO $db) {}
-    public function open(string $path, string $name): bool { return true; }
-    public function close(): bool { return true; }
-    public function validateId(string $id): bool
-    {
-        return (bool)query($this->db, 'SELECT 1 FROM app_sessions WHERE session_id=? AND expires_at>? LIMIT 1', [$id, time()])->fetchColumn();
-    }
-    public function updateTimestamp(string $id, string $data): bool
-    {
-        query($this->db, 'UPDATE app_sessions SET expires_at=? WHERE session_id=?', [time()+604800, $id]);
-        return lastMutationCount() > 0;
-    }
-    public function read(string $id): string|false
-    {
-        $row = query($this->db, 'SELECT payload FROM app_sessions WHERE session_id=? AND expires_at>? LIMIT 1', [$id, time()])->fetch();
-        return $row ? (string)$row['payload'] : '';
-    }
-    public function write(string $id, string $data): bool
-    {
-        query($this->db, 'INSERT INTO app_sessions(session_id,payload,expires_at) VALUES(?,?,?) ON CONFLICT(session_id) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at', [$id, $data, time()+604800]);
-        return true;
-    }
-    public function destroy(string $id): bool
-    {
-        query($this->db, 'DELETE FROM app_sessions WHERE session_id=?', [$id]);
-        return true;
-    }
-    public function gc(int $max_lifetime): int|false
-    {
-        query($this->db, 'DELETE FROM app_sessions WHERE expires_at<=?', [time()]);
-        return lastMutationCount();
-    }
-}
+session_save_path($sessionDirectory);
 $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
     || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 session_set_cookie_params([
     'httponly' => true, 'secure' => $isHttps,
     'samesite' => 'Lax', 'path' => '/',
 ]);
-session_set_save_handler(new KQDatabaseSessionHandler($GLOBALS['KQ_DB']), true);
 session_start();
 $_SESSION['last_seen'] = time();
 $_SESSION['csrf'] ??= bin2hex(random_bytes(32));

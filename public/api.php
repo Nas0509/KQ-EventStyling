@@ -32,7 +32,7 @@ function adminDashboardData(PDO $db, string $month): array
 }
 
 try {
-    $db = $GLOBALS['KQ_DB'];
+    $db = Database::connect();
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $action = $_GET['action'] ?? '';
     $mutating = in_array($method, ['POST','PATCH','PUT','DELETE'], true);
