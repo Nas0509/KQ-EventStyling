@@ -3198,12 +3198,13 @@ body.logout-modal-open {
 .customer-reschedule-date-control.booking-date-picker { width: 100%; max-width: none; }
 .customer-reschedule-date-control .booking-date-trigger { max-width: none; }
 .customer-reschedule-date-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
-.customer-reschedule-calendar { width: min(430px, calc(100vw - 48px)); }
+.customer-reschedule-calendar { position: relative; top: auto; left: auto; width: 100%; margin-top: 8px; box-shadow: 0 8px 24px rgba(23, 35, 45, .1); }
 .customer-reschedule-calendar .booking-calendar-help { display: block; margin-top: 10px; color: var(--ink-soft); font-size: .76rem; line-height: 1.4; }
 .customer-reschedule-date-control .booking-date-trigger:focus-visible { outline: 3px solid rgba(41, 155, 211, .22); outline-offset: 2px; }
 .customer-reschedule-clock-wrap { z-index: 5; }
 .customer-reschedule-clock-wrap .clock-time-display:disabled { cursor: not-allowed; opacity: .62; }
-.customer-reschedule-clock-wrap .customer-reschedule-clock { position: absolute; z-index: 900; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.customer-reschedule-clock-wrap .customer-reschedule-clock { position: absolute; z-index: 900; width: min(340px, calc(100vw - 56px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+.customer-reschedule-slots .time-slot-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .customer-reschedule-clock [data-reschedule-clock-done] { border-color: #1688bb; background: #1688bb; color: #fff; }
 .customer-reschedule-clock [data-reschedule-clock-done]:hover { border-color: #1179a8; background: #1179a8; }
 #clockPicker { z-index: 900; }
@@ -3211,6 +3212,7 @@ body.logout-modal-open {
 .customer-reschedule-clock .clock-footer > span { margin-right: auto; color: #607987; font-size: .8rem; }
 .customer-reschedule-slots .time-slot-option.is-pending:disabled { border-color: #d5e4e9; background: #f4f8fa; color: #657b85; opacity: 1; }
 .customer-reschedule-slots .time-slot-option.is-pending:disabled strong, .customer-reschedule-slots .time-slot-option.is-pending:disabled small { color: #657b85; }
+@media (max-width: 560px) { .customer-reschedule-slots .time-slot-options { grid-template-columns: 1fr; } }
 
 /* Customer mobile navigation */
 .mobile-nav-toggle {
