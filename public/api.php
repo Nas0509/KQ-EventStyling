@@ -6,8 +6,33 @@ require_once $projectRoot . '/app/BookingService.php';
 require_once $projectRoot . '/app/InspectionService.php';
 require_once $projectRoot . '/app/Mailer.php';
 
+function adminDashboardData(PDO $db, string $month): array
+{
+    if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D', $month)) fail(422, 'Choose a valid report month.');
+    $year = substr($month, 0, 4);
+    $monthlyIncome = array_fill(1, 12, 0);
+    $monthlyExpenses = array_fill(1, 12, 0);
+    foreach (query($db, "SELECT EXTRACT(MONTH FROM b.event_date::date)::integer AS month,coalesce(sum(p.amount_cents),0) amount FROM bookings b JOIN payments p ON p.booking_id=b.id WHERE b.status='approved' AND p.status='verified' AND EXTRACT(YEAR FROM b.event_date::date)=CAST(? AS INTEGER) GROUP BY month", [$year])->fetchAll() as $row) $monthlyIncome[(int)$row['month']] = (int)$row['amount'];
+    foreach (query($db, "SELECT EXTRACT(MONTH FROM expense_date::date)::integer AS month,coalesce(sum(amount_cents),0) amount FROM expenses WHERE EXTRACT(YEAR FROM expense_date::date)=CAST(? AS INTEGER) GROUP BY month", [$year])->fetchAll() as $row) $monthlyExpenses[(int)$row['month']] = (int)$row['amount'];
+    $monthNumber = (int)substr($month, 5, 2);
+    return [
+        'pending_bookings'=>(int)query($db, "SELECT count(*) FROM bookings WHERE status='pending'")->fetchColumn(),
+        'pending_payments'=>(int)query($db, "SELECT count(*) FROM payments WHERE status='pending'")->fetchColumn(),
+        'pending_changes'=>(int)query($db, "SELECT count(*) FROM change_requests WHERE status='pending'")->fetchColumn(),
+        'pending_inspections'=>(int)query($db, "SELECT count(*) FROM ocular_inspections WHERE status='pending'")->fetchColumn(),
+        'revenue_cents'=>(int)query($db, "SELECT coalesce(sum(amount_cents),0) FROM payments WHERE status='verified'")->fetchColumn(),
+        'expenses_cents'=>(int)query($db, 'SELECT coalesce(sum(amount_cents),0) FROM expenses')->fetchColumn(),
+        'inventory_items'=>(int)query($db, 'SELECT count(*) FROM inventory')->fetchColumn(),
+        'report_month'=>$month,
+        'month_income_cents'=>$monthlyIncome[$monthNumber],
+        'month_expenses_cents'=>$monthlyExpenses[$monthNumber],
+        'month_net_cents'=>$monthlyIncome[$monthNumber]-$monthlyExpenses[$monthNumber],
+        'monthly_finance'=>array_map(static fn($i)=>['month'=>$i,'income_cents'=>$monthlyIncome[$i],'expenses_cents'=>$monthlyExpenses[$i],'net_cents'=>$monthlyIncome[$i]-$monthlyExpenses[$i]], range(1, 12)),
+    ];
+}
+
 try {
-    $db = Database::connect();
+    $db = $GLOBALS['KQ_DB'];
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $action = $_GET['action'] ?? '';
     $mutating = in_array($method, ['POST','PATCH','PUT','DELETE'], true);
@@ -106,6 +131,19 @@ try {
             }
             if ($method === 'POST') respond($booking->create($input,$user),201);
             fail(405,'Method not allowed.');
+        case 'admin-overview':
+            if (!$user) fail(401, 'Please sign in.'); admin($user);
+            $month = is_string($_GET['month'] ?? null) ? $_GET['month'] : date('Y-m');
+            respond([
+                'csrf'=>$_SESSION['csrf'], 'user'=>$user, 'dashboard'=>adminDashboardData($db, $month),
+                'bookings'=>query($db, "SELECT b.*,u.name customer_name,u.email,COALESCE(NULLIF(b.package_label,''),p.name) package_name,(SELECT c.reason FROM change_requests c WHERE c.booking_id=b.id AND c.type='cancel' AND c.status='approved' ORDER BY c.id DESC LIMIT 1) cancellation_reason FROM bookings b JOIN users u ON u.id=b.user_id JOIN packages p ON p.id=b.package_id ORDER BY b.created_at DESC")->fetchAll(),
+                'payments'=>query($db, "SELECT p.id,p.booking_id,p.reference,p.amount_cents,p.status,p.created_at,b.event_date,b.slot,u.name customer_name,COALESCE(NULLIF(b.package_label,''),pkg.name) package_name FROM payments p JOIN bookings b ON b.id=p.booking_id JOIN users u ON u.id=b.user_id JOIN packages pkg ON pkg.id=b.package_id ORDER BY CASE p.status WHEN 'pending' THEN 0 ELSE 1 END,p.created_at DESC")->fetchAll(),
+                'changes'=>query($db, "SELECT c.*,b.event_date booking_date,u.name customer_name FROM change_requests c JOIN bookings b ON b.id=c.booking_id JOIN users u ON u.id=b.user_id WHERE c.status='pending' ORDER BY c.created_at")->fetchAll(),
+                'ocular'=>$inspection->list($user),
+                'inventory'=>query($db, 'SELECT * FROM inventory ORDER BY name')->fetchAll(),
+                'expenses'=>query($db, 'SELECT * FROM expenses WHERE archived_at IS NULL ORDER BY expense_date DESC,id DESC')->fetchAll(),
+                'archived_expenses'=>query($db, 'SELECT * FROM expenses WHERE archived_at IS NOT NULL ORDER BY archived_at DESC,id DESC')->fetchAll(),
+            ]);
         case 'booking-status':
             if ($method !== 'PATCH' || !$user) fail(405,'PATCH required.'); $booking->review(number($input,'booking_id',1,PHP_INT_MAX),text($input,'status'),$user); respond(['updated'=>true]);
         case 'profile':
@@ -257,14 +295,7 @@ try {
         case 'dashboard':
             if (!$user) fail(401,'Please sign in.'); admin($user);
             $month = is_string($_GET['month'] ?? null) ? $_GET['month'] : date('Y-m');
-            if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D', $month)) fail(422,'Choose a valid report month.');
-            $year = substr($month,0,4);
-            $monthlyIncome = array_fill(1,12,0);
-            $monthlyExpenses = array_fill(1,12,0);
-            foreach (query($db,"SELECT EXTRACT(MONTH FROM b.event_date::date)::integer AS month,coalesce(sum(p.amount_cents),0) amount FROM bookings b JOIN payments p ON p.booking_id=b.id WHERE b.status='approved' AND p.status='verified' AND EXTRACT(YEAR FROM b.event_date::date)=CAST(? AS INTEGER) GROUP BY month",[$year])->fetchAll() as $row) $monthlyIncome[(int)$row['month']] = (int)$row['amount'];
-            foreach (query($db,"SELECT EXTRACT(MONTH FROM expense_date::date)::integer AS month,coalesce(sum(amount_cents),0) amount FROM expenses WHERE EXTRACT(YEAR FROM expense_date::date)=CAST(? AS INTEGER) GROUP BY month",[$year])->fetchAll() as $row) $monthlyExpenses[(int)$row['month']] = (int)$row['amount'];
-            $monthNumber=(int)substr($month,5,2);
-            respond(['pending_bookings'=>(int)query($db,"SELECT count(*) FROM bookings WHERE status='pending'")->fetchColumn(),'pending_payments'=>(int)query($db,"SELECT count(*) FROM payments WHERE status='pending'")->fetchColumn(),'pending_changes'=>(int)query($db,"SELECT count(*) FROM change_requests WHERE status='pending'")->fetchColumn(),'pending_inspections'=>(int)query($db,"SELECT count(*) FROM ocular_inspections WHERE status='pending'")->fetchColumn(),'revenue_cents'=>(int)query($db,"SELECT coalesce(sum(amount_cents),0) FROM payments WHERE status='verified'")->fetchColumn(),'expenses_cents'=>(int)query($db,'SELECT coalesce(sum(amount_cents),0) FROM expenses')->fetchColumn(),'inventory_items'=>(int)query($db,'SELECT count(*) FROM inventory')->fetchColumn(),'report_month'=>$month,'month_income_cents'=>$monthlyIncome[$monthNumber],'month_expenses_cents'=>$monthlyExpenses[$monthNumber],'month_net_cents'=>$monthlyIncome[$monthNumber]-$monthlyExpenses[$monthNumber],'monthly_finance'=>array_map(static fn($i)=>['month'=>$i,'income_cents'=>$monthlyIncome[$i],'expenses_cents'=>$monthlyExpenses[$i],'net_cents'=>$monthlyIncome[$i]-$monthlyExpenses[$i]],range(1,12))]);
+            respond(adminDashboardData($db, $month));
         case 'inventory':
             if (!$user) fail(401,'Please sign in.'); admin($user);
             if ($method === 'GET') respond(query($db,'SELECT * FROM inventory ORDER BY name')->fetchAll());

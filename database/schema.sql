@@ -1,4 +1,8 @@
 PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS app_sessions (
+ session_id TEXT PRIMARY KEY, payload TEXT NOT NULL, expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS app_sessions_expires_at ON app_sessions(expires_at);
 CREATE TABLE IF NOT EXISTS users (
  id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE COLLATE NOCASE,
  phone TEXT NOT NULL DEFAULT '',
