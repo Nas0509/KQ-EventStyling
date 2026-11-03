@@ -33,6 +33,7 @@ function adminDashboardData(PDO $db, string $month): array
 
 try {
     $db = Database::connect();
+    restoreRememberedUser($db);
     $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
     $action = $_GET['action'] ?? '';
     $mutating = in_array($method, ['POST','PATCH','PUT','DELETE'], true);
@@ -59,7 +60,7 @@ try {
             if ($phone !== '' && !preg_match('/^09[0-9]{9}$/D', $phone)) fail(422, 'Use an 11-digit Philippine mobile number starting with 09.');
             try { query($db, 'INSERT INTO users(name,email,phone,password_hash) VALUES(?,?,?,?)', [$name,strtolower($email),$phone,password_hash($password,PASSWORD_DEFAULT)]); }
             catch (PDOException $e) { fail(409, 'That email is already registered.'); }
-            session_regenerate_id(true); $_SESSION['user_id']=lastInsertId($db); audit($db,$_SESSION['user_id'],'auth.registered',[]); respond(['user'=>currentUser($db)],201);
+            session_regenerate_id(true); $_SESSION['user_id']=lastInsertId($db); rememberUser($db,$_SESSION['user_id']); audit($db,$_SESSION['user_id'],'auth.registered',[]); respond(['user'=>currentUser($db)],201);
         case 'login':
             if ($method !== 'POST') fail(405, 'POST required.');
             $email = strtolower(text($input,'email',5,254)); $password = $input['password'] ?? '';
@@ -71,7 +72,9 @@ try {
                 query($db, 'INSERT INTO login_attempts VALUES(?,?,?) ON CONFLICT(attempt_key) DO UPDATE SET failures=failures+1,last_attempt=excluded.last_attempt',[$key,1,time()]);
                 fail(401,'Invalid email or password.');
             }
-            query($db,'DELETE FROM login_attempts WHERE attempt_key=?',[$key]); session_regenerate_id(true); $_SESSION['user_id']=(int)$account['id']; audit($db,$_SESSION['user_id'],'auth.signed_in',[]); respond(['user'=>currentUser($db)]);
+            query($db,'DELETE FROM login_attempts WHERE attempt_key=?',[$key]); session_regenerate_id(true); $_SESSION['user_id']=(int)$account['id'];
+            if (($input['remember'] ?? true) === true) rememberUser($db,$_SESSION['user_id']); else forgetRememberedUser($db);
+            audit($db,$_SESSION['user_id'],'auth.signed_in',[]); respond(['user'=>currentUser($db)]);
         case 'password-reset-request':
             if ($method !== 'POST') fail(405,'POST required.');
             $email=filter_var($input['email']??'',FILTER_VALIDATE_EMAIL);
@@ -98,11 +101,11 @@ try {
             if ($method !== 'POST') fail(405,'POST required.');
             $token=text($input,'token',64,64); $password=$input['password']??'';
             if (!is_string($password)||strlen($password)<8||strlen($password)>72||!preg_match('/[A-Z]/',$password)||!preg_match('/[a-z]/',$password)||!preg_match('/\d/',$password)||!preg_match('/[^A-Za-z0-9]/',$password)) fail(422,'Use 8+ characters with uppercase and lowercase letters, a number, and a symbol.');
-            transaction($db,function() use($db,$token,$password){$row=query($db,'SELECT id,user_id FROM password_reset_tokens WHERE token_hash=? AND expires_at>? AND used_at IS NULL', [hash('sha256',$token),time()])->fetch();if(!$row)fail(400,'This reset link is invalid or expired. Request a new one.');query($db,'UPDATE users SET password_hash=? WHERE id=?',[password_hash($password,PASSWORD_DEFAULT),$row['user_id']]);query($db,'UPDATE password_reset_tokens SET used_at=CURRENT_TIMESTAMP WHERE id=?',[$row['id']]);audit($db,(int)$row['user_id'],'auth.password_reset',[]);});
+            transaction($db,function() use($db,$token,$password){$row=query($db,'SELECT id,user_id FROM password_reset_tokens WHERE token_hash=? AND expires_at>? AND used_at IS NULL', [hash('sha256',$token),time()])->fetch();if(!$row)fail(400,'This reset link is invalid or expired. Request a new one.');query($db,'UPDATE users SET password_hash=? WHERE id=?',[password_hash($password,PASSWORD_DEFAULT),$row['user_id']]);query($db,'UPDATE password_reset_tokens SET used_at=CURRENT_TIMESTAMP WHERE id=?',[$row['id']]);query($db,'DELETE FROM remember_tokens WHERE user_id=?',[$row['user_id']]);audit($db,(int)$row['user_id'],'auth.password_reset',[]);});
             respond(['message'=>'Password updated. You can now sign in.']);
         case 'logout':
             if ($method !== 'POST') fail(405,'POST required.');
-            if ($user) audit($db,$user['id'],'auth.signed_out',[]); $_SESSION=[]; session_destroy(); respond(['logged_out'=>true]);
+            if ($user) audit($db,$user['id'],'auth.signed_out',[]); forgetRememberedUser($db); $_SESSION=[]; session_destroy(); respond(['logged_out'=>true]);
         case 'availability':
             if (isset($_GET['start_date'],$_GET['end_date'])) {
                 $start=text($_GET,'start_date',10,10); $end=text($_GET,'end_date',10,10);

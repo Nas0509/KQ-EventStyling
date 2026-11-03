@@ -5,7 +5,9 @@ date_default_timezone_set('Asia/Manila');
 ini_set('display_errors', '0');
 ini_set('session.use_strict_mode', '1');
 session_name('kq_session');
-ini_set('session.gc_maxlifetime', '604800');
+// Keep the PHP session cookie for 30 days. The remember token below restores
+// the session if Render clears its temporary session files during a restart.
+ini_set('session.gc_maxlifetime', '2592000');
 function ensurePrivateDirectoryWritable(string $path): bool
 {
     if ((!is_dir($path) && !@mkdir($path, 0700, true)) || !is_dir($path)) return false;
@@ -30,6 +32,7 @@ session_save_path($sessionDirectory);
 $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
     || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 session_set_cookie_params([
+    'lifetime' => 2592000,
     'httponly' => true, 'secure' => $isHttps,
     'samesite' => 'Lax', 'path' => '/',
 ]);
@@ -101,6 +104,48 @@ function currentUser(PDO $db, bool $required = true): ?array
     $user = query($db, 'SELECT id,name,email,phone,role FROM users WHERE id=?', [$_SESSION['user_id'] ?? 0])->fetch();
     if (!$user && $required) fail(401, 'Please sign in.');
     return $user ?: null;
+}
+function rememberCookieOptions(int $expires): array
+{
+    $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+        || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    return ['expires'=>$expires,'path'=>'/','secure'=>$isHttps,'httponly'=>true,'samesite'=>'Lax'];
+}
+function rememberUser(PDO $db, int $userId): void
+{
+    $oldToken = $_COOKIE['kq_remember'] ?? '';
+    if (is_string($oldToken) && preg_match('/^[a-f0-9]{64}$/D', $oldToken)) {
+        query($db, 'DELETE FROM remember_tokens WHERE token_hash=?', [hash('sha256', $oldToken)]);
+    }
+    $token = bin2hex(random_bytes(32));
+    $expires = time() + 2592000;
+    query($db, 'INSERT INTO remember_tokens(user_id,token_hash,expires_at) VALUES(?,?,?)', [$userId,hash('sha256',$token),$expires]);
+    setcookie('kq_remember', $token, rememberCookieOptions($expires));
+    $_COOKIE['kq_remember'] = $token;
+}
+function restoreRememberedUser(PDO $db): void
+{
+    if (!empty($_SESSION['user_id'])) return;
+    $token = $_COOKIE['kq_remember'] ?? '';
+    if (!is_string($token) || !preg_match('/^[a-f0-9]{64}$/D', $token)) return;
+    $row = query($db, 'SELECT user_id FROM remember_tokens WHERE token_hash=? AND expires_at>?', [hash('sha256',$token),time()])->fetch();
+    if (!$row) {
+        setcookie('kq_remember', '', rememberCookieOptions(time()-3600));
+        unset($_COOKIE['kq_remember']);
+        return;
+    }
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int)$row['user_id'];
+    $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
+}
+function forgetRememberedUser(PDO $db): void
+{
+    $token = $_COOKIE['kq_remember'] ?? '';
+    if (is_string($token) && preg_match('/^[a-f0-9]{64}$/D', $token)) {
+        query($db, 'DELETE FROM remember_tokens WHERE token_hash=?', [hash('sha256',$token)]);
+    }
+    setcookie('kq_remember', '', rememberCookieOptions(time()-3600));
+    unset($_COOKIE['kq_remember']);
 }
 function admin(array $user): void { if ($user['role'] !== 'admin') fail(403, 'Administrator access required.'); }
 function audit(PDO $db, int $userId, string $action, array $details): void

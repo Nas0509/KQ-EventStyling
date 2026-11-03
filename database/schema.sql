@@ -100,3 +100,9 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS password_reset_owner ON password_reset_tokens(user_id,expires_at);
+CREATE TABLE IF NOT EXISTS remember_tokens (
+ id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL,
+ created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS remember_tokens_owner ON remember_tokens(user_id,expires_at);
