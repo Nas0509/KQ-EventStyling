@@ -30,7 +30,7 @@
   function toggleAdminActionMenu(event,trigger){
     event.preventDefault();event.stopPropagation();
     const popover=$('#bookingActionsPopover');if(!popover)return;
-    if(popover.matches(':popover-open')&&activeActionTrigger===trigger){closeAdminActionMenu();return;}
+    if(popover.matches(':popover-open')&&(activeActionTrigger===trigger||trigger.getAttribute('aria-expanded')==='true')){closeAdminActionMenu();return;}
     closeAdminActionMenu();
     if(trigger.hasAttribute('data-payment-menu')){const id=Number(trigger.dataset.paymentMenu),template=document.querySelector(`[data-payment-menu-items="${id}"]`);if(!template)return;popover.innerHTML=template.innerHTML;activeActionTrigger=trigger;trigger.setAttribute('aria-expanded','true');popover.showPopover();const rect=trigger.getBoundingClientRect(),menu=popover.getBoundingClientRect(),edge=8,left=Math.max(edge,Math.min(rect.right-menu.width,window.innerWidth-menu.width-edge)),below=rect.bottom+6,top=below+menu.height<=window.innerHeight-edge?below:Math.max(edge,rect.top-menu.height-6);popover.style.left=`${left}px`;popover.style.top=`${top}px`;return;}
     const bookingId=trigger.dataset.bookingMenu,ocularId=trigger.dataset.ocularMenu,isOcular=Boolean(ocularId),id=Number(isOcular?ocularId:bookingId),item=isOcular?inspections.find(row=>Number(row.id)===id):bookings.find(row=>Number(row.id)===id);
