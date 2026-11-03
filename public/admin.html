@@ -13,7 +13,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=20261103-admin-mobile-navigation-1">
+          href="css/admin.css?v=20261103-mobile-admin-toolbar-1">
 
 </head>
 
@@ -33,6 +33,17 @@
                  class="brand-logo">
 
         </a>
+
+        <div class="admin-notification-wrap mobile-admin-notifications">
+            <button type="button" id="adminNotificationBtn" class="admin-notification-btn" aria-label="Open admin notifications" aria-expanded="false" aria-controls="adminNotificationPanel">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path></svg>
+                <span id="adminNotificationCount" class="admin-notification-count" hidden>0</span>
+            </button>
+            <div id="adminNotificationPanel" class="admin-notification-panel" hidden>
+                <div class="admin-notification-heading"><div><strong>Notifications</strong><small id="adminNotificationSummary">New bookings and requests</small></div><button type="button" id="closeAdminNotifications" aria-label="Close notifications">×</button></div>
+                <div id="adminNotificationsList"></div>
+            </div>
+        </div>
 
         <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Open navigation" aria-expanded="false" aria-controls="adminSidebarNav">
             <span></span><span></span><span></span>
@@ -161,17 +172,6 @@
 
 
             <div class="admin-header-actions">
-                <div class="admin-notification-wrap">
-                    <button type="button" id="adminNotificationBtn" class="admin-notification-btn" aria-label="Open admin notifications" aria-expanded="false" aria-controls="adminNotificationPanel">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"></path></svg>
-                        <span id="adminNotificationCount" class="admin-notification-count" hidden>0</span>
-                    </button>
-                    <div id="adminNotificationPanel" class="admin-notification-panel" hidden>
-                        <div class="admin-notification-heading"><div><strong>Notifications</strong><small id="adminNotificationSummary">New bookings and requests</small></div><button type="button" id="closeAdminNotifications" aria-label="Close notifications">×</button></div>
-                        <div id="adminNotificationsList"></div>
-                    </div>
-                </div>
-
             <div class="admin-user">
 
                 <span class="avatar">
@@ -1133,7 +1133,7 @@
          SCRIPTS
          ===================================================== -->
 
-    <script src="admin-php.js?v=20261103-admin-mobile-navigation-1"></script>
+    <script src="admin-php.js?v=20261103-mobile-admin-toolbar-1"></script>
 
 
 </body>
