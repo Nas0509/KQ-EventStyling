@@ -2507,6 +2507,11 @@ tbody tr:hover {
     }
     #adminPaymentTable th,
     #adminPaymentTable td { width: auto; }
+    /* Desktop column percentages must not constrain the mobile card grid. */
+    #adminPaymentTable tbody tr > td:nth-child(n) {
+        width: auto;
+        min-width: 0;
+    }
     #adminPaymentTable thead { display: none; }
     #adminPaymentTable tbody { display: grid; gap: 10px; }
     #adminPaymentTable tbody tr {
