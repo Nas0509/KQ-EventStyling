@@ -2228,11 +2228,10 @@ tbody tr:hover {
 .sidebar-settings-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .sidebar-account-menu[hidden] { display: none !important; }
 .sidebar-account-menu {
-    position: absolute;
+    position: fixed;
     z-index: 10000;
-    left: 0;
-    top: auto;
-    bottom: calc(100% + 10px);
+    left: 12px;
+    top: 12px;
     width: min(320px, calc(100vw - 24px));
     max-height: calc(100dvh - 24px);
     overflow: auto;
