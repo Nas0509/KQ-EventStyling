@@ -512,6 +512,14 @@ body {
     background: #1688bb;
     color: #fff;
 }
+.ocular-time-picker-wrap .clock-number:disabled {
+    color: #aebbc3;
+    cursor: not-allowed;
+}
+.ocular-time-picker-wrap #inspectionClockDone:disabled {
+    background: #aebbc3;
+    cursor: not-allowed;
+}
 .ocular-time-picker-wrap .clock-hand {
     position: absolute;
     top: 50%;
