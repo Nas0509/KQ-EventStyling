@@ -4,6 +4,7 @@
 <head>
 
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="kqlogo.png?v=20261103">
 
     <!-- IMPORTANT FOR MOBILE RESPONSIVENESS -->
     <meta name="viewport"
@@ -13,7 +14,7 @@
 
     <!-- ?v=4 forces browser to load the latest CSS -->
     <link rel="stylesheet"
-          href="css/admin.css?v=20261105-admin-payment-mobile-fix">
+          href="css/admin.css?v=20261105-account-menu-centered-1">
 
 </head>
 
@@ -720,6 +721,7 @@
                 <select id="paymentStatusFilter" aria-label="Filter payments by status">
                     <option value="ALL">All Payment Statuses</option>
                     <option value="UNPAID">Unpaid</option>
+                    <option value="PARTIAL">Partially Paid</option>
                     <option value="PAID">Fully Paid</option>
                 </select>
             </div>
@@ -1102,7 +1104,7 @@
     </main>
 
 
-    <div id="bookingActionsPopover" class="booking-actions-popover" popover="auto" role="menu" aria-label="Admin actions"></div>
+    <div id="bookingActionsPopover" class="booking-actions-popover" popover="manual" role="menu" aria-label="Admin actions"></div>
 
     <!-- =====================================================
          MODAL
@@ -1133,7 +1135,7 @@
          SCRIPTS
          ===================================================== -->
 
-    <script src="admin-php.js?v=20261103-inventory-three-dot-actions-1"></script>
+    <script src="admin-php.js?v=20261105-account-menu-anchor-1"></script>
 
 
 </body>
