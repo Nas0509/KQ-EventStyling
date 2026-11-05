@@ -154,14 +154,14 @@
                                         </div>
                                     </div>
                                     <div id="inspectionClockFace" class="clock-face"></div>
-                                    <div class="clock-footer">
+                                    <form class="clock-footer" method="dialog">
                                         <div class="clock-periods" aria-label="AM or PM">
                                             <button type="button" id="inspectionClockAm" class="active" aria-pressed="true">AM</button>
                                             <button type="button" id="inspectionClockPm" aria-pressed="false">PM</button>
                                         </div>
-                                        <button type="button" id="inspectionClockCancel">Cancel</button>
-                                        <button type="button" id="inspectionClockDone">Done</button>
-                                    </div>
+                                        <button type="submit" id="inspectionClockCancel" value="cancel">Cancel</button>
+                                        <button type="submit" id="inspectionClockDone" value="done">Done</button>
+                                    </form>
                                 </dialog>
                             </div>
                             <small id="inspectionTimeHelp" class="field-help">Choose a time from an available morning (6 AM–12 PM), afternoon (12 PM–6 PM), or night (6 PM–12 AM) slot.</small>
@@ -302,7 +302,7 @@
     </div>
 
     <script src="location-data.js?v=20261015-luzon-travel-fees"></script>
-    <script src="ocular-php.js?v=20261105-ocular-done-direct-fix"></script>
+    <script src="ocular-php.js?v=20261105-ocular-dialog-submit-fix"></script>
 
 
 </body>
