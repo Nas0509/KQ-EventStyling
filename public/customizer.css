@@ -407,19 +407,22 @@ body {
 }
 .ocular-time-picker-wrap .clock-time-display:hover { border-color: var(--sky-dark); }
 .ocular-time-picker-wrap .clock-icon { color: var(--sky-dark); font-size: 22px; }
-.ocular-time-picker-wrap .clock-picker[hidden] { display: none !important; }
 .ocular-time-picker-wrap .clock-picker {
-    position: absolute;
-    z-index: 50;
-    top: calc(100% + 8px);
-    left: 0;
+    position: fixed;
+    inset: 50% auto auto 50%;
+    z-index: 10000;
+    margin: 0;
+    transform: translate(-50%, -50%);
     width: min(360px, calc(100vw - 36px));
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
     padding: 16px;
     border: 1px solid #d9e5ed;
     border-radius: 16px;
     background: #fff;
     box-shadow: 0 20px 45px rgba(20, 43, 58, .18);
 }
+.ocular-time-picker-wrap .clock-picker::backdrop { background: transparent; }
 .ocular-time-picker-wrap .clock-picker-header {
     margin-bottom: 14px;
     padding: 14px 12px;
